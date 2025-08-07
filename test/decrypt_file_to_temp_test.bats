@@ -1,0 +1,36 @@
+#!/usr/bin/env bats
+
+setup() {
+  bats_load_library bats-support
+  bats_load_library bats-assert
+
+  # shellcheck source=src/memo.sh
+  source "memo.sh"
+}
+
+@test "returns decrypted file path and contents" {
+  local file="$NOTES_DIR/test.md"
+  echo "Hello World" >"$file"
+
+  gpg_encrypt "$file" "$file"
+
+  run decrypt_file_to_temp "$file.gpg"
+  assert_success
+  assert_output "/dev/shm/memo-test.md"
+
+  run cat "/dev/shm/memo-test.md"
+  assert_output "Hello World"
+
+  # Cleanup
+  rm -f "$file" "$file.gpg" "/dev/shm/memo-test.md"
+}
+
+@test "fails on invalid file" {
+  local file="$NOTES_DIR/test.gpg"
+  echo "not encrypted" >"$file"
+
+  run decrypt_file_to_temp "$file"
+  assert_failure
+
+  rm -f "$file"
+}

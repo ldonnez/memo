@@ -1,0 +1,39 @@
+setup_suite() {
+  TEST_HOME="$(mktemp -d)"
+  export TEST_HOME
+
+  export XDG_CONFIG_HOME="$TEST_HOME/.config"
+  export HOME="$TEST_HOME"
+  export NOTES_DIR="$TEST_HOME/notes"
+  export DAILY_NOTES_DIR="$NOTES_DIR/dailies"
+  export CACHE_DIR="$TEST_HOME/.cache/memo"
+  export EDITOR_CMD="true" # avoid launching an actual editor
+  export KEY_ID="mock@example.com"
+
+  mkdir -p "$XDG_CONFIG_HOME/memo"
+  mkdir -p "$NOTES_DIR" "$DAILY_NOTES_DIR" "$CACHE_DIR"
+
+  # Optional: provide a mock config file
+  cat >"$XDG_CONFIG_HOME/memo/config" <<EOF
+KEY_ID="$KEY_ID"
+EDITOR_CMD="true"
+EOF
+
+  gpg --batch --gen-key <<EOF
+%no-protection
+Key-Type: RSA
+Key-Length: 1024
+Name-Real: mock user
+Name-Email: $KEY_ID
+Expire-Date: 0
+%commit
+EOF
+
+  # Source your script with mocked env
+  # get the containing directory of this file
+  # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,
+  # as those will point to the bats executable's location or the preprocessed file respectively
+  DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" >/dev/null 2>&1 && pwd)"
+  # make executables in src/ visible to PATH
+  PATH="$DIR/../src:$PATH"
+}

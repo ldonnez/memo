@@ -1,23 +1,9 @@
 #!/usr/bin/env bash
 
-# Load config
-CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
-# shellcheck source=/dev/null
-[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
+set -euo pipefail
 
-# Set defaults
-: "${KEY_ID:=you@example.com}"
-: "${NOTES_DIR:=$HOME/notes}"
-: "${DAILY_NOTES_DIR:=$NOTES_DIR/dailies}"
-: "${EDITOR_CMD:=${EDITOR:-nano}}"
-: "${CACHE_DIR:=$HOME/.cache/memo}"
-
-# Create directories if not exist
-mkdir -p "$NOTES_DIR"
-mkdir -p "$DAILY_NOTES_DIR"
-mkdir -p "$CACHE_DIR"
-chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
-
+# TODO: Add IGNORE_PATTERNS in config file?
+# TODO: Add tests for this
 IGNORE_PATTERNS=(
   "*.bak"
   "*.tmp"
@@ -27,6 +13,34 @@ IGNORE_PATTERNS=(
 )
 
 # Helpers
+dir_exists() {
+  [[ -d "$1" ]]
+}
+
+file_exists() {
+  local filepath="$1"
+  [[ -f "$filepath" ]]
+}
+
+file_contents_are_equal() {
+  local file1="$1"
+  local file2="$2"
+
+  if [[ ! -f "$file1" || ! -f "$file2" ]]; then
+    return 1
+  fi
+
+  cmp -s "$file1" "$file2"
+}
+
+is_file_older_than() {
+  local file1="$1"
+  local file2="$2"
+
+  [[ "$file1" -ot "$file2" ]]
+}
+
+# TODO: Add tests for this
 is_ignored_path() {
   local path="$1"
   for ignore in "${IGNORE_PATTERNS[@]}"; do
@@ -35,36 +49,136 @@ is_ignored_path() {
   return 1
 }
 
-get_filepath() {
-  local input="$1"
-  case "$input" in
-  "" | "today") date=$(date +%F) ;;
-  "yesterday") date=$(date -v-1d +%F 2>/dev/null || date -d yesterday +%F) ;;
-  "tomorrow") date=$(date -v+1d +%F 2>/dev/null || date -d tomorrow +%F) ;;
-  *.md)
-    echo "$NOTES_DIR/$input.gpg"
-    return
-    ;;
-  *.gpg)
-    echo "$NOTES_DIR/$input"
-    return
-    ;;
-  [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) date="$input" ;;
-  *)
-    echo "❌ Invalid input: $input"
+filename_is_date() {
+  local filename="$1"
+
+  # Strip path and isolate base name
+  filename="${filename##*/}"
+
+  # Extract just the name before the first extension
+  # Example: 2025-08-05.md.gpg → 2025-08-05
+  local base="${filename%%.*}"
+
+  # Check if base name matches YYYY-MM-DD format
+  if [[ "$base" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    return 0
+  else
     return 1
-    ;;
-  esac
-  echo "$DAILY_NOTES_DIR/$date.md.gpg"
+  fi
 }
 
-get_secure_tempfile() {
-  local encfile="$1"
-  local relname="${encfile##*/}" # e.g., 2025-08-06.md.gpg
-  local base="${relname%.gpg}"   # remove .gpg → 2025-08-06.md
+# TODO: Add tests for this
+load_config() {
+  local config_file="$1"
+
+  # Set defaults
+  : "${KEY_ID:=you@example.com}"
+  : "${NOTES_DIR:=$HOME/notes}"
+  : "${DAILY_NOTES_DIR:=$NOTES_DIR/dailies}"
+  : "${EDITOR_CMD:=${EDITOR:-nano}}"
+  : "${CACHE_DIR:=$HOME/.cache/memo}"
+
+  if file_exists "$config_file"; then
+    # shellcheck source=/dev/null
+    source "$config_file"
+  else
+    echo "⚠️ Config file not found: $config_file" >&2
+  fi
+}
+
+# TODO: Add tests for this
+# Validate KEY_ID exists in GPG keyring
+gpg_key_exists() {
+  local key_id="$1"
+
+  if ! gpg --list-keys "$key_id" &>/dev/null; then
+    echo "❌ GPG key not found for KEY_ID: $KEY_ID" >&2
+    exit 1
+  fi
+}
+
+# TODO: Add tests for this
+create_dirs() {
+  # Create directories if not exist
+  mkdir -p "$NOTES_DIR"
+  mkdir -p "$DAILY_NOTES_DIR"
+  mkdir -p "$CACHE_DIR"
+  chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
+}
+
+determine_filename() {
+  local input="$1"
+
+  if [[ -z "$input" || "$input" == "today" ]]; then
+    echo "$(date +%F).md"
+    return 0
+  fi
+
+  if [[ "$input" == "yesterday" ]]; then
+    echo "$(date -d yesterday +%F).md"
+    return 0
+  fi
+
+  if [[ "$input" == "tomorrow" ]]; then
+    echo "$(date -d tomorrow +%F).md"
+    return 0
+  fi
+
+  if [[ "$input" == *.md ]]; then
+    echo "$input"
+    return 0
+  fi
+
+  if [[ "$input" == *.gpg ]]; then
+    echo "$input"
+    return 0
+  fi
+
+  if [[ "$input" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    echo "$input.md"
+    return 0
+  fi
+
+  >&2 echo "❌ Invalid input: $input"
+  return 1
+}
+
+get_filepath() {
+  local input="$1"
+  local filename
+  filename=$(determine_filename "$input")
+
+  if filename_is_date "$filename"; then
+    echo "$DAILY_NOTES_DIR/$filename"
+  else
+    echo "$NOTES_DIR/$filename"
+  fi
+}
+
+gpg_encrypt() {
+  # Sets output_path to input_path when output_path is not given
+  local input_path="$1" output_path="${2-$1}"
+
+  gpg --quiet --yes --encrypt -r "$KEY_ID" -o "$output_path.gpg" "$input_path"
+  echo "✅ Encrypted: $output_path.gpg"
+}
+
+gpg_decrypt() {
+  local input_path="$1" output_path="$2"
+
+  gpg --quiet --decrypt "$input_path" >"$output_path" || {
+    echo "❌ Failed to decrypt $input_path"
+    return 1
+  }
+}
+
+make_tempfile() {
+  local encrypted_file="$1"
+  local relname="${encrypted_file##*/}" # remove path /path/to/2025-01-01.md.gpg -> 2025-01-01.md.gpg
+  local base="${relname%.gpg}"          # remove .gpg extension 2025-01-01.md.gpg → 2025-01-01.md
 
   local tmpdir
-  if [[ -d /dev/shm ]]; then
+  if dir_exists /dev/shm; then
     tmpdir="/dev/shm"
   else
     tmpdir=$(mktemp -d 2>/dev/null || echo "/tmp")
@@ -78,12 +192,22 @@ decrypt_file_to_temp() {
   local encfile="$1"
   local basename="${encfile##*/}"
   local tmpfile
-  tmpfile=$(get_secure_tempfile "$basename")
-  if gpg --quiet --decrypt "$encfile" >"$tmpfile"; then
+  tmpfile=$(make_tempfile "$basename")
+
+  if gpg_decrypt "$encfile" "$tmpfile"; then
     echo "$tmpfile"
   else
-    echo ""
     return 1
+  fi
+}
+
+# Portable mtime getter
+file_mtime() {
+  local file="$1"
+  if stat --version >/dev/null 2>&1; then
+    stat -c %Y "$file"
+  else
+    stat -f %m "$file"
   fi
 }
 
@@ -93,15 +217,17 @@ update_cache_file() {
   relpath=$(realpath --relative-to="$NOTES_DIR" "$encfile")
   local decfile="$CACHE_DIR/${relpath%.gpg}"
   mkdir -p "$(dirname "$decfile")"
-  gpg --quiet --decrypt "$encfile" >"$decfile" || rm -f "$decfile"
+  gpg_decrypt "$encfile" "$decfile" || rm -f "$decfile"
 }
 
+# TODO: Add tests for this
+# TODO: Can't we make this simpler by not asking for it. It can be annoying.
 reencrypt_if_confirmed() {
   local decrypted_file="$1"
   local encrypted_file="$2"
 
   # If the encrypted file doesn't exist, skip comparison and prompt for encryption
-  if [[ ! -f "$encrypted_file" ]]; then
+  if ! file_exists "$encrypted_file.gpg"; then
     echo -n "💾 Save and encrypt this new memo? (y/N): "
     read -r confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
@@ -138,19 +264,55 @@ strip_extensions() {
   echo "$filename"
 }
 
-# === Core Commands ===
+should_encrypt_file() {
+  # Sets encrypted_file to plaintext when encrypted_file is not given
+  local plaintext="$1" encrypted_file="${2-$1}"
+
+  if ! file_exists "$encrypted_file"; then
+    return 0
+  fi
+
+  if is_file_older_than "$plaintext" "$encrypted_file"; then
+    return 1
+  fi
+
+  local tmp_file
+  tmp_file=$(make_tempfile "$encrypted_file")
+
+  if file_contents_are_equal "$plaintext" "$tmp_file"; then
+    rm -f "$tmp_file"
+    return 1
+  else
+    rm -f "$tmp_file"
+    return 0
+  fi
+}
+
+encrypt_file() {
+  local input_file="$1" output_file="$2" dry="$3"
+
+  if [[ "$dry" -eq 1 ]]; then
+    echo "📝 Would encrypt: $input_file → $output_file.gpg"
+    echo "🧹 Would delete: $input_file"
+  else
+    gpg_encrypt "$input_file" "$output_file" && {
+      update_cache_file "$output_file.gpg"
+      rm -f "$input_file"
+    }
+  fi
+}
+
+# Commands
+# TODO: Add tests for this
 edit_memo() {
   local input="$1"
   local filepath
   filepath=$(get_filepath "$input") || return 1
   local tmpfile
-  tmpfile=$(get_secure_tempfile "${filepath##*/}")
+  tmpfile=$(make_tempfile "${filepath##*/}")
 
-  if [[ -f "$filepath" ]]; then
-    gpg --quiet --decrypt "$filepath" >"$tmpfile" || {
-      echo "❌ Failed to decrypt $filepath"
-      return 1
-    }
+  if [[ -f "$filepath.gpg" ]]; then
+    gpg_decrypt "$filepath.gpg" "$tmpfile"
   else
     header=$(strip_extensions "$(strip_path "$filepath")")
     echo "# $header" >"$tmpfile"
@@ -162,6 +324,7 @@ edit_memo() {
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
 
+# TODO: Add tests for this
 unlock() {
   local target="$1"
   if [[ -z "$target" ]]; then
@@ -173,7 +336,7 @@ unlock() {
     find "$NOTES_DIR" -type f -name "*.gpg" | while read -r file; do
       local plaintext="${file%.gpg}"
       [[ -f "$plaintext" ]] && echo "⚠️ Skipping: $plaintext" && continue
-      gpg --quiet --decrypt "$file" >"$plaintext" && echo "✅ Decrypted: $plaintext"
+      gpg_decrypt "$file" "$plaintext" && echo "✅ Decrypted: $plaintext"
     done
   else
     local file
@@ -181,39 +344,12 @@ unlock() {
     [[ -z "$file" ]] && echo "❌ File not found: $target" && return 1
     local plaintext="${file%.gpg}"
     [[ -f "$plaintext" ]] && echo "⚠️ Already exists: $plaintext" && return 1
-    gpg --quiet --decrypt "$file" >"$plaintext" && echo "✅ Decrypted: $plaintext"
+    gpg_decrypt "$file" "$plaintext" && echo "✅ Decrypted: $plaintext"
   fi
   echo "🧼 Run 'memo lock all' to re-encrypt"
 }
 
-should_encrypt_file() {
-  local plaintext="$1" encfile="$2"
-  [[ ! -f "$encfile" ]] && return 0
-  [[ "$plaintext" -ot "$encfile" ]] && return 1
-
-  local tmp_dec
-  tmp_dec=$(mktemp)
-  gpg --quiet --decrypt "$encfile" >"$tmp_dec" || return 0
-  cmp -s "$plaintext" "$tmp_dec"
-  local result=$?
-  rm -f "$tmp_dec"
-  return $((!result))
-}
-
-encrypt_file() {
-  local plaintext="$1" encfile="$2" dry="$3"
-  if [[ "$dry" -eq 1 ]]; then
-    echo "📝 Would encrypt: $plaintext → $encfile"
-    echo "🧹 Would delete: $plaintext"
-  else
-    gpg --quiet --yes --encrypt -r "$KEY_ID" -o "$encfile" "$plaintext" && {
-      echo "✅ Encrypted: $encfile"
-      update_cache_file "$encfile"
-      rm -f "$plaintext"
-    }
-  fi
-}
-
+# TODO: Add tests for this
 lock() {
   local dry=0 target exclude_patterns=()
 
@@ -242,17 +378,18 @@ lock() {
         [[ $(basename "$file") == "$pattern" ]] && echo "⏭️ Skipping: $file" && continue 2
       done
       local encfile="$file.gpg"
-      should_encrypt_file "$file" "$encfile" && encrypt_file "$file" "$encfile" "$dry"
+      should_encrypt_file "$file" "$encfile" && encrypt_file "$file" "$file" "$dry"
     done
   else
     local file
     file=$(find "$NOTES_DIR" -type f -name "$target" | head -n 1)
     [[ -z "$file" ]] && echo "❌ Not found: $target" && return 1
     local encfile="$file.gpg"
-    should_encrypt_file "$file" "$encfile" && encrypt_file "$file" "$encfile" "$dry"
+    should_encrypt_file "$file" "$encfile" && encrypt_file "$file" "$file" "$dry"
   fi
 }
 
+# TODO: Add tests for this
 search_memo_filenames() {
   local result
   result=$(find "$NOTES_DIR" -type f -name "*.gpg" | fzf --preview "gpg --quiet --decrypt {} 2>/dev/null | head -100")
@@ -263,6 +400,7 @@ search_memo_filenames() {
   reencrypt_if_confirmed "$tmpfile" "$result"
 }
 
+# TODO: Add tests for this
 live_grep_memos() {
   local dec_files=()
   while IFS= read -r -d $'\0' file; do
@@ -290,6 +428,11 @@ live_grep_memos() {
   reencrypt_if_confirmed "$dec_file" "$enc_file"
 }
 
+memo_test() {
+  echo "NOTHING TO TEST"
+}
+
+# TODO: Add tests for this
 memo_remove() {
   local input="$1"
   [[ -z "$input" ]] && echo "❌ No memo filename provided." && return 1
@@ -325,6 +468,7 @@ memo_remove() {
   fi
 }
 
+# TODO: Add tests for this
 build_cache() {
   echo "🔄 Building cache from encrypted notes..."
 
@@ -344,38 +488,72 @@ build_cache() {
   echo "✅ Cache build complete."
 }
 
-# === Main CLI ===
-case "$1" in
-"" | today | yesterday | tomorrow | [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] | *.md | *.gpg)
-  edit_memo "$1"
-  ;;
-edit)
-  shift
-  edit_memo "$1"
-  ;;
-remove)
-  shift
-  memo_remove "$1"
-  ;;
-find)
-  search_memo_filenames
-  ;;
-grep)
-  live_grep_memos
-  ;;
-unlock)
-  shift
-  unlock "$@"
-  ;;
-lock)
-  shift
-  lock "$@"
-  ;;
-build-cache)
-  build_cache
-  ;;
-*)
+# Main CLI entrypoint
+# TODO: Add tests for this
+main() {
+  local arg="$1"
+
+  CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
+  load_config "$CONFIG_FILE"
+  gpg_key_exists "$KEY_ID"
+  create_dirs
+
+  # Handle default/editable memo inputs
+  if [[ -z "$arg" || "$arg" == "today" || "$arg" == "yesterday" || "$arg" == "tomorrow" || "$arg" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ || "$arg" == *.md || "$arg" == *.gpg ]]; then
+    edit_memo "$arg"
+    return
+  fi
+
+  if [[ "$arg" == "edit" ]]; then
+    shift
+    edit_memo "$1"
+    return
+  fi
+
+  if [[ "$arg" == "remove" ]]; then
+    shift
+    memo_remove "$1"
+    return
+  fi
+
+  if [[ "$arg" == "find" ]]; then
+    search_memo_filenames
+    return
+  fi
+
+  if [[ "$arg" == "grep" ]]; then
+    live_grep_memos
+    return
+  fi
+
+  if [[ "$arg" == "unlock" ]]; then
+    shift
+    unlock "$@"
+    return
+  fi
+
+  if [[ "$arg" == "lock" ]]; then
+    shift
+    lock "$@"
+    return
+  fi
+
+  if [[ "$arg" == "build-cache" ]]; then
+    build_cache
+    return
+  fi
+
+  if [[ "$arg" == "test" ]]; then
+    memo_test
+    return
+  fi
+
+  # Default fallback
   echo "Usage: memo [edit|today|yesterday|YYYY-MM-DD|find|grep|lock|unlock]"
   exit 1
-  ;;
-esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Script is being executed directly, NOT sourced
+  main "$@"
+fi
