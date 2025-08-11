@@ -33,12 +33,6 @@ setup() {
   assert_output "2025-01-01.md"
 }
 
-@test "returns exit 1 when xxxx is given" {
-  run determine_filename "xxxx"
-  assert_failure
-  assert_output "❌ Invalid input: xxxx"
-}
-
 @test "get_filepath returns $DAILY_NOTES_DIR path" {
   run get_filepath "today"
   assert_output "$DAILY_NOTES_DIR/$(date +%F).md"

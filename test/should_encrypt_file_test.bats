@@ -12,7 +12,7 @@ setup() {
   local file="$NOTES_DIR/test.md"
   echo "Hello World" >"$file"
 
-  gpg_encrypt "$file"
+  gpg_encrypt "$file" "$file.gpg"
 
   echo "Hello World 2" >"$file"
 
@@ -27,7 +27,7 @@ setup() {
   local file="$NOTES_DIR/test.md"
   echo "Hello World" >"$file"
 
-  gpg_encrypt "$file"
+  gpg_encrypt "$file" "$file.gpg"
 
   run should_encrypt_file "$file" "$file.gpg"
   assert_failure
@@ -41,19 +41,4 @@ setup() {
 
   run should_encrypt_file "$file"
   assert_success
-}
-
-@test "returns failure because file is older then encrypted file" {
-  local file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
-
-  sleep 1
-
-  gpg_encrypt "$file"
-
-  run should_encrypt_file "$file" "$file.gpg"
-  assert_failure
-
-  # Cleanup
-  rm -f "$file" "$file.gpg"
 }

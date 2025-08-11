@@ -12,15 +12,15 @@ setup() {
   local input_path="$NOTES_DIR/test.md"
   echo "Hello World" >"$input_path"
 
-  run gpg_encrypt "$input_path"
+  run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_success
-  assert_output "✅ Encrypted: $input_path.gpg"
+  assert_output "Encrypted: $input_path.gpg"
 
   run file_exists "$input_path.gpg"
   assert_success
 
   # Cleanup
-  rm -f "$input_path" "$input_path.gpg"
+  rm -f "$input_path" "$input_path"
 }
 
 @test "encrypts file to given output_path" {
@@ -29,13 +29,13 @@ setup() {
 
   local output_path="$NOTES_DIR/dailies/test.md"
 
-  run gpg_encrypt "$input_path" "$output_path"
+  run gpg_encrypt "$input_path" "$output_path.gpg"
   assert_success
-  assert_output "✅ Encrypted: $output_path.gpg"
+  assert_output "Encrypted: $output_path.gpg"
 
   run file_exists "$output_path.gpg"
   assert_success
 
   # Cleanup
-  rm -f "$input_path" "$output_path.gpg"
+  rm -f "$input_path" "$output_path"
 }

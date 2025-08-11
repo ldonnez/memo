@@ -12,7 +12,7 @@ setup() {
   local file="$NOTES_DIR/test.md"
   echo "Hello World" >"$file"
 
-  gpg_encrypt "$file" "$file"
+  gpg_encrypt "$file" "$file.gpg"
 
   run decrypt_file_to_temp "$file.gpg"
   assert_success
