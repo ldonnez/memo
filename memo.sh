@@ -99,7 +99,7 @@ load_config() {
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
-  : "${CACHE_BUILDER_BIN:=$script_path/bin/cache-builder}"
+  : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
 
   if file_exists "$config_file"; then
     # shellcheck source=/dev/null
@@ -112,10 +112,12 @@ load_config() {
     echo "Building cache binary..."
     mkdir -p "$(dirname "$CACHE_BUILDER_BIN")"
 
-    (cd "$script_path" && go build -o "$CACHE_BUILDER_BIN" ./cache-builder/main.go) || {
+    (cd "$script_path" && go build -o "$CACHE_BUILDER_BIN" ./cmd/cache_builder) || {
       echo "Error: Failed to build cache binary" >&2
       exit 1
     }
+
+    chmod +x "$CACHE_BUILDER_BIN"
   fi
 }
 
@@ -456,10 +458,6 @@ search_memo_filenames() {
   tmpfile=$(decrypt_file_to_temp "$result") || return
   "$EDITOR_CMD" "$tmpfile"
   save_file "$tmpfile" "$result"
-}
-
-memo_test() {
-  echo "NOTHING TO TEST"
 }
 
 # TODO: Add tests for this
