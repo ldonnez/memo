@@ -6,6 +6,3 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean
 
 WORKDIR /opt
-
-# Set entrypoint
-ENTRYPOINT ["/bin/bash"]

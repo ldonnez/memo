@@ -29,4 +29,5 @@ shell:
 	}
 
 test:
+	@docker compose run --rm memo-sh go test -v ./...
 	@docker compose run --rm memo-sh bats test/$(file)
