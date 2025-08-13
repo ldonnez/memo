@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM golang:1.24-bookworm
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \

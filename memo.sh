@@ -27,6 +27,16 @@ file_is_gpg() {
   [[ "$filepath" == *".gpg" ]]
 }
 
+get_hash() {
+  local filename="$1"
+
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    md5 -q "$filename"
+  else
+    md5sum "$filename" | awk '{print $1}'
+  fi
+}
+
 file_content_is_equal() {
   local file1_hash
   file1_hash=$(get_hash "$1") || return 1
@@ -39,13 +49,6 @@ file_content_is_equal() {
   fi
 
   return 1
-}
-
-is_file_older_than() {
-  local file1="$1"
-  local file2="$2"
-
-  [[ "$file1" -ot "$file2" ]]
 }
 
 # TODO: Add tests for this
@@ -79,6 +82,16 @@ filename_is_date() {
 load_config() {
   local config_file="$1"
 
+  # Resolve the absolute path of this script, following symlinks
+  SOURCE="${BASH_SOURCE[0]}"
+  while [ -h "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+  done
+  local script_path
+  script_path="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
   # Set defaults
   : "${KEY_ID:=you@example.com}"
   : "${NOTES_DIR:=$HOME/notes}"
@@ -86,12 +99,23 @@ load_config() {
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
+  : "${CACHE_BUILDER_BIN:=$script_path/bin/cache-builder}"
 
   if file_exists "$config_file"; then
     # shellcheck source=/dev/null
     source "$config_file"
   else
-    echo "⚠️ Config file not found: $config_file" >&2
+    echo "Config file not found: $config_file" >&2
+  fi
+
+  if [ ! -x "$CACHE_BUILDER_BIN" ]; then
+    echo "Building cache binary..."
+    mkdir -p "$(dirname "$CACHE_BUILDER_BIN")"
+
+    (cd "$script_path" && go build -o "$CACHE_BUILDER_BIN" ./cache-builder/main.go) || {
+      echo "Error: Failed to build cache binary" >&2
+      exit 1
+    }
   fi
 }
 
@@ -140,30 +164,6 @@ determine_filename() {
 
   echo "$input"
   return 0
-}
-
-find_note() {
-  local filename="$1"
-  local note_path
-
-  # Use find to search for the file recursively.
-  # It's important to use -print0 and xargs -0 for filenames with spaces.
-  # The -quit flag is a GNU find extension to stop after the first match.
-  # We use a subshell to capture the output without affecting the main script.
-  if [[ "$(uname -s)" == "Linux" ]]; then
-    note_path=$(find "$NOTES_DIR" -type f -name "$filename" -print0 -quit | xargs -0 -I {} echo "{}")
-  else
-    # On macOS (BSD find), we can't use -quit with -print0, so we use head
-    note_path=$(find "$NOTES_DIR" -type f -name "$filename" -print0 | head -z -n 1 | xargs -0 -I {} echo "{}")
-  fi
-
-  # Return the full path of the found file
-  if [[ -n "$note_path" ]]; then
-    echo "$note_path"
-    return 0
-  else
-    return 1
-  fi
 }
 
 get_filepath() {
@@ -235,25 +235,6 @@ decrypt_file_to_temp() {
   fi
 }
 
-# Portable mtime getter
-file_mtime() {
-  local file="$1"
-  if stat --version >/dev/null 2>&1; then
-    stat -c %Y "$file"
-  else
-    stat -f %m "$file"
-  fi
-}
-
-update_cache_file() {
-  local encfile="$1"
-  local relpath
-  relpath=$(realpath --relative-to="$NOTES_DIR" "$encfile")
-  local decfile="$CACHE_DIR/${relpath%.gpg}"
-  mkdir -p "$(dirname "$decfile")"
-  gpg_decrypt "$encfile" "$decfile" || rm -f "$decfile"
-}
-
 # TODO: Add tests for this
 # TODO: Can't we make this simpler by not asking for it. It can be annoying.
 save_file() {
@@ -263,13 +244,13 @@ save_file() {
   # If the encrypted file doesn't exist, skip comparison and prompt for encryption
   if ! file_exists "$encrypted_file"; then
     encrypt_file "$decrypted_file" "$encrypted_file"
-    update_note_index "$encrypted_file"
+    build_notes_cache "$encrypted_file"
     return
   fi
 
   if should_encrypt_file "$decrypted_file" "$encrypted_file"; then
     encrypt_file "$decrypted_file" "$encrypted_file"
-    update_note_index "$encrypted_file"
+    build_notes_cache "$encrypted_file"
   fi
 }
 
@@ -377,47 +358,6 @@ make_or_edit_file() {
   fi
 
   echo "$tmpfile"
-}
-
-update_memo_index_entry() {
-  local gpg_filepath="$1"
-  local relative_path=${gpg_filepath#"$NOTES_DIR/"}
-
-  # Decrypt the old cache to a temporary file
-  local temp_old_index
-  temp_old_index=$(mktemp)
-  if [[ -f "$CACHE_FILE" ]]; then
-    gpg --quiet --decrypt "$CACHE_FILE" >"$temp_old_index"
-  fi
-
-  # Create a new temporary index file to store the updated index
-  local temp_new_index
-  temp_new_index=$(mktemp)
-
-  # Copy all entries from the old cache except the one we are updating
-  if [[ -f "$temp_old_index" ]]; then
-    awk -F'|' -v path="$relative_path" '$1 != path' "$temp_old_index" >"$temp_new_index"
-  fi
-
-  # Get the new content and hash of the updated file
-  local decrypted_content
-  decrypted_content=$(gpg --quiet --decrypt "$gpg_filepath")
-
-  local new_hash
-  new_hash=$(get_hash "$gpg_filepath")
-
-  # Add the new entry to the temporary index
-  echo "$decrypted_content" | while read -r line; do
-    printf "%s|%s|%s\n" "$relative_path" "$new_hash" "$line" >>"$temp_new_index"
-  done
-
-  # Re-encrypt the new index and replace the old cache
-  gpg --quiet --yes --recipient "$KEY_ID" --encrypt --output "$CACHE_FILE" "$temp_new_index"
-
-  # Clean up temporary files
-  rm "$temp_old_index" "$temp_new_index"
-
-  echo "Cache for '$relative_path' has been updated."
 }
 
 # Commands
@@ -536,7 +476,7 @@ memo_remove() {
     return 1
   fi
 
-  read -rp "🗑️  Are you sure you want to delete '$filepath'? [y/N] " confirm
+  read -rp "Are you sure you want to delete '$filepath'? [y/N] " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "Deletion cancelled."
     return 1
@@ -545,267 +485,15 @@ memo_remove() {
   # Delete memo
   rm -f "$filepath"
   echo "Removed: $filepath"
-
-  # Remove from cache if present
-  if [[ -n "$CACHE_DIR" ]]; then
-    local relpath decfile
-    relpath=$(realpath --relative-to="$NOTES_DIR" "$filepath")
-    decfile="$CACHE_DIR/${relpath%.gpg}"
-    if [[ -f "$decfile" ]]; then
-      rm -f "$decfile"
-      echo "Cache cleaned: $decfile"
-    fi
-  fi
-}
-
-# Cross-platform function to get file modification time
-function get_mtime() {
-  local filename="$1"
-  local os_name
-  os_name=$(uname -s)
-
-  if [[ "$os_name" == "Linux" ]]; then
-    # GNU stat on Linux
-    stat -c %Y "$filename"
-  elif [[ "$os_name" == "Darwin" ]]; then
-    # BSD stat on macOS
-    stat -f "%m" "$filename"
-  else
-    # Fallback for other systems
-    echo "Unknown OS"
-  fi
-}
-
-# --- Helpers ---
-get_size() {
-  local filename="$1"
-  if [[ "$(uname -s)" == "Darwin" ]]; then
-    stat -f %z "$filename"
-  else
-    stat -c %s "$filename"
-  fi
-}
-
-get_hash() {
-  local filename="$1"
-  if [[ "$(uname -s)" == "Darwin" ]]; then
-    md5 -q "$filename"
-  else
-    md5sum "$filename" | awk '{print $1}'
-  fi
-}
-
-hash_path() {
-  local str="$1"
-  local hash=0 i ch
-  for ((i = 0; i < ${#str}; i++)); do
-    ch=$(printf "%d" "'${str:i:1}")
-    hash=$(((hash * 31 + ch) % HASH_BUCKETS))
-  done
-  echo "$hash"
+  build_notes_cache "$filepath"
 }
 
 # --- Main ---
-# Incrementally update note index - optimized for single file changes
-update_note_index() {
-  local target_file="${1-""}" # Optional: specific file to update
-  local start_time
-  start_time=$(date +%s)
+# Incrementally update note index
+build_notes_cache() {
+  local file="${1-""}"
 
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap 'rm -rf '"$tmpdir"'' EXIT
-
-  local temp_new_index="$tmpdir/new_index"
-  local old_index_file="$tmpdir/old_index"
-
-  # Decrypt old index if it exists, otherwise start fresh
-  if [[ -f "$CACHE_FILE" ]]; then
-    gpg --quiet --decrypt "$CACHE_FILE" >"$old_index_file"
-  else
-    : >"$old_index_file"
-  fi
-
-  # Copy old index as base for new index
-  cp "$old_index_file" "$temp_new_index"
-
-  # Function to update a single file in the index
-  update_single_file() {
-    local file="$1"
-    local rel="${file#"$NOTES_DIR"/}"
-    local size hash
-
-    # Get current file stats
-    if [[ "$(uname -s)" == "Darwin" ]]; then
-      size=$(stat -f %z "$file")
-      hash=$(md5 -q "$file")
-    else
-      size=$(stat -c %s "$file")
-      hash=$(md5sum "$file" | awk '{print $1}')
-    fi
-
-    # Check if this file's hash has changed
-    local old_hash
-    old_hash=$(awk -F'|' -v rel="$rel" '$1==rel {print $3; exit}' "$old_index_file")
-
-    if [[ "$hash" != "$old_hash" ]]; then
-      # Remove old entries for this file
-      awk -F'|' -v rel="$rel" '$1!=rel' "$temp_new_index" >"$tmpdir/temp_filtered"
-      mv "$tmpdir/temp_filtered" "$temp_new_index"
-
-      # Add new entries for this file
-      gpg --quiet --decrypt "$file" | while IFS= read -r line; do
-        printf "%s|%s|%s|%s\n" "$rel" "$size" "$hash" "$line"
-      done >>"$temp_new_index"
-
-      return 0 # File was updated
-    fi
-
-    return 1 # File was unchanged
-  }
-
-  local files_updated=0
-
-  if [[ -n "$target_file" ]]; then
-    # Update specific file only
-    if [[ -f "$target_file" && "$target_file" == *.gpg ]]; then
-      if update_single_file "$target_file"; then
-        files_updated=1
-        printf "Updated index for: %s\n" "${target_file#"$NOTES_DIR"/}"
-      fi
-    else
-      printf "File not found or not a .gpg file: %s\n" "$target_file"
-      return 1
-    fi
-  else
-    # Smart incremental update: check all files but optimize for recent changes
-
-    # First, remove entries for files that no longer exist
-    local deleted_files="$tmpdir/deleted_files"
-    local unique_files="$tmpdir/unique_files"
-
-    # Get unique file paths from index
-    awk -F'|' '{if(NF>=1 && $1!="") print $1}' "$old_index_file" | sort -u >"$unique_files"
-
-    # Check which ones no longer exist on disk
-    : >"$deleted_files"
-    while read -r rel; do
-      [[ -n "$rel" ]] || continue
-      local full_path="$NOTES_DIR/$rel"
-      if [[ ! -f "$full_path" ]]; then
-        echo "$rel" >>"$deleted_files"
-        printf "Found deleted file: %s\n" "$rel"
-        files_updated=$((files_updated + 1))
-      fi
-    done <"$unique_files"
-
-    # Remove all entries for deleted files
-    if [[ -s "$deleted_files" ]]; then
-      local temp_filtered="$tmpdir/temp_filtered"
-      cp "$temp_new_index" "$temp_filtered"
-
-      while read -r deleted_rel; do
-        awk -F'|' -v rel="$deleted_rel" '$1!=rel' "$temp_filtered" >"$tmpdir/temp_work"
-        mv "$tmpdir/temp_work" "$temp_filtered"
-      done <"$deleted_files"
-
-      mv "$temp_filtered" "$temp_new_index"
-    fi
-
-    # Then check all existing files
-    local updated_count=0
-    find "$NOTES_DIR" -type f -name "*.gpg" | while read -r file; do
-      if update_single_file "$file"; then
-        updated_count=$((updated_count + 1))
-        printf "Updated: %s\n" "${file#"$NOTES_DIR"/}"
-      fi
-    done
-    files_updated=$((files_updated + updated_count))
-  fi
-
-  # Only rewrite cache if something changed
-  if [[ $files_updated -gt 0 ]] || [[ ! -f "$CACHE_FILE" ]]; then
-    gpg --yes --batch --quiet --recipient "$KEY_ID" --encrypt --output "$CACHE_FILE" "$temp_new_index"
-
-    local end_time
-    end_time=$(date +%s)
-    printf "Index updated (%d files changed) in %ds\n" $files_updated $((end_time - start_time))
-  else
-    printf "No changes detected\n"
-  fi
-}
-
-# Convenience function for full rebuild (same as original behavior)
-build_note_index() {
-  update_note_index
-}
-
-# Fast single-file update (call this after creating/editing a note)
-update_single_note() {
-  local file="$1"
-  if [[ -z "$file" ]]; then
-    printf "Usage: update_single_note <file.gpg>\n"
-    return 1
-  fi
-  update_note_index "$file"
-}
-
-# Quick check if index needs updating (doesn't actually update)
-check_index_status() {
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap 'rm -rf '"$tmpdir"'' EXIT
-
-  local old_index_file="$tmpdir/old_index"
-  local changes_found=0
-
-  if [[ -f "$CACHE_FILE" ]]; then
-    gpg --quiet --decrypt "$CACHE_FILE" >"$old_index_file"
-  else
-    printf "No index cache found\n"
-    return 1
-  fi
-
-  printf "Checking index status...\n"
-
-  # Check for deleted files
-  while IFS='|' read -r rel size hash rest; do
-    [[ -n "$rel" ]] || continue
-    if [[ ! -f "$NOTES_DIR/$rel" ]]; then
-      printf "DELETED: %s\n" "$rel"
-      changes_found=1
-    fi
-  done <"$old_index_file"
-
-  # Check for new/modified files
-  find "$NOTES_DIR" -type f -name "*.gpg" | while read -r file; do
-    local rel="${file#"$NOTES_DIR"/}"
-    local size hash old_hash
-
-    if [[ "$(uname -s)" == "Darwin" ]]; then
-      size=$(stat -f %z "$file")
-      hash=$(md5 -q "$file")
-    else
-      size=$(stat -c %s "$file")
-      hash=$(md5sum "$file" | awk '{print $1}')
-    fi
-
-    old_hash=$(awk -F'|' -v rel="$rel" '$1==rel {print $3; exit}' "$old_index_file")
-
-    if [[ -z "$old_hash" ]]; then
-      printf "NEW: %s\n" "$rel"
-      changes_found=1
-    elif [[ "$hash" != "$old_hash" ]]; then
-      printf "MODIFIED: %s\n" "$rel"
-      changes_found=1
-    fi
-  done
-
-  if [[ $changes_found -eq 0 ]]; then
-    printf "Index is up to date\n"
-  fi
-
-  return $changes_found
+  $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_ID" "$file"
 }
 
 # Updated function to search through the encrypted note index
@@ -817,7 +505,7 @@ grep() {
 
   if [[ ! -f "$CACHE_FILE" ]]; then
     echo "Note index not found. Building it now..."
-    update_note_index
+    build_notes_cache
   fi
 
   # Decrypt the single index file
@@ -888,30 +576,8 @@ main() {
     return
   fi
 
-  if [[ "$arg" == "build-cache" ]]; then
-    build_cache
-    return
-  fi
-
-  if [[ "$arg" == "rebuild_cache" ]]; then
-    sync_cache
-    return
-  fi
-
-  if [[ "$arg" == "search_notes" ]]; then
-    shift
-    search_notes "$@"
-    return
-  fi
-
-  if [[ "$arg" == "build_note_index" ]]; then
-    update_note_index
-    return
-  fi
-
-  if [[ "$arg" == "nsearch" ]]; then
-    shift
-    nsearch "$@"
+  if [[ "$arg" == "build_cache" ]]; then
+    build_notes_cache
     return
   fi
 
