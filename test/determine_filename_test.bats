@@ -4,7 +4,7 @@ setup() {
   bats_load_library bats-support
   bats_load_library bats-assert
 
-  # shellcheck source=src/memo.sh
+  # shellcheck source=smemo.sh
   source "memo.sh"
 }
 
@@ -33,9 +33,9 @@ setup() {
   assert_output "2025-01-01.md"
 }
 
-@test "get_filepath returns $DAILY_NOTES_DIR path" {
+@test "get_filepath returns $JOURNAL_NOTES_DIR path" {
   run get_filepath "today"
-  assert_output "$DAILY_NOTES_DIR/$(date +%F).md"
+  assert_output "$JOURNAL_NOTES_DIR/$(date +%F).md"
 }
 
 @test "get_filepath returns $NOTES_DIR path" {

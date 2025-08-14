@@ -5,14 +5,14 @@ setup_suite() {
   export XDG_CONFIG_HOME="$TEST_HOME/.config"
   export HOME="$TEST_HOME"
   export NOTES_DIR="$TEST_HOME/notes"
-  export DAILY_NOTES_DIR="$NOTES_DIR/dailies"
+  export JOURNAL_NOTES_DIR="$NOTES_DIR/journal"
   export CACHE_DIR="$TEST_HOME/.cache/memo"
   export CACHE_FILE="$CACHE_DIR/notes.cache"
   export EDITOR_CMD="true" # avoid launching an actual editor
   export KEY_ID="mock@example.com"
 
   mkdir -p "$XDG_CONFIG_HOME/memo"
-  mkdir -p "$NOTES_DIR" "$DAILY_NOTES_DIR" "$CACHE_DIR"
+  mkdir -p "$NOTES_DIR" "$JOURNAL_NOTES_DIR" "$CACHE_DIR"
 
   # Optional: provide a mock config file
   cat >"$XDG_CONFIG_HOME/memo/config" <<EOF

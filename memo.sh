@@ -95,7 +95,7 @@ load_config() {
   # Set defaults
   : "${KEY_ID:=you@example.com}"
   : "${NOTES_DIR:=$HOME/notes}"
-  : "${DAILY_NOTES_DIR:=$NOTES_DIR/dailies}"
+  : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
@@ -136,7 +136,7 @@ gpg_key_exists() {
 create_dirs() {
   # Create directories if not exist
   mkdir -p "$NOTES_DIR"
-  mkdir -p "$DAILY_NOTES_DIR"
+  mkdir -p "$JOURNAL_NOTES_DIR"
   mkdir -p "$CACHE_DIR"
   chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
 }
@@ -176,7 +176,7 @@ get_filepath() {
   local filepath
 
   if filename_is_date "$filename"; then
-    filepath="$DAILY_NOTES_DIR/$filename"
+    filepath="$JOURNAL_NOTES_DIR/$filename"
   elif [[ "$PWD" == "$NOTES_DIR"* ]]; then
     filepath="$PWD/$input"
   elif file_exists "$filename" && file_is_gpg "$filename"; then

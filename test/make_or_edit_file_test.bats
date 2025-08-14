@@ -4,7 +4,7 @@ setup() {
   bats_load_library bats-support
   bats_load_library bats-assert
 
-  # shellcheck source=src/memo.sh
+  # shellcheck source=memo.sh
   source "memo.sh"
 
   # mock /dev/shm
@@ -46,7 +46,7 @@ teardown() {
   date="$(date +%F).md"
 
   local file
-  file="$DAILY_NOTES_DIR/$date.md"
+  file="$JOURNAL_NOTES_DIR/$date.md"
   echo "# $date" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"

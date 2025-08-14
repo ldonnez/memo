@@ -4,18 +4,18 @@ setup() {
   bats_load_library bats-support
   bats_load_library bats-assert
 
-  # shellcheck source=src/memo.sh
+  # shellcheck source=memo.sh
   source "memo.sh"
 }
 
 @test "successfully creates a new memo with todays date because it does not exist yet" {
   local to_be_created_file
-  to_be_created_file=$DAILY_NOTES_DIR/$(date +%F).md.gpg
+  to_be_created_file=$JOURNAL_NOTES_DIR/$(date +%F).md.gpg
 
   run edit_memo ""
   assert_success
   assert_output "Encrypted: $to_be_created_file
-Updated index for: dailies/$(date +%F).md.gpg
+Updated index for: journal/$(date +%F).md.gpg
 Index updated (1 files changed) in 0s"
 
   # Cleanup
@@ -24,7 +24,7 @@ Index updated (1 files changed) in 0s"
 
 @test "successfully detects no changes edits a memo with todays date because it exists already" {
   local file
-  file="$DAILY_NOTES_DIR/$(date +%F).md"
+  file="$JOURNAL_NOTES_DIR/$(date +%F).md"
   echo "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"

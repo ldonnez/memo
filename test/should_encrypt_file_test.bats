@@ -4,7 +4,7 @@ setup() {
   bats_load_library bats-support
   bats_load_library bats-assert
 
-  # shellcheck source=src/memo.sh
+  # shellcheck source=memo.sh
   source "memo.sh"
 }
 

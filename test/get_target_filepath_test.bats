@@ -4,13 +4,13 @@ setup() {
   bats_load_library bats-support
   bats_load_library bats-assert
 
-  # shellcheck source=src/memo.sh
+  # shellcheck source=memo.sh
   source "memo.sh"
 }
 
 @test "returns daily notes path with todays date as filename if empty arg" {
   local to_be_created_file
-  to_be_created_file=$DAILY_NOTES_DIR/$(date +%F).md
+  to_be_created_file=$JOURNAL_NOTES_DIR/$(date +%F).md
 
   run get_target_filepath ""
   assert_success

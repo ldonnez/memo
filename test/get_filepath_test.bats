@@ -4,13 +4,13 @@ setup() {
   bats_load_library bats-support
   bats_load_library bats-assert
 
-  # shellcheck source=src/memo.sh
+  # shellcheck source=memo.sh
   source "memo.sh"
 }
 
-@test "returns $DAILY_NOTES_DIR/<current_date>.md path" {
+@test "returns $JOURNAL_NOTES_DIR/<current_date>.md path" {
   run get_filepath "today"
-  assert_output "$DAILY_NOTES_DIR/$(date +%F).md"
+  assert_output "$JOURNAL_NOTES_DIR/$(date +%F).md"
 }
 
 @test "returns $NOTES_DIR/test.md path" {
