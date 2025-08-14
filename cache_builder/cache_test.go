@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func setupGPG(t *testing.T) (string, string) {
+func setupGPG(t *testing.T) (string, []string) {
 	t.Helper()
 
 	gnupgHome := t.TempDir()
@@ -31,12 +31,25 @@ func setupGPG(t *testing.T) (string, string) {
 		t.Fatalf("failed to generate test key: %s\n%s", err, out)
 	}
 
-	return gnupgHome, "test@example.com"
+	keys := []string{
+		"test@example.com",
+	}
+
+	return gnupgHome, keys
 }
 
-func encryptNote(t *testing.T, recipient, plaintext, dest string) {
+func encryptNote(t *testing.T, recipients []string, plaintext string, dest string) {
 	t.Helper()
-	cmd := exec.Command("gpg", "--yes", "--batch", "--quiet", "--recipient", recipient, "--encrypt", "--output", dest)
+
+	args := []string{"--yes", "--batch", "--quiet"}
+
+	for _, recipient:= range recipients {
+		args = append(args, "--recipient", recipient)
+	}
+
+	args = append(args, "--encrypt", "--output", dest)
+
+	cmd := exec.Command("gpg", args...)
 	cmd.Stdin = strings.NewReader(plaintext)
 
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -45,16 +58,16 @@ func encryptNote(t *testing.T, recipient, plaintext, dest string) {
 }
 
 func TestUpdateAllAndLoad(t *testing.T) {
-	_, keyID := setupGPG(t)
+	_, keyIDs := setupGPG(t)
 	notesDir := t.TempDir()
 	cacheFile := filepath.Join(t.TempDir(), "notes.cache")
 
 	// Create encrypted note
 	notePath := filepath.Join(notesDir, "note1.gpg")
-	encryptNote(t, keyID, "Hello world\nSecond line", notePath)
+	encryptNote(t, keyIDs, "Hello world\nSecond line", notePath)
 
 	// Run UpdateAll
-	changed := UpdateAll(notesDir, cacheFile, keyID)
+	changed := UpdateAll(notesDir, cacheFile, keyIDs)
 	if changed == 0 {
 		t.Fatal("expected changes, got 0")
 	}
@@ -70,15 +83,15 @@ func TestUpdateAllAndLoad(t *testing.T) {
 	}
 
 	// Run UpdateAll again without changes
-	changed = UpdateAll(notesDir, cacheFile, keyID)
+	changed = UpdateAll(notesDir, cacheFile, keyIDs)
 	if changed != 0 {
 		t.Errorf("expected 0 changes on second run, got %d", changed)
 	}
 
 	// Add another note
 	notePath2 := filepath.Join(notesDir, "note2.gpg")
-	encryptNote(t, keyID, "Another note", notePath2)
-	changed = UpdateAll(notesDir, cacheFile, keyID)
+	encryptNote(t, keyIDs, "Another note", notePath2)
+	changed = UpdateAll(notesDir, cacheFile, keyIDs)
 
 	if changed == 0 {
 		t.Error("expected changes after adding note2")
@@ -86,19 +99,19 @@ func TestUpdateAllAndLoad(t *testing.T) {
 }
 
 func TestUpdateSingle(t *testing.T) {
-	_, keyID := setupGPG(t)
+	_, keyIDs := setupGPG(t)
 	notesDir := t.TempDir()
 	cacheFile := filepath.Join(t.TempDir(), "notes.cache")
 
 	// Create one encrypted note
 	notePath := filepath.Join(notesDir, "note1.gpg")
-	encryptNote(t, keyID, "Line 1", notePath)
-	UpdateAll(notesDir, cacheFile, keyID)
+	encryptNote(t, keyIDs, "Line 1", notePath)
+	UpdateAll(notesDir, cacheFile, keyIDs)
 
 	// Create a second note and update single
 	notePath2 := filepath.Join(notesDir, "note2.gpg")
-	encryptNote(t, keyID, "Line 2", notePath2)
-	changed := UpdateSingle(notesDir, cacheFile, keyID, notePath2)
+	encryptNote(t, keyIDs, "Line 2", notePath2)
+	changed := UpdateSingle(notesDir, cacheFile, keyIDs, notePath2)
 
 	if !changed {
 		t.Error("expected change from UpdateSingle")

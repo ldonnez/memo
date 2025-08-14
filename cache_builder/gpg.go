@@ -50,12 +50,20 @@ func DecryptAndLoad(cacheFile string) []Entry {
 	return entries
 }
 
-func EncryptAndWrite(entries []Entry, cacheFile, keyID string) {
+func EncryptAndWrite(entries []Entry, cacheFile string, keyIDs []string) {
 	var content strings.Builder
 	for _, entry := range entries {
 		fmt.Fprintf(&content, "%s|%d|%s|%s\n", entry.Path, entry.Size, entry.Hash, entry.Content)
 	}
-	cmd := exec.Command("gpg", "--yes", "--batch", "--quiet", "--recipient", keyID, "--encrypt", "--output", cacheFile)
+
+	args := []string{"--yes", "--batch", "--quiet"}
+	for _, id := range keyIDs {
+		args = append(args, "--recipient", id)
+	}
+
+	args = append(args, "--encrypt", "--output", cacheFile)
+
+	cmd := exec.Command("gpg", args...)
 	cmd.Stdin = strings.NewReader(content.String())
 	cmd.Run()
 }

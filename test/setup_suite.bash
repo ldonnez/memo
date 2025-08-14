@@ -9,14 +9,14 @@ setup_suite() {
   export CACHE_DIR="$TEST_HOME/.cache/memo"
   export CACHE_FILE="$CACHE_DIR/notes.cache"
   export EDITOR_CMD="true" # avoid launching an actual editor
-  export KEY_ID="mock@example.com"
+  export KEY_IDS="mock@example.com"
 
   mkdir -p "$XDG_CONFIG_HOME/memo"
   mkdir -p "$NOTES_DIR" "$JOURNAL_NOTES_DIR" "$CACHE_DIR"
 
   # Optional: provide a mock config file
   cat >"$XDG_CONFIG_HOME/memo/config" <<EOF
-KEY_ID="$KEY_ID"
+KEY_ID="$KEY_IDS"
 EDITOR_CMD="true"
 EOF
 
@@ -25,7 +25,7 @@ EOF
 Key-Type: RSA
 Key-Length: 1024
 Name-Real: mock user
-Name-Email: $KEY_ID
+Name-Email: $KEY_IDS
 Expire-Date: 0
 %commit
 EOF

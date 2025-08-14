@@ -93,7 +93,7 @@ load_config() {
   script_path="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 
   # Set defaults
-  : "${KEY_ID:=you@example.com}"
+  : "${KEY_IDS:=you@example.com}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
@@ -124,10 +124,19 @@ load_config() {
 # TODO: Add tests for this
 # Validate KEY_ID exists in GPG keyring
 gpg_key_exists() {
-  local key_id="$1"
+  local key_ids="$1"
+  local missing_keys=()
 
-  if ! gpg --list-keys "$key_id" &>/dev/null; then
-    echo "GPG key not found for KEY_ID: $KEY_ID" >&2
+  IFS=',' read -ra keys <<<"$key_ids"
+  for key in "${keys[@]}"; do
+    key="$(echo "$key" | xargs)" # trim spaces
+    if ! gpg --list-keys "$key" &>/dev/null; then
+      missing_keys+=("$key")
+    fi
+  done
+
+  if ((${#missing_keys[@]} > 0)); then
+    echo "GPG key(s) not found: ${missing_keys[*]}" >&2
     exit 1
   fi
 }
@@ -195,7 +204,13 @@ gpg_encrypt() {
   # Sets output_path to input_path when output_path is not given
   local input_path="$1" output_path="${2-$1}"
 
-  gpg --quiet --yes --encrypt -r "$KEY_ID" -o "$output_path" "$input_path"
+  recipients=()
+  IFS=',' read -ra ids <<<"$KEY_IDS"
+  for id in "${ids[@]}"; do
+    recipients+=("-r" "$id")
+  done
+
+  gpg --quiet --yes --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
   echo "Encrypted: $output_path"
 }
 
@@ -491,7 +506,7 @@ memo_remove() {
 build_notes_cache() {
   local file="${1-""}"
 
-  $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_ID" "$file"
+  $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$file"
 }
 
 # Updated function to search through the encrypted note index
@@ -535,7 +550,7 @@ main() {
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
   load_config "$CONFIG_FILE"
-  gpg_key_exists "$KEY_ID"
+  gpg_key_exists "$KEY_IDS"
   create_dirs
 
   # Handle default/editable memo inputs

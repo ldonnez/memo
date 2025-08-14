@@ -18,21 +18,15 @@ type Entry struct {
 	Content string
 }
 
-// Function variables for dependency injection in tests
-var ProcessFileFn = processFile
-var SaveIndexFn = saveIndex
-var LoadIndexFn = loadIndex
-var FindFilesFn = findFiles
-
-func UpdateAll(notesDir, cacheFile, keyID string) int {
-	oldEntries := LoadIndexFn(cacheFile)
+func UpdateAll(notesDir string, cacheFile string, keyIDs []string) int {
+	oldEntries := loadIndex(cacheFile)
 	oldMap := make(map[string]Entry)
 	for _, entry := range oldEntries {
 		key := entry.Path + "|" + strconv.FormatInt(entry.Size, 10)
 		oldMap[key] = entry
 	}
 
-	files := FindFilesFn(notesDir, ".gpg")
+	files := findFiles(notesDir, ".gpg")
 	var newEntries []Entry
 	changed := 0
 	currentFiles := make(map[string]bool)
@@ -51,7 +45,7 @@ func UpdateAll(notesDir, cacheFile, keyID string) int {
 				}
 			}
 		} else {
-			entries := ProcessFileFn(file, path, size, hash)
+			entries := processFile(file, path, size, hash)
 			newEntries = append(newEntries, entries...)
 			changed++
 		}
@@ -65,19 +59,19 @@ func UpdateAll(notesDir, cacheFile, keyID string) int {
 	}
 
 	if changed > 0 {
-		SaveIndexFn(newEntries, cacheFile, keyID)
+		saveIndex(newEntries, cacheFile, keyIDs)
 	}
 	return changed
 }
 
-func UpdateSingle(notesDir, cacheFile, keyID, file string) bool {
+func UpdateSingle(notesDir string, cacheFile string, keyIDs []string, file string) bool {
 	if !strings.HasSuffix(file, ".gpg") {
 		return false
 	}
 
 	path := strings.TrimPrefix(file, notesDir+"/")
 	size, hash := GetFileInfo(file)
-	oldEntries := LoadIndexFn(cacheFile)
+	oldEntries := loadIndex(cacheFile)
 
 	unchanged := false
 	for _, old := range oldEntries {
@@ -97,9 +91,9 @@ func UpdateSingle(notesDir, cacheFile, keyID, file string) bool {
 		}
 	}
 
-	entries := ProcessFileFn(file, path, size, hash)
+	entries := processFile(file, path, size, hash)
 	newEntries = append(newEntries, entries...)
-	SaveIndexFn(newEntries, cacheFile, keyID)
+	saveIndex(newEntries, cacheFile, keyIDs)
 	return true
 }
 
@@ -134,14 +128,14 @@ func GetFileInfo(file string) (int64, string) {
 	return stat.Size(), fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func saveIndex(entries []Entry, cacheFile, keyID string) {
+func saveIndex(entries []Entry, cacheFile string, keyIDs []string) {
 	sort.Slice(entries, func(i, j int) bool {
 		if entries[i].Path == entries[j].Path {
 			return entries[i].Content < entries[j].Content
 		}
 		return entries[i].Path < entries[j].Path
 	})
-	EncryptAndWrite(entries, cacheFile, keyID)
+	EncryptAndWrite(entries, cacheFile, keyIDs)
 }
 
 func loadIndex(cacheFile string) []Entry {
