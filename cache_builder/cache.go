@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -19,6 +20,21 @@ type Entry struct {
 }
 
 func UpdateAll(notesDir string, cacheFile string, keyIDs []string) int {
+	// Filter only existing keys
+	validKeys := []string{}
+	for _, key := range keyIDs {
+		if gpgKeyExists(key) {
+			validKeys = append(validKeys, key)
+		} else {
+			fmt.Fprintf(os.Stderr, "Skipping missing recipient: %s\n", key)
+		}
+	}
+
+	if len(validKeys) == 0 {
+		fmt.Fprintln(os.Stderr, "No valid recipients found — skipping cache build.")
+		return 0
+	}
+
 	oldEntries := loadIndex(cacheFile)
 	oldMap := make(map[string]Entry)
 	for _, entry := range oldEntries {
@@ -39,18 +55,24 @@ func UpdateAll(notesDir string, cacheFile string, keyIDs []string) int {
 		key := path + "|" + strconv.FormatInt(size, 10)
 
 		if old, exists := oldMap[key]; exists && old.Hash == hash {
+			// File unchanged — reuse old entry
 			for _, entry := range oldEntries {
 				if entry.Path == path && entry.Size == size && entry.Hash == hash {
 					newEntries = append(newEntries, entry)
 				}
 			}
 		} else {
-			entries := processFile(file, path, size, hash)
-			newEntries = append(newEntries, entries...)
-			changed++
+			if canDecrypt(file) { // <-- new check before decrypting
+				entries := processFile(file, path, size, hash)
+				newEntries = append(newEntries, entries...)
+				changed++
+			} else {
+				fmt.Fprintf(os.Stderr, "Skipping undecryptable file: %s\n", file)
+			}
 		}
 	}
 
+	// Detect deleted files
 	for _, old := range oldEntries {
 		if !currentFiles[old.Path] {
 			changed++
@@ -59,9 +81,23 @@ func UpdateAll(notesDir string, cacheFile string, keyIDs []string) int {
 	}
 
 	if changed > 0 {
-		saveIndex(newEntries, cacheFile, keyIDs)
+		saveIndex(newEntries, cacheFile, validKeys) // use only valid keys
 	}
 	return changed
+}
+
+func gpgKeyExists(keyID string) bool {
+	cmd := exec.Command("gpg", "--list-keys", keyID)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	return cmd.Run() == nil
+}
+
+func canDecrypt(file string) bool {
+	cmd := exec.Command("gpg", "--list-packets", file)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	return cmd.Run() == nil
 }
 
 func UpdateSingle(notesDir string, cacheFile string, keyIDs []string, file string) bool {
@@ -128,7 +164,31 @@ func GetFileInfo(file string) (int64, string) {
 	return stat.Size(), fmt.Sprintf("%x", h.Sum(nil))
 }
 
+// Checks if a GPG public key exists in the keyring
+func keyExists(id string) bool {
+	cmd := exec.Command("gpg", "--list-keys", id)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run() == nil
+}
+
 func saveIndex(entries []Entry, cacheFile string, keyIDs []string) {
+	// Filter valid recipients
+	var validKeys []string
+	for _, id := range keyIDs {
+		if keyExists(id) {
+			validKeys = append(validKeys, id)
+		} else {
+			fmt.Printf("Skipping missing recipient: %s\n", id)
+		}
+	}
+
+	// No valid recipients? Skip cache creation.
+	if len(validKeys) == 0 {
+		fmt.Println("No valid recipients found — skipping cache build")
+		return
+	}
+
 	sort.Slice(entries, func(i, j int) bool {
 		if entries[i].Path == entries[j].Path {
 			return entries[i].Content < entries[j].Content
@@ -139,5 +199,9 @@ func saveIndex(entries []Entry, cacheFile string, keyIDs []string) {
 }
 
 func loadIndex(cacheFile string) []Entry {
+	if _, err := os.Stat(cacheFile); err != nil {
+		return nil
+	}
+
 	return DecryptAndLoad(cacheFile)
 }

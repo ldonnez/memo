@@ -38,12 +38,51 @@ func setupGPG(t *testing.T) (string, []string) {
 	return gnupgHome, keys
 }
 
+func TestGPGKeyExists(t *testing.T) {
+	gnupgHome, keyIDs := setupGPG(t)
+	os.Setenv("GNUPGHOME", gnupgHome)
+
+	if !gpgKeyExists(keyIDs[0]) {
+		t.Errorf("expected gpgKeyExists(%q) to return true", keyIDs[0])
+	}
+
+	if gpgKeyExists("nonexistent@example.com") {
+		t.Error("expected gpgKeyExists for missing key to return false")
+	}
+}
+
+func TestCanDecrypt(t *testing.T) {
+	gnupgHome, keyIDs := setupGPG(t)
+	os.Setenv("GNUPGHOME", gnupgHome)
+
+	tmpDir := t.TempDir()
+	encFile := filepath.Join(tmpDir, "test.gpg")
+	plaintext := "this is a test"
+
+	// Create an encrypted file we can decrypt
+	encryptNote(t, keyIDs, plaintext, encFile)
+
+	if !canDecrypt(encFile) {
+		t.Error("expected canDecrypt to return true for valid encrypted file")
+	}
+
+	// Create a file we cannot decrypt (random content)
+	unreadableFile := filepath.Join(tmpDir, "random.gpg")
+	if err := os.WriteFile(unreadableFile, []byte("not actually gpg"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if canDecrypt(unreadableFile) {
+		t.Error("expected canDecrypt to return false for invalid GPG file")
+	}
+}
+
 func encryptNote(t *testing.T, recipients []string, plaintext string, dest string) {
 	t.Helper()
 
 	args := []string{"--yes", "--batch", "--quiet"}
 
-	for _, recipient:= range recipients {
+	for _, recipient := range recipients {
 		args = append(args, "--recipient", recipient)
 	}
 
@@ -122,5 +161,26 @@ func TestUpdateSingle(t *testing.T) {
 
 	if len(entries) != 2 {
 		t.Errorf("expected 2 entries, got %d", len(entries))
+	}
+}
+
+func TestUpdateAllSkipsWhenNoKeysExist(t *testing.T) {
+	// Don't call setupGPG, so no keys are created
+	notesDir := t.TempDir()
+	cacheFile := filepath.Join(t.TempDir(), "notes.cache")
+
+	// Create a dummy encrypted file (unrelated key)
+	notePath := filepath.Join(notesDir, "note1.gpg")
+	os.WriteFile(notePath, []byte("fake data"), 0600)
+
+	// Attempt to run UpdateAll with a non-existent key
+	changed := UpdateAll(notesDir, cacheFile, []string{"missing@example.com"})
+
+	if changed != 0 {
+		t.Errorf("expected 0 changes when no recipients exist, got %d", changed)
+	}
+
+	if _, err := os.Stat(cacheFile); err == nil {
+		t.Error("expected cache file not to be created")
 	}
 }
