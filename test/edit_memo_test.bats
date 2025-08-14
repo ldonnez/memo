@@ -14,9 +14,8 @@ setup() {
 
   run edit_memo ""
   assert_success
-  assert_output "Encrypted: $to_be_created_file
-Updated index for: journal/$(date +%F).md.gpg
-Index updated (1 files changed) in 0s"
+  assert_output --partial "Encrypted: $to_be_created_file
+Updated: $(date +%F).md.gpg"
 
   # Cleanup
   rm -f "$to_be_created_file"
@@ -57,9 +56,8 @@ Index updated (1 files changed) in 0s"
 
   run edit_memo "$file"
   assert_success
-  assert_output "Encrypted: $NOTES_DIR/$file.gpg
-Updated index for: new-file-test.md.gpg
-Index updated (1 files changed) in 0s"
+  assert_output --partial "Encrypted: $NOTES_DIR/$file.gpg
+Updated: $file.gpg"
 
   # Cleanup
   rm -f "$NOTES_DIR/$file.gpg"

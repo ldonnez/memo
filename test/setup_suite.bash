@@ -30,6 +30,8 @@ Expire-Date: 0
 %commit
 EOF
 
+  setup_cache_builder
+
   # Source your script with mocked env
   # get the containing directory of this file
   # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,
@@ -37,4 +39,21 @@ EOF
   DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" >/dev/null 2>&1 && pwd)"
   # make executables in src/ visible to PATH
   PATH="$DIR/..:$PATH"
+}
+
+setup_cache_builder() {
+  # Set paths
+  PROJECT_ROOT="$(cd "$(dirname "${BATS_TEST_DIRNAME}")/" && pwd)"
+  BIN_DIR="$PROJECT_ROOT/bin"
+
+  mkdir -p "$BIN_DIR"
+
+  # Build the Go binary
+  echo "Building cache_builder..."
+  (cd "$PROJECT_ROOT" && go build -o "$BIN_DIR/cache_builder" ./cmd/cache_builder)
+
+  # Make sure it's executable
+  chmod +x "$BIN_DIR/cache_builder"
+
+  export CACHE_BUILDER_BIN=$BIN_DIR/cache_builder
 }
