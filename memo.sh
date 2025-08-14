@@ -205,9 +205,15 @@ gpg_encrypt() {
   local input_path="$1" output_path="${2-$1}"
 
   recipients=()
+
   IFS=',' read -ra ids <<<"$KEY_IDS"
   for id in "${ids[@]}"; do
     id="$(echo "$id" | xargs)" # trim spaces
+
+    if ! gpg_key_exists "$id"; then
+      return 1
+    fi
+
     recipients+=("-r" "$id")
   done
 
