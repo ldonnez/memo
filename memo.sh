@@ -207,6 +207,7 @@ gpg_encrypt() {
   recipients=()
   IFS=',' read -ra ids <<<"$KEY_IDS"
   for id in "${ids[@]}"; do
+    id="$(echo "$id" | xargs)" # trim spaces
     recipients+=("-r" "$id")
   done
 
