@@ -432,7 +432,6 @@ lock() {
   local dry=0 target
   local exclude_patterns=()
   local ignore_patterns=()
-  local recipients=()
 
   # capture .ignore → ignore_patterns[] (Bash 3.2 compatible)
   while IFS= read -r pat; do
@@ -457,13 +456,9 @@ lock() {
     return 1
   fi
 
-  # build recipients array from $KEY_IDS
-  if [[ -z "$KEY_IDS" ]]; then
-    echo "KEY_IDS not set"
-    return 1
-  fi
-
+  local recipients=()
   IFS=',' read -ra ids <<<"$KEY_IDS"
+
   for id in "${ids[@]}"; do
     id="$(echo "$id" | xargs)" # trim spaces
     if ! gpg_keys_exists "$id"; then
