@@ -38,6 +38,40 @@ Encrypted: $file3"
   rm -f "$file1.gpg" "$file2" "$file2.gpg" "$file3.gpg"
 }
 
+@test "Does not encrypt .gpg files" {
+  local file1="$NOTES_DIR/test.md"
+  echo "Hello World" >"$file1"
+
+  local file2="$NOTES_DIR/test2.md"
+  echo "Hello World 2" >"$file2"
+
+  gpg_encrypt "$file2" "$file2.gpg"
+  rm -f "$file2"
+
+  mkdir -p "$NOTES_DIR/test_dir"
+  local file3="$NOTES_DIR/test_dir/test2.md"
+  echo "Hello World 3" >"$file3"
+
+  gpg_encrypt "$file3" "$file3.gpg"
+  rm -f "$file3"
+
+  run lock "all"
+  assert_success
+  assert_output "Encrypted: $file1"
+
+  run file_exists "$file1"
+  assert_failure
+
+  run file_exists "$file2.gpg"
+  assert_success
+
+  run file_exists "$file3.gpg"
+  assert_success
+
+  # Cleanup
+  rm -f "$file1.gpg" "$file2.gpg" "$file3.gpg"
+}
+
 @test "ignore files by glob pattern in .ignore" {
   local ignore="$NOTES_DIR/.ignore"
   echo "*.txt" >"$ignore"
