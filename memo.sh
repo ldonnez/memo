@@ -2,16 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Add IGNORE_PATTERNS in config file?
-# TODO: Add tests for this
-IGNORE_PATTERNS=(
-  "*.bak"
-  "*.tmp"
-  ".git"
-  ".DS_Store"
-  "README.md"
-)
-
 # Helpers
 dir_exists() {
   [[ -d "$1" ]]
@@ -48,15 +38,6 @@ file_content_is_equal() {
     return 0
   fi
 
-  return 1
-}
-
-# TODO: Add tests for this
-is_ignored_path() {
-  local path="$1"
-  for ignore in "${IGNORE_PATTERNS[@]}"; do
-    [[ "$path" == *"/$ignore/"* || "$path" == *"/$ignore/"*/* ]] && return 0
-  done
   return 1
 }
 
