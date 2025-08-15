@@ -104,7 +104,7 @@ load_config() {
 
 # TODO: Add tests for this
 # Validate KEY_ID exists in GPG keyring
-gpg_key_exists() {
+gpg_keys_exists() {
   local key_ids="$1"
   local missing_keys=()
 
@@ -191,7 +191,7 @@ gpg_encrypt() {
   for id in "${ids[@]}"; do
     id="$(echo "$id" | xargs)" # trim spaces
 
-    if ! gpg_key_exists "$id"; then
+    if ! gpg_keys_exists "$id"; then
       return 1
     fi
 
@@ -466,7 +466,7 @@ lock() {
   IFS=',' read -ra ids <<<"$KEY_IDS"
   for id in "${ids[@]}"; do
     id="$(echo "$id" | xargs)" # trim spaces
-    if ! gpg_key_exists "$id"; then
+    if ! gpg_keys_exists "$id"; then
       echo "GPG key not found: $id"
       return 1
     fi
@@ -645,7 +645,7 @@ main() {
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
   load_config "$CONFIG_FILE"
-  gpg_key_exists "$KEY_IDS"
+  gpg_keys_exists "$KEY_IDS"
   create_dirs
 
   # Handle default/editable memo inputs
