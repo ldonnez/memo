@@ -78,6 +78,9 @@ EOF
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_failure
   assert_output --partial "GPG key(s) not found: missing@example.com"
+
+  #cleanup
+  rm -f "$input_path"
 }
 
 @test "does not leave unencrypted file when encryption fails" {
@@ -92,4 +95,8 @@ EOF
 
   run file_exists "$input_path.gpg"
   assert_failure
+
+  #cleanup
+  rm -f "$input_path"
+
 }
