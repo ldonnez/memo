@@ -428,13 +428,37 @@ unlock() {
     [[ -f "$plaintext" ]] && echo "Already exists: $plaintext" && return 1
     gpg_decrypt "$file" "$plaintext" && echo "Decrypted: $plaintext"
   fi
+
   echo "Run 'memo lock all' to re-encrypt"
+}
+
+read_ignore_file() {
+  local ignore_file=$NOTES_DIR/.ignore
+  if file_exists "$ignore_file"; then
+    # always ignore the .ignore file itself
+    echo ".ignore"
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      case "$line" in \#*) continue ;; esac
+      # print the pattern so the caller can capture it
+      echo "$line"
+    done <"$ignore_file"
+  fi
 }
 
 # TODO: Add tests for this
 lock() {
-  local dry=0 target exclude_patterns=()
+  local dry=0 target
+  local exclude_patterns=()
+  local ignore_patterns=()
+  local recipients=()
 
+  # capture .ignore → ignore_patterns[] (Bash 3.2 compatible)
+  while IFS= read -r pat; do
+    ignore_patterns[${#ignore_patterns[@]}]="$pat"
+  done < <(read_ignore_file)
+
+  # parse args
   while [[ $# -gt 0 ]]; do
     case "$1" in
     --dry-run) dry=1 ;;
@@ -452,22 +476,105 @@ lock() {
     return 1
   fi
 
-  if [[ "$target" == "all" ]]; then
-    find "$NOTES_DIR" -type f ! -name "*.gpg" | while read -r file; do
-      is_ignored_path "$file" && continue
+  # build recipients array from $KEY_IDS
+  if [[ -z "$KEY_IDS" ]]; then
+    echo "KEY_IDS not set"
+    return 1
+  fi
 
-      for pattern in "${exclude_patterns[@]}"; do
-        [[ $(basename "$file") == "$pattern" ]] && echo "Skipping: $file" && continue 2
+  IFS=',' read -ra ids <<<"$KEY_IDS"
+  for id in "${ids[@]}"; do
+    id="$(echo "$id" | xargs)" # trim spaces
+    if ! gpg_key_exists "$id"; then
+      echo "GPG key not found: $id"
+      return 1
+    fi
+    recipients+=("-r" "$id")
+  done
+
+  if [[ "$target" == "all" ]]; then
+    local files_to_encrypt=()
+
+    while IFS= read -r file; do
+      local rel="${file#"$NOTES_DIR"/}"
+
+      # check .ignore patterns
+      local skip=0
+      for ig in "${ignore_patterns[@]}"; do
+        # shellcheck disable=SC2053
+        [[ "$rel" == $ig ]] && skip=1 && break
       done
-      local encfile="$file.gpg"
-      should_encrypt_file "$file" "$encfile" && encrypt_file "$file" "$file" "$dry"
-    done
+      [[ $skip -eq 1 ]] && echo "Ignored (.ignore): $rel" && continue
+
+      # check --exclude patterns
+      for ex in "${exclude_patterns[@]}"; do
+        # shellcheck disable=SC2053
+        [[ "$rel" == $ex ]] && skip=1 && break
+      done
+      [[ $skip -eq 1 ]] && echo "Excluded (--exclude): $rel" && continue
+
+      [[ $skip -eq 1 ]] && continue
+
+      files_to_encrypt+=("$file")
+    done < <(find "$NOTES_DIR" -type f ! -name "*.gpg")
+
+    if [[ ${#files_to_encrypt[@]} -eq 0 ]]; then
+      echo "Nothing to encrypt."
+      return 0
+    fi
+
+    if [[ $dry -eq 1 ]]; then
+      printf "Would encrypt: %s\n" "${files_to_encrypt[@]}"
+    else
+      gpg --encrypt-files --quiet --yes "${recipients[@]}" "${files_to_encrypt[@]}"
+
+      local to_remove=()
+      for f in "${files_to_encrypt[@]}"; do
+        [[ -f "$f.gpg" ]] && to_remove+=("$f")
+      done
+
+      if ((${#to_remove[@]} > 0)); then
+        rm -f "${to_remove[@]}"
+        printf "Encrypted: %s\n" "${to_remove[@]}"
+      fi
+    fi
   else
+    # resolve target file
     local file
-    file=$(find "$NOTES_DIR" -type f -name "$target" | head -n 1)
-    [[ -z "$file" ]] && echo "Not found: $target" && return 1
-    local encfile="$file.gpg"
-    should_encrypt_file "$file" "$encfile" && encrypt_file "$file" "$file" "$dry"
+
+    if [[ -f "$target" ]]; then
+      file=$(realpath "$target")
+    # else, search by basename under NOTES_DIR
+    else
+      file=$(find "$NOTES_DIR" -type f -name "$target" | head -n 1)
+    fi
+
+    if [[ -z "$file" ]]; then
+      echo "Not found: $target"
+      return 1
+    fi
+
+    if ! is_in_notes_dir "$file"; then
+      echo "File not in $NOTES_DIR"
+      return 1
+    fi
+
+    # compute path relative to NOTES_DIR
+    local rel_file
+    rel_file="${file#"$NOTES_DIR"/}"
+
+    if [[ $dry -eq 1 ]]; then
+      echo "Would encrypt: $rel_file"
+    else
+      gpg --encrypt-files --quiet --yes "${recipients[@]}" "$file"
+      local enc_file="$file.gpg"
+      if [[ -f "$enc_file" ]]; then
+        rm -f "$NOTES_DIR/$file"
+        echo "Encrypted: $rel_file"
+      else
+        echo "Encryption failed, keeping plaintext: $rel_file"
+      fi
+    fi
   fi
 }
 

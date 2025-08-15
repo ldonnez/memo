@@ -1,0 +1,30 @@
+#!/usr/bin/env bats
+
+setup() {
+  bats_load_library bats-support
+  bats_load_library bats-assert
+
+  # shellcheck source=memo.sh
+  source "memo.sh"
+}
+
+@test "reads ignore file" {
+  local ignore="$NOTES_DIR/.ignore"
+  echo "*.txt
+.git" >"$ignore"
+
+  run read_ignore_file
+  assert_success
+  assert_output ".ignore
+*.txt
+.git"
+
+  # Cleanup
+  rm -f "$NOTES_DIR/.ignore"
+}
+
+@test "returns empty when .ignore file does not exist" {
+  run read_ignore_file
+  assert_success
+  assert_output ""
+}
