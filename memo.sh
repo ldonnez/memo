@@ -47,7 +47,6 @@ filename_is_date() {
   # Strip path and isolate base name
   filename="${filename##*/}"
 
-  # Extract just the name before the first extension
   # Example: 2025-08-05.md.gpg → 2025-08-05
   local base="${filename%%.*}"
 
@@ -59,28 +58,54 @@ filename_is_date() {
   fi
 }
 
-# TODO: Add tests for this
-load_config() {
-  local config_file="$1"
+# Resolve the absolute path of where this script is run (it follows symlinks)
+get_script_path() {
+  local source="${BASH_SOURCE[0]}"
+  while [ -h "$source" ]; do
+    local dir
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
 
-  # Resolve the absolute path of this script, following symlinks
-  SOURCE="${BASH_SOURCE[0]}"
-  while [ -h "$SOURCE" ]; do
-    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
-    SOURCE="$(readlink "$SOURCE")"
-    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+    source="$(readlink "$source")"
+    [[ $source != /* ]] && source="$dir/$source"
   done
-  local script_path
-  script_path="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  cd -P "$(dirname "$source")" && pwd
+}
 
-  # Set defaults
-  : "${KEY_IDS:=you@example.com}"
+# Build the cache_builder binary if not found
+build_cache_binary() {
+  local script_path="$1"
+  local binary="$2"
+
+  if [ ! -x "$binary" ]; then
+    printf "Building cache binary...\n"
+    mkdir -p "$(dirname "$binary")"
+
+    (cd "$script_path" && go build -o "$binary" ./cmd/cache_builder) || {
+      printf "Error: Failed to build cache binary\n" >&2
+      exit 1
+    }
+
+    chmod +x "$binary"
+  fi
+}
+
+# Set default values if unset
+set_default_values() {
+  : "${KEY_IDS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
-  : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
+  : "${CACHE_BUILDER_BIN:=$1/bin/cache_builder}"
+}
+
+# TODO: Add tests for this
+load_config() {
+  local config_file="$1"
+  local script_path="$2"
+
+  set_default_values "$script_path"
 
   if file_exists "$config_file"; then
     # shellcheck source=/dev/null
@@ -89,17 +114,6 @@ load_config() {
     printf "Config file not found: %s\n" "$config_file" >&2
   fi
 
-  if [ ! -x "$CACHE_BUILDER_BIN" ]; then
-    printf "Building cache binary...\n"
-    mkdir -p "$(dirname "$CACHE_BUILDER_BIN")"
-
-    (cd "$script_path" && go build -o "$CACHE_BUILDER_BIN" ./cmd/cache_builder) || {
-      printf "Error: Failed to build cache binary\n" >&2
-      exit 1
-    }
-
-    chmod +x "$CACHE_BUILDER_BIN"
-  fi
 }
 
 trim() {
@@ -418,10 +432,10 @@ edit_memo() {
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
 
-unlock() {
+memo_decrypt() {
   local target="$1"
   if [[ -z "$target" ]]; then
-    printf "Usage: memo unlock <filename.gpg | all>\n"
+    printf "Usage: memo --decrypt <filename.gpg | all>\n"
     return 1
   fi
 
@@ -456,7 +470,7 @@ read_ignore_file() {
   fi
 }
 
-lock() {
+memo_encrypt() {
   local dry=0 target
   local exclude_patterns=()
   local ignore_patterns=()
@@ -480,7 +494,7 @@ lock() {
   done
 
   if [[ -z "$target" ]]; then
-    printf "Usage: memo lock <filename | all> [--dry-run] [--exclude pattern]\n"
+    printf "Usage: memo encrypt <filename | all> [--dry-run] [--exclude pattern]\n"
     return 1
   fi
 
@@ -570,7 +584,6 @@ lock() {
   fi
 }
 
-# TODO: Add tests for this
 find_memos() {
   local result
 
@@ -583,28 +596,23 @@ find_memos() {
 
 # TODO: Add tests for this
 memo_remove() {
-  local input="$1"
-  [[ -z "$input" ]] && printf "No memo filename provided.\n" && return 1
+  local target="$1"
+  [[ -z "$target" ]] && printf "No memo filename provided.\n" && return 1
 
-  # Normalize filename: append .gpg if missing
-  [[ "$input" != *.gpg ]] && input="${input}.gpg"
+  if file=$(find_note_file "$target"); then
+    read -rp "Are you sure you want to delete '$file'? [y/N] " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+      printf "Deletion cancelled.\n"
+      return 1
+    fi
 
-  local filepath="$NOTES_DIR/$input"
-  if [[ ! -f "$filepath" ]]; then
-    printf "Memo not found: %s\n" "$filepath"
-    return 1
+    # Delete memo
+    rm -f "$file"
+    printf "Removed: %s\n" "$file"
+    build_notes_cache "$file"
+  else
+    printf "Memo not found: %s\n" "$target"
   fi
-
-  read -rp "Are you sure you want to delete '$filepath'? [y/N] " confirm
-  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    printf "Deletion cancelled.\n"
-    return 1
-  fi
-
-  # Delete memo
-  rm -f "$filepath"
-  printf "Removed: %s\n" "$filepath"
-  build_notes_cache "$filepath"
 }
 
 # --- Main ---
@@ -615,7 +623,6 @@ build_notes_cache() {
   $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$file"
 }
 
-# Updated function to search through the encrypted note index
 grep() {
   local query="${1-""}"
 
@@ -623,7 +630,7 @@ grep() {
   temp_index=$(mktemp)
 
   if [[ ! -f "$CACHE_FILE" ]]; then
-    printf "Note index not found. Building it now...\n"
+    printf "Cache not found. Building it now...\n"
     build_notes_cache
   fi
 
@@ -645,71 +652,101 @@ grep() {
   fi
 }
 
-# Main CLI entrypoint
-# TODO: Add tests for this and make separate pars_args function
-main() {
-  # default "" when no arg is given
+show_help() {
+  cat <<EOF
+Usage: memo [OPTIONS] [COMMAND] [ARGS]
+
+Options:
+  -h, --help                Show this help message and exit
+
+Commands:
+  --remove MEMO             Remove a memo
+  --find                    List all memos in $NOTES_DIR with rg and fzf
+  --grep                    Uses rg and the $CACHE_FILE to grep all notes
+  --decrypt [filename|all]  Decrypt one or all memos
+  --encrypt [filename|all]  Encrypt one or all memos
+  --cache                   Builds the cache file (incrementally)
+  today                     Shortcut for editing today's memo
+  yesterday                 Shortcut for editing yesterday's memo
+  tomorrow                  Shortcut for editing tomorrow's memo
+  YYYY-MM-DD                Edit memo for a specific date
+EOF
+}
+
+parse_args() {
   local arg="${1-""}"
 
-  CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
-  load_config "$CONFIG_FILE"
-  gpg_keys_exists "$KEY_IDS"
-  create_dirs
-
-  # Handle default/editable memo inputs
-
-  if [[ "$arg" == "edit" ]]; then
-    shift
-    edit_memo "$1"
-    return
-  fi
-
-  if [[ "$arg" == "remove" ]]; then
-    shift
-    memo_remove "$1"
-    return
-  fi
-
-  if [[ "$arg" == "find" ]]; then
-    find_memos
-    return
-  fi
-
-  if [[ "$arg" == "grep" ]]; then
-    grep
-    return
-  fi
-
-  if [[ "$arg" == "unlock" ]]; then
-    shift
-    unlock "$@"
-    return
-  fi
-
-  if [[ "$arg" == "lock" ]]; then
-    shift
-    lock "$@"
-    return
-  fi
-
-  if [[ "$arg" == "build_cache" ]]; then
-    build_notes_cache
-    return
-  fi
-
-  if [[ "$arg" == "test" ]]; then
-    memo_test
-    return
-  fi
+  while [ $# -gt 0 ]; do
+    case "$1" in
+    --help)
+      show_help
+      exit 0
+      ;;
+    --remove)
+      shift
+      memo_remove "$1"
+      return
+      ;;
+    --find)
+      find_memos
+      return
+      ;;
+    --grep)
+      grep
+      return
+      ;;
+    --decrypt)
+      shift
+      memo_encrypt "$@"
+      return
+      ;;
+    --encrypt)
+      shift
+      memo_encrypt "$@"
+      return
+      ;;
+    --cache)
+      build_notes_cache
+      return
+      ;;
+    --) # end of options
+      shift
+      break
+      ;;
+    -*) # unknown short option
+      show_help
+      exit 1
+      ;;
+    *) # positional argument (subcommand/date)
+      arg="$1"
+      shift
+      break
+      ;;
+    esac
+  done
 
   if [[ -z "$arg" || "$arg" == "today" || "$arg" == "yesterday" || "$arg" == "tomorrow" || "$arg" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ || -n "$arg" ]]; then
     edit_memo "$arg"
     return
   fi
 
-  # Default fallback
-  printf "Usage: memo [edit|today|yesterday|YYYY-MM-DD|find|grep|lock|unlock]\n"
+  # unknown command
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|--find|--grep|--encrypt|--decrypt|--cache]\n"
   exit 1
+}
+
+# Entrypoint
+main() {
+  local script_path
+  script_path="$(get_script_path)"
+
+  CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
+  load_config "$CONFIG_FILE" "$script_path"
+  gpg_keys_exists "$KEY_IDS"
+  create_dirs
+  build_cache_binary "$script_path" "$CACHE_BUILDER_BIN"
+
+  parse_args "$@"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

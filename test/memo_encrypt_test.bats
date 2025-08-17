@@ -23,7 +23,7 @@ teardown() {
   local file3="$NOTES_DIR/test_dir/test2.md"
   printf "Hello World 3" >"$file3"
 
-  run lock "all"
+  run memo_encrypt "all"
   assert_success
   assert_output "Encrypted: $file2
 Encrypted: $file1
@@ -56,7 +56,7 @@ Encrypted: $file3"
   gpg_encrypt "$file3" "$file3.gpg"
   rm -f "$file3"
 
-  run lock "all"
+  run memo_encrypt "all"
   assert_success
   assert_output "Encrypted: $file1"
 
@@ -80,7 +80,7 @@ Encrypted: $file3"
   local txtfile="$NOTES_DIR/test2.txt"
   printf "Hello World 2" >"$txtfile"
 
-  run lock "all"
+  run memo_encrypt "all"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
@@ -100,7 +100,7 @@ Encrypted: $mdfile"
   local txtfile="$NOTES_DIR/test2.txt"
   printf "Hello World 2" >"$txtfile"
 
-  run lock "all"
+  run memo_encrypt "all"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
@@ -121,7 +121,7 @@ Encrypted: $mdfile"
   local mdfile="$NOTES_DIR/test.md"
   printf "Hello World 2" >"$mdfile"
 
-  run lock "all"
+  run memo_encrypt "all"
   assert_success
   assert_output "Ignored (.ignore): .git/COMMIT
 Ignored (.ignore): .ignore
@@ -138,7 +138,7 @@ Encrypted: $mdfile"
   local txtfile="$NOTES_DIR/test2.txt"
   printf "Hello World 2" >"$txtfile"
 
-  run lock "all" --exclude "*.txt"
+  run memo_encrypt "all" --exclude "*.txt"
   assert_success
   assert_output "Excluded (--exclude): test2.txt
 Encrypted: $mdfile"
@@ -158,7 +158,7 @@ Encrypted: $mdfile"
   local file3="$NOTES_DIR/test_dir/test2.md"
   printf "Hello World 3" >"$file3"
 
-  run lock "all" --dry-run
+  run memo_encrypt "all" --dry-run
   assert_success
   assert_output "Would encrypt: $file2
 Would encrypt: $file1
@@ -169,7 +169,7 @@ Would encrypt: $file3"
   local file="$NOTES_DIR/test.md"
   printf "Hello World" >"$file"
 
-  run lock "test.md"
+  run memo_encrypt "test.md"
   assert_success
   assert_output "Encrypted: test.md"
 
@@ -183,7 +183,7 @@ Would encrypt: $file3"
   printf "Hello World" >"$file"
 
   cd "$NOTES_DIR/test_dir"
-  run lock "test2.md"
+  run memo_encrypt "test2.md"
   assert_success
   assert_output "Encrypted: test_dir/test2.md"
 
@@ -196,7 +196,7 @@ Would encrypt: $file3"
   local file="$NOTES_DIR/test_dir/test2.md"
   printf "Hello World" >"$file"
 
-  run lock "test_dir/test2.md"
+  run memo_encrypt "test_dir/test2.md"
   assert_success
   assert_output "Encrypted: test_dir/test2.md"
 
@@ -208,7 +208,7 @@ Would encrypt: $file3"
   local file="$HOME/test2.md"
   printf "Hello World" >"$file"
 
-  run lock "$file"
+  run memo_encrypt "$file"
   assert_failure
   assert_output "File not in $NOTES_DIR"
 }

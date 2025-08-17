@@ -12,7 +12,7 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/{,.}*
 }
 
-@test "unlocks all files in notes dir ($NOTES_DIR)" {
+@test "decrypts all files in notes dir ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
   printf "Hello World" >"$file"
 
@@ -27,7 +27,7 @@ teardown() {
   gpg_encrypt "$file2" "$file2.gpg"
   rm -f "$file2"
 
-  run unlock "all"
+  run memo_decrypt "all"
   assert_success
 
   run file_exists "$file"
@@ -39,14 +39,14 @@ teardown() {
   assert_output ""
 }
 
-@test "unlocks single file in notes dir ($NOTES_DIR)" {
+@test "decrypts single file in notes dir ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
   printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
   rm -f "$file"
 
-  run unlock "$file.gpg"
+  run memo_decrypt "$file.gpg"
   assert_success
   assert_output "Decrypted: $file"
 
@@ -57,14 +57,14 @@ teardown() {
   assert_success
 }
 
-@test "unlocks single file by only giving its name in notes dir ($NOTES_DIR)" {
+@test "decrypts single file by only giving its name in notes dir ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
   printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
   rm -f "$file"
 
-  run unlock "test.md.gpg"
+  run memo_decrypt "test.md.gpg"
   assert_success
   assert_output "Decrypted: $file"
 
@@ -75,7 +75,7 @@ teardown() {
   assert_success
 }
 
-@test "unlocks single file when giving relative path in notes dir ($NOTES_DIR)" {
+@test "decrypts single file when giving relative path in notes dir ($NOTES_DIR)" {
   mkdir -p "$NOTES_DIR/test_2_dir"
 
   local file="$NOTES_DIR/test_2_dir/test.md"
@@ -84,7 +84,7 @@ teardown() {
   gpg_encrypt "$file" "$file.gpg"
   rm -f "$file"
 
-  run unlock "test_2_dir/test.md.gpg"
+  run memo_decrypt "test_2_dir/test.md.gpg"
   assert_success
   assert_output "Decrypted: $file"
 
@@ -101,7 +101,7 @@ teardown() {
 
   gpg_encrypt "$file" "$file.gpg"
 
-  run unlock "$file"
+  run memo_decrypt "$file"
   assert_failure
   assert_output "File not in $NOTES_DIR"
 
