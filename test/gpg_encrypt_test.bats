@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "encrypts file to same path when no output_path (second arg) is given" {
   local input_path="$NOTES_DIR/test.md"
   echo "Hello World" >"$input_path"
@@ -18,9 +22,6 @@ setup() {
 
   run file_exists "$input_path.gpg"
   assert_success
-
-  # Cleanup
-  rm -f "$input_path" "$input_path"
 }
 
 @test "encrypts file to given output_path" {
@@ -35,9 +36,6 @@ setup() {
 
   run file_exists "$output_path.gpg"
   assert_success
-
-  # Cleanup
-  rm -f "$input_path" "$output_path"
 }
 
 @test "encrypts file with multiple recipients" {
@@ -62,9 +60,6 @@ EOF
 
   run file_exists "$input_path.gpg"
   assert_success
-
-  #cleanup
-  rm -f "$input_path" "$input_path.gpg"
 }
 
 @test "fails if one recipient key is missing" {
@@ -78,9 +73,6 @@ EOF
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_failure
   assert_output --partial "GPG key(s) not found: missing@example.com"
-
-  #cleanup
-  rm -f "$input_path"
 }
 
 @test "does not leave unencrypted file when encryption fails" {
@@ -95,8 +87,4 @@ EOF
 
   run file_exists "$input_path.gpg"
   assert_failure
-
-  #cleanup
-  rm -f "$input_path"
-
 }

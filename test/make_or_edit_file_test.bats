@@ -13,6 +13,7 @@ setup() {
 
 teardown() {
   rm -rf "/dev/shm/*"
+  rm -rf "${NOTES_DIR:?}"/{,.}*
 }
 
 @test "returns new tmp file with filename as header if file does not exist" {
@@ -43,7 +44,9 @@ teardown() {
 
 @test "decrypts existing current date daily in tmpfile" {
   local date
-  date="$(date +%F).md"
+  date="$(date +%F)"
+
+  mkdir -p "$JOURNAL_NOTES_DIR"
 
   local file
   file="$JOURNAL_NOTES_DIR/$date.md"

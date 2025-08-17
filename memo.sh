@@ -102,8 +102,7 @@ load_config() {
   fi
 }
 
-# TODO: Add tests for this
-# Validate KEY_ID exists in GPG keyring
+# Validates if all the given key_ids exist in GPG keyring
 gpg_keys_exists() {
   local key_ids="$1"
   local missing_keys=()
@@ -205,7 +204,7 @@ gpg_encrypt() {
 gpg_decrypt() {
   local input_path="$1" output_path="$2"
 
-  gpg --quiet --decrypt "$input_path" >"$output_path" || {
+  gpg --quiet --yes --decrypt "$input_path" >"$output_path" || {
     echo "Failed to decrypt $input_path"
     return 1
   }
@@ -311,7 +310,6 @@ is_in_notes_dir() {
   # Remove trailing slash from NOTES_DIR if it exists, for consistent comparison
   notes_dir=${notes_dir%/}
 
-  # Use a simple string comparison to check if the path starts with the notes directory.
   if [[ "$fullpath" == "$notes_dir"* ]]; then
     return 0
   else
@@ -365,8 +363,31 @@ make_or_edit_file() {
   echo "$tmpfile"
 }
 
+find_note_file() {
+  local target="$1"
+  local file=""
+
+  if [[ -f "$target" ]]; then
+    file=$(realpath "$target")
+  else
+    file=$(find "$NOTES_DIR" -type f -path "*/$target" | head -n 1)
+  fi
+
+  if ! file_exists "$file"; then
+    echo "Not found: $target"
+    return 1
+  fi
+
+  if ! is_in_notes_dir "$file"; then
+    echo "File not in $NOTES_DIR"
+    return 1
+  fi
+
+  # Return the file path, or empty string if not found
+  echo "$file"
+}
+
 # Commands
-# TODO: Add tests for this
 edit_memo() {
   local input="$1"
 
@@ -387,7 +408,6 @@ edit_memo() {
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
 
-# TODO: Add tests for this
 unlock() {
   local target="$1"
   if [[ -z "$target" ]]; then
@@ -396,21 +416,20 @@ unlock() {
   fi
 
   if [[ "$target" == "all" ]]; then
-    find "$NOTES_DIR" -type f -name "*.gpg" | while read -r file; do
-      local plaintext="${file%.gpg}"
-      [[ -f "$plaintext" ]] && echo "Skipping: $plaintext" && continue
-      gpg_decrypt "$file" "$plaintext" && echo "Decrypted: $plaintext"
-    done
+    gpg --yes --decrypt-files "$NOTES_DIR"/*.gpg "$NOTES_DIR"/**/*.gpg
   else
-    local file
-    file=$(find "$NOTES_DIR" -type f -name "$target" | head -n 1)
-    [[ -z "$file" ]] && echo "File not found: $target" && return 1
-    local plaintext="${file%.gpg}"
-    [[ -f "$plaintext" ]] && echo "Already exists: $plaintext" && return 1
-    gpg_decrypt "$file" "$plaintext" && echo "Decrypted: $plaintext"
-  fi
+    local target="$1"
 
-  echo "Run 'memo lock all' to re-encrypt"
+    if file=$(find_note_file "$target"); then
+
+      local plaintext="${file%.gpg}"
+
+      gpg_decrypt "$file" "$plaintext" && echo "Decrypted: $plaintext"
+    else
+      printf "File not in %s" "$NOTES_DIR"
+      return 1
+    fi
+  fi
 }
 
 read_ignore_file() {
@@ -427,7 +446,6 @@ read_ignore_file() {
   fi
 }
 
-# TODO: Add tests for this
 lock() {
   local dry=0 target
   local exclude_patterns=()
@@ -476,18 +494,22 @@ lock() {
 
       # check .ignore patterns
       local skip=0
-      for ig in "${ignore_patterns[@]}"; do
-        # shellcheck disable=SC2053
-        [[ "$rel" == $ig ]] && skip=1 && break
-      done
-      [[ $skip -eq 1 ]] && echo "Ignored (.ignore): $rel" && continue
+      if [[ "${#ignore_patterns[@]}" -gt 0 ]]; then
+        for ig in "${ignore_patterns[@]}"; do
+          # shellcheck disable=SC2053
+          [[ "$rel" == $ig ]] && skip=1 && break
+        done
+        [[ $skip -eq 1 ]] && echo "Ignored (.ignore): $rel" && continue
+      fi
 
       # check --exclude patterns
-      for ex in "${exclude_patterns[@]}"; do
-        # shellcheck disable=SC2053
-        [[ "$rel" == $ex ]] && skip=1 && break
-      done
-      [[ $skip -eq 1 ]] && echo "Excluded (--exclude): $rel" && continue
+      if [[ "${#exclude_patterns[@]}" -gt 0 ]]; then
+        for ex in "${exclude_patterns[@]}"; do
+          # shellcheck disable=SC2053
+          [[ "$rel" == $ex ]] && skip=1 && break
+        done
+        [[ $skip -eq 1 ]] && echo "Excluded (--exclude): $rel" && continue
+      fi
 
       [[ $skip -eq 1 ]] && continue
 
@@ -516,53 +538,37 @@ lock() {
     fi
   else
     # resolve target file
-    local file
-
-    if [[ -f "$target" ]]; then
-      file=$(realpath "$target")
-    # else, search by basename under NOTES_DIR
-    else
-      file=$(find "$NOTES_DIR" -type f -name "$target" | head -n 1)
-    fi
-
-    if [[ -z "$file" ]]; then
-      echo "Not found: $target"
-      return 1
-    fi
-
-    if ! is_in_notes_dir "$file"; then
-      echo "File not in $NOTES_DIR"
-      return 1
-    fi
-
-    # compute path relative to NOTES_DIR
-    local rel_file
-    rel_file="${file#"$NOTES_DIR"/}"
-
-    if [[ $dry -eq 1 ]]; then
-      echo "Would encrypt: $rel_file"
-    else
-      gpg --encrypt-files --quiet --yes "${recipients[@]}" "$file"
-      local enc_file="$file.gpg"
-      if [[ -f "$enc_file" ]]; then
-        rm -f "$NOTES_DIR/$file"
-        echo "Encrypted: $rel_file"
+    if file=$(find_note_file "$target"); then
+      local rel_file
+      rel_file="${file#"$NOTES_DIR"/}"
+      if [[ $dry -eq 1 ]]; then
+        echo "Would encrypt: $rel_file"
       else
-        echo "Encryption failed, keeping plaintext: $rel_file"
+        gpg --encrypt-files --quiet --yes "${recipients[@]}" "$file"
+        local enc_file="$file.gpg"
+        if [[ -f "$enc_file" ]]; then
+          rm -f "$NOTES_DIR/$file"
+          echo "Encrypted: $rel_file"
+        else
+          echo "Encryption failed, keeping plaintext: $rel_file"
+        fi
       fi
+    else
+      printf "File not in %s" "$NOTES_DIR"
+      return 1
     fi
   fi
 }
 
 # TODO: Add tests for this
-search_memo_filenames() {
+find_memos() {
   local result
-  result=$(find "$NOTES_DIR" -type f -name "*.gpg" | fzf --preview "gpg --quiet --decrypt {} 2>/dev/null | head -100")
+
+  result=$(rg --files --glob "*.gpg" "$NOTES_DIR" | fzf --preview "gpg --quiet --decrypt {} 2>/dev/null | head -100")
+
   [[ -z "$result" ]] && return
-  local tmpfile
-  tmpfile=$(decrypt_file_to_temp "$result") || return
-  "$EDITOR_CMD" "$tmpfile"
-  save_file "$tmpfile" "$result"
+
+  edit_memo "$result"
 }
 
 # TODO: Add tests for this
@@ -611,23 +617,20 @@ grep() {
     build_notes_cache
   fi
 
-  # Decrypt the single index file
-  gpg --quiet --decrypt "$CACHE_FILE" >"$temp_index"
+  gpg_decrypt "$CACHE_FILE" "$temp_index"
 
   local selected_line
 
-  # Use awk to print only the filename and content, removing the hash.
-  # The output is then piped directly to fzf.
+  # Print only the filename and content, removing the size and hash.
   selected_line=$(awk -F'|' '{print $1 ":" $4}' "$temp_index" | fzf --ansi -q "$query")
 
   rm "$temp_index"
 
   if [[ -n "$selected_line" ]]; then
-    # The filename is the first word on the selected line, up to the first colon
+    # The filename is the first word on the selected line, up to the first colon eg. "filename.md.gpg:content"
     local filename
     filename=$(echo "$selected_line" | awk -F: '{print $1}')
 
-    # Call the edit_memo function with the extracted filename
     edit_memo "$NOTES_DIR/$filename"
   fi
 }
@@ -658,7 +661,7 @@ main() {
   fi
 
   if [[ "$arg" == "find" ]]; then
-    search_memo_filenames
+    find_memos
     return
   fi
 

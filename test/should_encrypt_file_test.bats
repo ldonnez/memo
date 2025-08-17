@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "returns success to encrypt file since it has changed since last encryption" {
   local file="$NOTES_DIR/test.md"
   echo "Hello World" >"$file"
@@ -18,9 +22,6 @@ setup() {
 
   run should_encrypt_file "$file" "$file.gpg"
   assert_success
-
-  # Cleanup
-  rm -f "$file" "$file.gpg"
 }
 
 @test "returns failure to encrypt file since the contents are the same" {
@@ -31,9 +32,6 @@ setup() {
 
   run should_encrypt_file "$file" "$file.gpg"
   assert_failure
-
-  # Cleanup
-  rm -f "$file" "$file.gpg"
 }
 
 @test "returns success because file does not exist yet" {

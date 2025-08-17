@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "returns success when file exists" {
   local file="$NOTES_DIR/test.md"
   touch "$file"

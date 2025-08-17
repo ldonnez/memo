@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "returns daily notes path with todays date as filename if empty arg" {
   local to_be_created_file
   to_be_created_file=$JOURNAL_NOTES_DIR/$(date +%F).md
@@ -15,9 +19,6 @@ setup() {
   run get_target_filepath ""
   assert_success
   assert_output "$to_be_created_file"
-
-  # Cleanup
-  rm -f "$to_be_created_file"
 }
 
 @test "returns full path if note is in notes dir ($NOTES_DIR)" {

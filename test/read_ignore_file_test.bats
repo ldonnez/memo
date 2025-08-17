@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "reads ignore file" {
   local ignore="$NOTES_DIR/.ignore"
   echo "*.txt
@@ -18,9 +22,6 @@ setup() {
   assert_output ".ignore
 *.txt
 .git"
-
-  # Cleanup
-  rm -f "$NOTES_DIR/.ignore"
 }
 
 @test "returns empty when .ignore file does not exist" {

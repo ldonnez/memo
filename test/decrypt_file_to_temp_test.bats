@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "returns decrypted file path and contents" {
   local file="$NOTES_DIR/test.md"
   echo "Hello World" >"$file"

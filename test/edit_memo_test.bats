@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "successfully creates a new memo with todays date because it does not exist yet" {
   local to_be_created_file
   to_be_created_file=$JOURNAL_NOTES_DIR/$(date +%F).md.gpg
@@ -16,12 +20,11 @@ setup() {
   assert_success
   assert_output --partial "Encrypted: $to_be_created_file
 Updated: $(date +%F).md.gpg"
-
-  # Cleanup
-  rm -f "$to_be_created_file"
 }
 
 @test "successfully detects no changes edits a memo with todays date because it exists already" {
+  mkdir -p "$JOURNAL_NOTES_DIR"
+
   local file
   file="$JOURNAL_NOTES_DIR/$(date +%F).md"
   echo "Hello World" >"$file"
@@ -31,9 +34,6 @@ Updated: $(date +%F).md.gpg"
   run edit_memo ""
   assert_success
   assert_output ""
-
-  # Cleanup
-  rm -f "$file" "$file.gpg"
 }
 
 @test "successfully edits existing file" {
@@ -46,9 +46,6 @@ Updated: $(date +%F).md.gpg"
   run edit_memo "$file.gpg"
   assert_success
   assert_output ""
-
-  # Cleanup
-  rm -f "$file" "$file.gpg"
 }
 
 @test "successfully creates new file in notes dir ($NOTES_DIR)" {
@@ -58,9 +55,6 @@ Updated: $(date +%F).md.gpg"
   assert_success
   assert_output --partial "Encrypted: $NOTES_DIR/$file.gpg
 Updated: $file.gpg"
-
-  # Cleanup
-  rm -f "$NOTES_DIR/$file.gpg"
 }
 
 @test "fails editting existing file since its not in the notes dir ($NOTES_DIR)" {

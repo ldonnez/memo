@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "returns success when 2 file contents are equal" {
   local file1="$NOTES_DIR/test1.md"
   echo "Hello World" >"$file1"

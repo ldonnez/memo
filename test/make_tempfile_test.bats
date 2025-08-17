@@ -8,6 +8,11 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "/dev/shm/*"
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "returns temp file without .gpg in /dev/shm if it exists" {
   # Mock /dev/shm as existing
   mkdir -p /dev/shm

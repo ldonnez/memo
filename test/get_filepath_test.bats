@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "returns $JOURNAL_NOTES_DIR/<current_date>.md path" {
   run get_filepath "today"
   assert_output "$JOURNAL_NOTES_DIR/$(date +%F).md"

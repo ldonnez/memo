@@ -8,6 +8,10 @@ setup() {
   source "memo.sh"
 }
 
+teardown() {
+  rm -rf "${NOTES_DIR:?}"/{,.}*
+}
+
 @test "encrypts all the files and removes the originals in the notes dir ($NOTES_DIR)" {
   local file1="$NOTES_DIR/test.md"
   echo "Hello World" >"$file1"
@@ -33,9 +37,6 @@ Encrypted: $file3"
 
   run file_exists "$file3"
   assert_failure
-
-  # Cleanup
-  rm -f "$file1.gpg" "$file2" "$file2.gpg" "$file3.gpg"
 }
 
 @test "Does not encrypt .gpg files" {
@@ -67,9 +68,6 @@ Encrypted: $file3"
 
   run file_exists "$file3.gpg"
   assert_success
-
-  # Cleanup
-  rm -f "$file1.gpg" "$file2.gpg" "$file3.gpg"
 }
 
 @test "ignore files by glob pattern in .ignore" {
@@ -113,9 +111,6 @@ Encrypted: $mdfile"
 
   run file_exists "$txtfile"
   assert_success
-
-  # Cleanup
-  rm -f "$ignore" "$mdfile" "$mdfile.gpg" "$txtfile"
 }
 
 @test "ignore directories in .ignore" {
@@ -137,9 +132,6 @@ Encrypted: $mdfile"
 
   run file_exists "$gitfile"
   assert_success
-
-  # Cleanup
-  rm -f "$ignore" "$gitfile" "$mdfile" "$mdfile.gpg"
 }
 
 @test "ignore files by glob patter when excluded with --exclude" {
@@ -156,9 +148,6 @@ Encrypted: $mdfile"
 
   run file_exists "$txtfile"
   assert_success
-
-  # Cleanup
-  rm -f "$mdfile" "$mdfile.gpg" "$txtfile"
 }
 
 @test "Shows all actions in dry mode" {
@@ -177,9 +166,6 @@ Encrypted: $mdfile"
   assert_output "Would encrypt: $file2
 Would encrypt: $file1
 Would encrypt: $file3"
-
-  # Cleanup
-  rm -f "$file1.gpg" "$file2" "$file2.gpg" "$file3.gpg"
 }
 
 @test "Works with single file" {
@@ -209,9 +195,19 @@ Would encrypt: $file3"
 
   run file_exists "$file.md"
   assert_failure
+}
 
-  # Cleanup
-  rm -f "$file.gpg"
+@test "Works when giving single file in subdir with path" {
+  mkdir -p "$NOTES_DIR/test_dir"
+  local file="$NOTES_DIR/test_dir/test2.md"
+  echo "Hello World" >"$file"
+
+  run lock "test_dir/test2.md"
+  assert_success
+  assert_output "Encrypted: test_dir/test2.md"
+
+  run file_exists "$file.md"
+  assert_failure
 }
 
 @test "Does not work on a file outside of notes_dir ($NOTES_DIR)" {
@@ -221,7 +217,4 @@ Would encrypt: $file3"
   run lock "$file"
   assert_failure
   assert_output "File not in $NOTES_DIR"
-
-  # Cleanup
-  rm -f "$file.gpg"
 }
