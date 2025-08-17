@@ -30,7 +30,7 @@ teardown() {
 @test "decrypts existing file in tmpfile" {
   local file
   file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
@@ -50,7 +50,7 @@ teardown() {
 
   local file
   file="$JOURNAL_NOTES_DIR/$date.md"
-  echo "# $date" >"$file"
+  printf "# %s" "$date" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 

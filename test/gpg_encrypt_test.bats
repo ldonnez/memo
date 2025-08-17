@@ -14,7 +14,7 @@ teardown() {
 
 @test "encrypts file to same path when no output_path (second arg) is given" {
   local input_path="$NOTES_DIR/test.md"
-  echo "Hello World" >"$input_path"
+  printf "Hello World" >"$input_path"
 
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_success
@@ -26,7 +26,7 @@ teardown() {
 
 @test "encrypts file to given output_path" {
   local input_path="$NOTES_DIR/test.md"
-  echo "Hello World" >"$input_path"
+  printf "Hello World" >"$input_path"
 
   local output_path="$NOTES_DIR/test.md"
 
@@ -52,7 +52,7 @@ EOF
   export KEY_IDS="mock@example.com,test2@example.com"
 
   local input_path="$NOTES_DIR/test_multi.md"
-  echo "Hello Multiple" >"$input_path"
+  printf "Hello Multiple" >"$input_path"
 
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_success
@@ -68,7 +68,7 @@ EOF
   export KEY_IDS="mock@example.com,missing@example.com"
 
   local input_path="$NOTES_DIR/test_fail.md"
-  echo "Hello Fail" >"$input_path"
+  printf "Hello Fail" >"$input_path"
 
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_failure
@@ -80,7 +80,7 @@ EOF
   export KEY_IDS="missing@example.com"
 
   local input_path="$NOTES_DIR/test_secure.md"
-  echo "Sensitive" >"$input_path"
+  printf "Sensitive" >"$input_path"
 
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_failure

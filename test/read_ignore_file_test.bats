@@ -14,8 +14,8 @@ teardown() {
 
 @test "reads ignore file" {
   local ignore="$NOTES_DIR/.ignore"
-  echo "*.txt
-.git" >"$ignore"
+  printf "*.txt\n
+.git\n" >"$ignore"
 
   run read_ignore_file
   assert_success

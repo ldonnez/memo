@@ -86,20 +86,31 @@ load_config() {
     # shellcheck source=/dev/null
     source "$config_file"
   else
-    echo "Config file not found: $config_file" >&2
+    printf "Config file not found: %s\n" "$config_file" >&2
   fi
 
   if [ ! -x "$CACHE_BUILDER_BIN" ]; then
-    echo "Building cache binary..."
+    printf "Building cache binary...\n"
     mkdir -p "$(dirname "$CACHE_BUILDER_BIN")"
 
     (cd "$script_path" && go build -o "$CACHE_BUILDER_BIN" ./cmd/cache_builder) || {
-      echo "Error: Failed to build cache binary" >&2
+      printf "Error: Failed to build cache binary\n" >&2
       exit 1
     }
 
     chmod +x "$CACHE_BUILDER_BIN"
   fi
+}
+
+trim() {
+  local string="$1"
+
+  # trim leading spaces
+  string="${string#"${string%%[! ]*}"}"
+
+  # trim trailing spaces
+  string="${string%"${string##*[! ]}"}"
+  printf "%s" "$string"
 }
 
 # Validates if all the given key_ids exist in GPG keyring
@@ -109,14 +120,15 @@ gpg_keys_exists() {
 
   IFS=',' read -ra keys <<<"$key_ids"
   for key in "${keys[@]}"; do
-    key="$(echo "$key" | xargs)" # trim spaces
+    key="$(trim "$key")"
+
     if ! gpg --list-keys "$key" &>/dev/null; then
       missing_keys+=("$key")
     fi
   done
 
   if ((${#missing_keys[@]} > 0)); then
-    echo "GPG key(s) not found: ${missing_keys[*]}" >&2
+    printf "GPG key(s) not found: %s\n" "${missing_keys[*]}" >&2
     exit 1
   fi
 }
@@ -134,26 +146,26 @@ determine_filename() {
   local input="$1"
 
   if [[ -z "$input" || "$input" == "today" ]]; then
-    echo "$(date +%F).md"
+    printf "%s.md" "$(date +%F)"
     return 0
   fi
 
   if [[ "$input" == "yesterday" ]]; then
-    echo "$(date -d "yesterday" +%F 2>/dev/null || date -v-1d +%F).md"
+    printf "%s.md" "$(date -d "yesterday" +%F 2>/dev/null || date -v-1d +%F)"
     return 0
   fi
 
   if [[ "$input" == "tomorrow" ]]; then
-    echo "$(date -d "tomorrow" +%F 2>/dev/null || date -v+1d +%F).md"
+    printf "%s.md" "$(date -d "tomorrow" +%F 2>/dev/null || date -v+1d +%F)"
     return 0
   fi
 
   if [[ "$input" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    echo "$input.md"
+    printf "%s.md" "$input"
     return 0
   fi
 
-  echo "$input"
+  printf "%s" "$input"
   return 0
 }
 
@@ -177,7 +189,7 @@ get_filepath() {
   dirpath=$(dirname "$filepath")
   mkdir -p "$dirpath"
 
-  echo "$filepath"
+  printf "%s" "$filepath"
 }
 
 gpg_encrypt() {
@@ -188,7 +200,7 @@ gpg_encrypt() {
 
   IFS=',' read -ra ids <<<"$KEY_IDS"
   for id in "${ids[@]}"; do
-    id="$(echo "$id" | xargs)" # trim spaces
+    id="$(trim "$id")"
 
     if ! gpg_keys_exists "$id"; then
       return 1
@@ -198,14 +210,14 @@ gpg_encrypt() {
   done
 
   gpg --quiet --yes --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
-  echo "Encrypted: $output_path"
+  printf "Encrypted: %s\n" "$output_path"
 }
 
 gpg_decrypt() {
   local input_path="$1" output_path="$2"
 
   gpg --quiet --yes --decrypt "$input_path" >"$output_path" || {
-    echo "Failed to decrypt $input_path"
+    printf "Failed to decrypt %s\n" "$input_path"
     return 1
   }
 }
@@ -219,11 +231,11 @@ make_tempfile() {
   if dir_exists /dev/shm; then
     tmpdir="/dev/shm"
   else
-    tmpdir=$(mktemp -d 2>/dev/null || echo "/tmp")
+    tmpdir=$(mktemp -d 2>/dev/null || printf "/tmp")
   fi
 
   local tmpfile="$tmpdir/memo-${base}"
-  echo "$tmpfile"
+  printf "%s" "$tmpfile"
 }
 
 decrypt_file_to_temp() {
@@ -233,7 +245,7 @@ decrypt_file_to_temp() {
   tmpfile=$(make_tempfile "$basename")
 
   if gpg_decrypt "$encfile" "$tmpfile"; then
-    echo "$tmpfile"
+    printf "%s" "$tmpfile"
   else
     return 1
   fi
@@ -260,7 +272,7 @@ save_file() {
 
 strip_path() {
   local filepath="$1"
-  echo "${filepath##*/}"
+  printf "%s" "${filepath##*/}"
 }
 
 strip_extensions() {
@@ -268,7 +280,7 @@ strip_extensions() {
   while [[ "$filename" == *.* ]]; do
     filename="${filename%.*}"
   done
-  echo "$filename"
+  printf "%s" "$filename"
 }
 
 should_encrypt_file() {
@@ -295,8 +307,8 @@ encrypt_file() {
   local input_file="$1" output_file="$2" dry="${3-0}"
 
   if [[ "$dry" -eq 1 ]]; then
-    echo "Would encrypt: $input_file → $output_file.gpg"
-    echo "Would delete: $input_file"
+    printf "Would encrypt: %s → %s.gpg\n" "$input_file" "$output_file"
+    printf "Would delete: %s\n" "$input_file"
   else
     gpg_encrypt "$input_file" "$output_file"
     rm -f "$input_file"
@@ -330,10 +342,10 @@ get_target_filepath() {
   if file_exists "$input"; then
     fullpath=$(readlink -f "$input")
     if is_in_notes_dir "$fullpath" && file_is_gpg "$input"; then
-      echo "$fullpath"
+      printf "%s" "$fullpath"
       return
     else
-      echo "Error: File is not a valid gpg memo in the notes directory." >&2
+      printf "Error: File is not a valid gpg memo in the notes directory.\n" >&2
       return 1
     fi
   else
@@ -356,11 +368,10 @@ make_or_edit_file() {
   else
     local header
     header=$(strip_extensions "$(strip_path "$filepath")")
-    echo "# $header" >"$tmpfile"
-    echo "" >>"$tmpfile"
+    printf "# %s\n\n" "$header" >"$tmpfile"
   fi
 
-  echo "$tmpfile"
+  printf "%s\n" "$tmpfile"
 }
 
 find_note_file() {
@@ -374,17 +385,16 @@ find_note_file() {
   fi
 
   if ! file_exists "$file"; then
-    echo "Not found: $target"
+    printf "Not found: %s\n" "$target"
     return 1
   fi
 
   if ! is_in_notes_dir "$file"; then
-    echo "File not in $NOTES_DIR"
+    printf "File not in %s\n" "$NOTES_DIR"
     return 1
   fi
 
-  # Return the file path, or empty string if not found
-  echo "$file"
+  printf "%s" "$file"
 }
 
 # Commands
@@ -411,7 +421,7 @@ edit_memo() {
 unlock() {
   local target="$1"
   if [[ -z "$target" ]]; then
-    echo "Usage: memo unlock <filename.gpg | all>"
+    printf "Usage: memo unlock <filename.gpg | all>\n"
     return 1
   fi
 
@@ -424,9 +434,9 @@ unlock() {
 
       local plaintext="${file%.gpg}"
 
-      gpg_decrypt "$file" "$plaintext" && echo "Decrypted: $plaintext"
+      gpg_decrypt "$file" "$plaintext" && printf "Decrypted: %s\n" "$plaintext"
     else
-      printf "File not in %s" "$NOTES_DIR"
+      printf "File not in %s\n" "$NOTES_DIR"
       return 1
     fi
   fi
@@ -436,12 +446,12 @@ read_ignore_file() {
   local ignore_file=$NOTES_DIR/.ignore
   if file_exists "$ignore_file"; then
     # always ignore the .ignore file itself
-    echo ".ignore"
+    printf ".ignore\n"
     while IFS= read -r line; do
       [ -z "$line" ] && continue
       case "$line" in \#*) continue ;; esac
       # print the pattern so the caller can capture it
-      echo "$line"
+      printf "%s\n" "$line"
     done <"$ignore_file"
   fi
 }
@@ -470,7 +480,7 @@ lock() {
   done
 
   if [[ -z "$target" ]]; then
-    echo "Usage: memo lock <filename | all> [--dry-run] [--exclude pattern]"
+    printf "Usage: memo lock <filename | all> [--dry-run] [--exclude pattern]\n"
     return 1
   fi
 
@@ -478,9 +488,9 @@ lock() {
   IFS=',' read -ra ids <<<"$KEY_IDS"
 
   for id in "${ids[@]}"; do
-    id="$(echo "$id" | xargs)" # trim spaces
+    id="$(trim "$id")" # trim spaces
     if ! gpg_keys_exists "$id"; then
-      echo "GPG key not found: $id"
+      printf "GPG key not found: %s\n" "$id"
       return 1
     fi
     recipients+=("-r" "$id")
@@ -499,7 +509,7 @@ lock() {
           # shellcheck disable=SC2053
           [[ "$rel" == $ig ]] && skip=1 && break
         done
-        [[ $skip -eq 1 ]] && echo "Ignored (.ignore): $rel" && continue
+        [[ $skip -eq 1 ]] && printf "Ignored (.ignore): %s\n" "$rel" && continue
       fi
 
       # check --exclude patterns
@@ -508,7 +518,7 @@ lock() {
           # shellcheck disable=SC2053
           [[ "$rel" == $ex ]] && skip=1 && break
         done
-        [[ $skip -eq 1 ]] && echo "Excluded (--exclude): $rel" && continue
+        [[ $skip -eq 1 ]] && printf "Excluded (--exclude): %s\n" "$rel" && continue
       fi
 
       [[ $skip -eq 1 ]] && continue
@@ -517,7 +527,7 @@ lock() {
     done < <(find "$NOTES_DIR" -type f ! -name "*.gpg")
 
     if [[ ${#files_to_encrypt[@]} -eq 0 ]]; then
-      echo "Nothing to encrypt."
+      printf "Nothing to encrypt.\n"
       return 0
     fi
 
@@ -542,19 +552,19 @@ lock() {
       local rel_file
       rel_file="${file#"$NOTES_DIR"/}"
       if [[ $dry -eq 1 ]]; then
-        echo "Would encrypt: $rel_file"
+        printf "Would encrypt: %s\n" "$rel_file"
       else
         gpg --encrypt-files --quiet --yes "${recipients[@]}" "$file"
         local enc_file="$file.gpg"
         if [[ -f "$enc_file" ]]; then
           rm -f "$NOTES_DIR/$file"
-          echo "Encrypted: $rel_file"
+          printf "Encrypted: %s\n" "$rel_file"
         else
-          echo "Encryption failed, keeping plaintext: $rel_file"
+          printf "Encryption failed, keeping plaintext: %s\n" "$rel_file"
         fi
       fi
     else
-      printf "File not in %s" "$NOTES_DIR"
+      printf "File not in %s\n" "$NOTES_DIR"
       return 1
     fi
   fi
@@ -574,26 +584,26 @@ find_memos() {
 # TODO: Add tests for this
 memo_remove() {
   local input="$1"
-  [[ -z "$input" ]] && echo "No memo filename provided." && return 1
+  [[ -z "$input" ]] && printf "No memo filename provided.\n" && return 1
 
   # Normalize filename: append .gpg if missing
   [[ "$input" != *.gpg ]] && input="${input}.gpg"
 
   local filepath="$NOTES_DIR/$input"
   if [[ ! -f "$filepath" ]]; then
-    echo "Memo not found: $filepath"
+    printf "Memo not found: %s\n" "$filepath"
     return 1
   fi
 
   read -rp "Are you sure you want to delete '$filepath'? [y/N] " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    echo "Deletion cancelled."
+    printf "Deletion cancelled.\n"
     return 1
   fi
 
   # Delete memo
   rm -f "$filepath"
-  echo "Removed: $filepath"
+  printf "Removed: %s\n" "$filepath"
   build_notes_cache "$filepath"
 }
 
@@ -613,7 +623,7 @@ grep() {
   temp_index=$(mktemp)
 
   if [[ ! -f "$CACHE_FILE" ]]; then
-    echo "Note index not found. Building it now..."
+    printf "Note index not found. Building it now...\n"
     build_notes_cache
   fi
 
@@ -629,7 +639,7 @@ grep() {
   if [[ -n "$selected_line" ]]; then
     # The filename is the first word on the selected line, up to the first colon eg. "filename.md.gpg:content"
     local filename
-    filename=$(echo "$selected_line" | awk -F: '{print $1}')
+    filename=$(printf "%s" "$selected_line" | awk -F: '{print $1}')
 
     edit_memo "$NOTES_DIR/$filename"
   fi
@@ -698,7 +708,7 @@ main() {
   fi
 
   # Default fallback
-  echo "Usage: memo [edit|today|yesterday|YYYY-MM-DD|find|grep|lock|unlock]"
+  printf "Usage: memo [edit|today|yesterday|YYYY-MM-DD|find|grep|lock|unlock]\n"
   exit 1
 }
 

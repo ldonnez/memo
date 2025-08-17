@@ -14,11 +14,11 @@ teardown() {
 
 @test "returns success to encrypt file since it has changed since last encryption" {
   local file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
-  echo "Hello World 2" >"$file"
+  printf "Hello World 2" >"$file"
 
   run should_encrypt_file "$file" "$file.gpg"
   assert_success
@@ -26,7 +26,7 @@ teardown() {
 
 @test "returns failure to encrypt file since the contents are the same" {
   local file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 

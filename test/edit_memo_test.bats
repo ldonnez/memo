@@ -27,7 +27,7 @@ Updated: $(date +%F).md.gpg"
 
   local file
   file="$JOURNAL_NOTES_DIR/$(date +%F).md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
@@ -39,7 +39,7 @@ Updated: $(date +%F).md.gpg"
 @test "successfully edits existing file" {
   local file
   file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
@@ -60,7 +60,7 @@ Updated: $file.gpg"
 @test "fails editting existing file since its not in the notes dir ($NOTES_DIR)" {
   local file
   file="test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 

@@ -16,7 +16,7 @@ teardown() {
 
   # Create a mock encrypted cache file
   local file="$NOTES_DIR/file.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
@@ -29,16 +29,16 @@ teardown() {
     local fzf_input
     read -r -d '' fzf_input
 
-    echo "$fzf_input"
+    printf "%s" "$fzf_input"
   }
 
   # Mock edit_memo to verify it's called with the correct arguments
   # shellcheck disable=SC2329
   edit_memo() {
     if [[ "$1" == "$NOTES_DIR/file.md.gpg" ]]; then
-      echo "edit_memo called with correct file"
+      printf "edit_memo called with correct file\n"
     else
-      echo "edit_memo called with wrong file" >&2
+      printf "edit_memo called with wrong file\n" >&2
     fi
   }
 
@@ -52,19 +52,19 @@ teardown() {
 
   # Create a mock encrypted cache file
   local file="$NOTES_DIR/file.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
   build_notes_cache
 
   fzf() {
-    echo ""
+    printf ""
   }
 
   # Mock edit_memo to verify it's called with the correct arguments
   edit_memo() {
-    echo "edit_memo was called unexpectedly" >&2
+    printf "edit_memo was called unexpectedly\n" >&2
     return 1
   }
 

@@ -15,27 +15,27 @@ teardown() {
 @test "find_memos should correctly find and edit a .gpg file" {
   # Setup: Create a temporary directory and a test file
   local file="$NOTES_DIR/file.md"
-  echo "Hello world" >"$file"
+  printf "Hello world" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
   # Mock rg
   rg() {
-    echo "$NOTES_DIR/file.gpg"
+    printf "%s/file.gpg" "$NOTES_DIR"
   }
 
   # Mock fzf command
   fzf() {
-    echo "$NOTES_DIR/file.gpg"
+    printf "%s/file.gpg" "$NOTES_DIR"
   }
 
   # Mock for edit_memo
   edit_memo() {
     if [[ "$1" == "$NOTES_DIR/file.gpg" ]]; then
-      echo "edit_memo called with correct file"
+      printf "edit_memo called with correct file\n"
       return 0
     else
-      echo "edit_memo called with wrong file" >&2
+      printf "edit_memo called with wrong file\n" >&2
       return 1
     fi
   }

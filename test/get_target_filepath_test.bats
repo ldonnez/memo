@@ -24,7 +24,7 @@ teardown() {
 @test "returns full path if note is in notes dir ($NOTES_DIR)" {
   local file
   file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
@@ -36,7 +36,7 @@ teardown() {
 @test "fails because existing file is not in notes dir" {
   local file
   file="not-in-notes-dir.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 

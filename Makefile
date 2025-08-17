@@ -24,7 +24,7 @@ build:
 
 shell:
 	@docker compose exec memo-sh /bin/bash || { \
-		echo "\033[38;5;214m[!] Fallback to 'docker compose run'\033[0m"; \
+		printf "\033[38;5;214m[!] Fallback to 'docker compose run'\033[0m"; \
 		docker compose run --rm --no-deps memo-sh /bin/bash; \
 	}
 

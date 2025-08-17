@@ -14,7 +14,7 @@ teardown() {
 
 @test "retuns the path if in notes dir" {
   local file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run find_note_file "$file"
   assert_success
@@ -23,7 +23,7 @@ teardown() {
 
 @test "retuns the path if just giving name when in notes dir" {
   local file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run find_note_file "test.md"
   assert_success
@@ -34,7 +34,7 @@ teardown() {
   mkdir -p "$NOTES_DIR/test_dir"
 
   local file="$NOTES_DIR/test_dir/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run find_note_file "$file"
   assert_success
@@ -45,7 +45,7 @@ teardown() {
   mkdir -p "$NOTES_DIR/test_dir"
 
   local file="$NOTES_DIR/test_dir/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run find_note_file "test_dir/test.md"
   assert_success
@@ -56,7 +56,7 @@ teardown() {
   mkdir -p "$NOTES_DIR/test_dir"
 
   local file="$NOTES_DIR/test_dir/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   cd "$NOTES_DIR/test_dir"
 
@@ -67,7 +67,7 @@ teardown() {
 
 @test "does not return the path if not in notes dir" {
   local file="$HOME/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run find_note_file "$file"
   assert_failure

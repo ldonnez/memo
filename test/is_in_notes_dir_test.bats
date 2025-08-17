@@ -14,7 +14,7 @@ teardown() {
 
 @test "returns 0 when file is in notes_dir" {
   local input_path="$NOTES_DIR/test.md"
-  echo "Hello World" >"$input_path"
+  printf "Hello World" >"$input_path"
 
   run is_in_notes_dir "$input_path"
   assert_success
@@ -22,7 +22,7 @@ teardown() {
 
 @test "returns 1 when file is not in notes_dir" {
   local input_path="$HOME/test.md"
-  echo "Hello World" >"$input_path"
+  printf "Hello World" >"$input_path"
 
   run is_in_notes_dir "$input_path"
   assert_failure

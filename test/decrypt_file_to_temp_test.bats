@@ -14,7 +14,7 @@ teardown() {
 
 @test "returns decrypted file path and contents" {
   local file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   gpg_encrypt "$file" "$file.gpg"
 
@@ -31,7 +31,7 @@ teardown() {
 
 @test "fails on invalid file" {
   local file="$NOTES_DIR/test.gpg"
-  echo "not encrypted" >"$file"
+  printf "not encrypted" >"$file"
 
   run decrypt_file_to_temp "$file"
   assert_failure

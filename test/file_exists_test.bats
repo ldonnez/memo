@@ -18,9 +18,6 @@ teardown() {
 
   run file_exists "$file"
   assert_success
-
-  # Cleanup
-  rm -f "$file"
 }
 
 @test "returns failure when file does not exist" {

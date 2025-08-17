@@ -49,7 +49,7 @@ setup_cache_builder() {
   mkdir -p "$BIN_DIR"
 
   # Build the Go binary
-  echo "Building cache_builder..."
+  printf "Building cache_builder...\n"
   (cd "$PROJECT_ROOT" && go build -o "$BIN_DIR/cache_builder" ./cmd/cache_builder)
 
   # Make sure it's executable

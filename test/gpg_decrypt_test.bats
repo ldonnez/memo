@@ -14,7 +14,7 @@ teardown() {
 
 @test "decrypts file to given output path" {
   local input_path="$NOTES_DIR/test.md"
-  echo "Hello World" >"$input_path"
+  printf "Hello World" >"$input_path"
 
   gpg_encrypt "$input_path" "$input_path.gpg"
 

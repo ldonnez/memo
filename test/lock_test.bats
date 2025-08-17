@@ -14,14 +14,14 @@ teardown() {
 
 @test "encrypts all the files and removes the originals in the notes dir ($NOTES_DIR)" {
   local file1="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file1"
+  printf "Hello World" >"$file1"
 
   local file2="$NOTES_DIR/test2.md"
-  echo "Hello World 2" >"$file2"
+  printf "Hello World 2" >"$file2"
 
   mkdir -p "$NOTES_DIR/test_dir"
   local file3="$NOTES_DIR/test_dir/test2.md"
-  echo "Hello World 3" >"$file3"
+  printf "Hello World 3" >"$file3"
 
   run lock "all"
   assert_success
@@ -41,17 +41,17 @@ Encrypted: $file3"
 
 @test "Does not encrypt .gpg files" {
   local file1="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file1"
+  printf "Hello World" >"$file1"
 
   local file2="$NOTES_DIR/test2.md"
-  echo "Hello World 2" >"$file2"
+  printf "Hello World 2" >"$file2"
 
   gpg_encrypt "$file2" "$file2.gpg"
   rm -f "$file2"
 
   mkdir -p "$NOTES_DIR/test_dir"
   local file3="$NOTES_DIR/test_dir/test2.md"
-  echo "Hello World 3" >"$file3"
+  printf "Hello World 3" >"$file3"
 
   gpg_encrypt "$file3" "$file3.gpg"
   rm -f "$file3"
@@ -72,13 +72,13 @@ Encrypted: $file3"
 
 @test "ignore files by glob pattern in .ignore" {
   local ignore="$NOTES_DIR/.ignore"
-  echo "*.txt" >"$ignore"
+  printf "*.txt\n" >"$ignore"
 
   local mdfile="$NOTES_DIR/test2.md"
-  echo "Hello World 2" >"$mdfile"
+  printf "Hello World 2" >"$mdfile"
 
   local txtfile="$NOTES_DIR/test2.txt"
-  echo "Hello World 2" >"$txtfile"
+  printf "Hello World 2" >"$txtfile"
 
   run lock "all"
   assert_success
@@ -88,20 +88,17 @@ Encrypted: $mdfile"
 
   run file_exists "$txtfile"
   assert_success
-
-  # Cleanup
-  rm -f "$ignore" "$mdfile" "$mdfile.gpg" "$txtfile"
 }
 
 @test "ignore files by name in .ignore" {
   local ignore="$NOTES_DIR/.ignore"
-  echo "test2.txt" >"$ignore"
+  printf "test2.txt\n" >"$ignore"
 
   local mdfile="$NOTES_DIR/test2.md"
-  echo "Hello World 2" >"$mdfile"
+  printf "Hello World 2" >"$mdfile"
 
   local txtfile="$NOTES_DIR/test2.txt"
-  echo "Hello World 2" >"$txtfile"
+  printf "Hello World 2" >"$txtfile"
 
   run lock "all"
   assert_success
@@ -115,14 +112,14 @@ Encrypted: $mdfile"
 
 @test "ignore directories in .ignore" {
   local ignore="$NOTES_DIR/.ignore"
-  echo ".git/*" >"$ignore"
+  printf ".git/*\n" >"$ignore"
 
   mkdir -p "$NOTES_DIR/.git"
   local gitfile="$NOTES_DIR/.git/COMMIT"
-  echo "TEST" >"$gitfile"
+  printf "TEST" >"$gitfile"
 
   local mdfile="$NOTES_DIR/test.md"
-  echo "Hello World 2" >"$mdfile"
+  printf "Hello World 2" >"$mdfile"
 
   run lock "all"
   assert_success
@@ -136,10 +133,10 @@ Encrypted: $mdfile"
 
 @test "ignore files by glob patter when excluded with --exclude" {
   local mdfile="$NOTES_DIR/test2.md"
-  echo "Hello World 2" >"$mdfile"
+  printf "Hello World 2" >"$mdfile"
 
   local txtfile="$NOTES_DIR/test2.txt"
-  echo "Hello World 2" >"$txtfile"
+  printf "Hello World 2" >"$txtfile"
 
   run lock "all" --exclude "*.txt"
   assert_success
@@ -152,14 +149,14 @@ Encrypted: $mdfile"
 
 @test "Shows all actions in dry mode" {
   local file1="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file1"
+  printf "Hello World" >"$file1"
 
   local file2="$NOTES_DIR/test2.md"
-  echo "Hello World 2" >"$file2"
+  printf "Hello World 2" >"$file2"
 
   mkdir -p "$NOTES_DIR/test_dir"
   local file3="$NOTES_DIR/test_dir/test2.md"
-  echo "Hello World 3" >"$file3"
+  printf "Hello World 3" >"$file3"
 
   run lock "all" --dry-run
   assert_success
@@ -170,7 +167,7 @@ Would encrypt: $file3"
 
 @test "Works with single file" {
   local file="$NOTES_DIR/test.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run lock "test.md"
   assert_success
@@ -178,15 +175,12 @@ Would encrypt: $file3"
 
   run file_exists "$file.md"
   assert_failure
-
-  # Cleanup
-  rm -f "$file.gpg"
 }
 
 @test "Works with single file in subdir" {
   mkdir -p "$NOTES_DIR/test_dir"
   local file="$NOTES_DIR/test_dir/test2.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   cd "$NOTES_DIR/test_dir"
   run lock "test2.md"
@@ -200,7 +194,7 @@ Would encrypt: $file3"
 @test "Works when giving single file in subdir with path" {
   mkdir -p "$NOTES_DIR/test_dir"
   local file="$NOTES_DIR/test_dir/test2.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run lock "test_dir/test2.md"
   assert_success
@@ -212,7 +206,7 @@ Would encrypt: $file3"
 
 @test "Does not work on a file outside of notes_dir ($NOTES_DIR)" {
   local file="$HOME/test2.md"
-  echo "Hello World" >"$file"
+  printf "Hello World" >"$file"
 
   run lock "$file"
   assert_failure
