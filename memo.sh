@@ -594,24 +594,48 @@ find_memos() {
   edit_memo "$result"
 }
 
-# TODO: Add tests for this
-memo_remove() {
-  local target="$1"
-  [[ -z "$target" ]] && printf "No memo filename provided.\n" && return 1
+memo_delete() {
+  local force=""
+  while [ "$1" = "--force" ]; do
+    force="1"
+    shift
+  done
 
-  if file=$(find_note_file "$target"); then
-    read -rp "Are you sure you want to delete '$file'? [y/N] " confirm
+  if [ $# -eq 0 ]; then
+    printf "No memo filename provided.\n"
+    return 1
+  fi
+
+  # collect files that exist
+  delete_list=()
+  for target in "$@"; do
+    file=$(find_note_file "$target") || {
+      printf "Memo not found: %s\n" "$target"
+      continue
+    }
+    delete_list+=("$file")
+  done
+
+  # nothing to delete
+  if [ ${#delete_list[@]} -eq 0 ]; then
+    return 1
+  fi
+
+  # prompt once for all files unless --force
+  if [ -z "$force" ]; then
+    printf "Are you sure you want to delete the following files?\n"
+    printf "  %s\n" "${delete_list[@]}"
+    read -rp "[y/N] " confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
       printf "Deletion cancelled.\n"
       return 1
     fi
+  fi
 
-    # Delete memo
-    rm -f "$file"
-    printf "Removed: %s\n" "$file"
-    build_notes_cache "$file"
-  else
-    printf "Memo not found: %s\n" "$target"
+  if [ ${#delete_list[@]} -gt 0 ]; then
+    rm -f "${delete_list[@]}"
+    printf "Deleted: %s\n" "${delete_list[*]}"
+    build_notes_cache "${delete_list[@]}"
   fi
 }
 
@@ -658,7 +682,7 @@ Options:
   -h, --help                Show this help message and exit
 
 Commands:
-  --remove MEMO             Remove a memo
+  --delete  [filename]      Delete a memo & updates cache
   --find                    List all memos in $NOTES_DIR with rg and fzf
   --grep                    Uses rg and the $CACHE_FILE to grep all notes
   --decrypt [filename|all]  Decrypt one or all memos
@@ -680,9 +704,9 @@ parse_args() {
       show_help
       exit 0
       ;;
-    --remove)
+    --delete)
       shift
-      memo_remove "$1"
+      memo_delete "$@"
       return
       ;;
     --find)
