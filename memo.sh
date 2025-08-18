@@ -618,9 +618,7 @@ memo_remove() {
 # --- Main ---
 # Incrementally update note index
 build_notes_cache() {
-  local file="${1-""}"
-
-  $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$file"
+  $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$@"
 }
 
 grep() {
@@ -706,7 +704,7 @@ parse_args() {
       return
       ;;
     --cache)
-      build_notes_cache
+      build_notes_cache "$@"
       return
       ;;
     --) # end of options

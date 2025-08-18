@@ -51,7 +51,7 @@ func UpdateAll(notesDir string, cacheFile string, keyIDs []string) int {
 		path := strings.TrimPrefix(file, notesDir+"/")
 		currentFiles[path] = true
 
-		size, hash := GetFileInfo(file)
+		size, hash := getFileInfo(file)
 		key := path + "|" + strconv.FormatInt(size, 10)
 
 		if old, exists := oldMap[key]; exists && old.Hash == hash {
@@ -100,41 +100,107 @@ func canDecrypt(file string) bool {
 	return cmd.Run() == nil
 }
 
-func UpdateSingle(notesDir string, cacheFile string, keyIDs []string, file string) bool {
-	if !strings.HasSuffix(file, ".gpg") {
-		return false
+func loadOldEntriesMap(oldEntries []Entry) map[string]Entry {
+	m := make(map[string]Entry)
+	for _, e := range oldEntries {
+		key := e.Path + "|" + strconv.FormatInt(e.Size, 10)
+		m[key] = e
 	}
-
-	path := strings.TrimPrefix(file, notesDir+"/")
-	size, hash := GetFileInfo(file)
-	oldEntries := loadIndex(cacheFile)
-
-	unchanged := false
-	for _, old := range oldEntries {
-		if old.Path == path && old.Size == size && old.Hash == hash {
-			unchanged = true
-			break
-		}
-	}
-	if unchanged {
-		return false
-	}
-
-	var newEntries []Entry
-	for _, entry := range oldEntries {
-		if entry.Path != path {
-			newEntries = append(newEntries, entry)
-		}
-	}
-
-	entries := processFile(file, path, size, hash)
-	newEntries = append(newEntries, entries...)
-	saveIndex(newEntries, cacheFile, keyIDs)
-	return true
+	return m
 }
 
-func FindFiles(dir, suffix string) []string {
-	return findFiles(dir, suffix)
+func shouldSkipFile(notesDir, file string) (bool, string) {
+	if !strings.HasSuffix(file, ".gpg") {
+		return true, "non-gpg file"
+	}
+	if !isInsideDir(notesDir, file) {
+		return true, "file outside notesDir"
+	}
+	info, err := os.Stat(file)
+	if err != nil || info.IsDir() {
+		return true, "missing or directory"
+	}
+	return false, ""
+}
+
+func processFileUpdate(file string, path string, oldMap map[string]Entry) ([]Entry, bool) {
+	size, hash := getFileInfo(file)
+	key := path + "|" + strconv.FormatInt(size, 10)
+
+	if old, exists := oldMap[key]; exists && old.Hash == hash {
+		return []Entry{old}, false
+	}
+	if canDecrypt(file) {
+		entries := processFile(file, path, size, hash)
+		return entries, true
+	}
+	fmt.Printf("Skipping undecryptable file: %s\n", file)
+	return nil, false
+}
+
+func mergeOldEntries(notesDir string, oldEntries []Entry, preservedPaths map[string]bool) []Entry {
+	newEntries := []Entry{}
+	for _, old := range oldEntries {
+		if preservedPaths[old.Path] {
+			continue
+		}
+		fullPath := filepath.Join(notesDir, old.Path)
+		info, err := os.Stat(fullPath)
+		if err != nil || info.IsDir() {
+			// missing/deleted → handled elsewhere
+			continue
+		}
+		newEntries = append(newEntries, old)
+	}
+	return newEntries
+}
+
+func UpdateManyFiles(notesDir string, cacheFile string, keyIDs []string, files []string) int {
+	oldEntries := loadIndex(cacheFile)
+	oldMap := loadOldEntriesMap(oldEntries)
+
+	newEntries := []Entry{}
+	changed := 0
+	preservedPaths := make(map[string]bool)
+
+	for _, file := range files {
+		path := strings.TrimPrefix(file, notesDir+"/")
+		preservedPaths[path] = true
+
+		if skip, reason := shouldSkipFile(notesDir, file); skip {
+			if reason == "missing or directory" {
+				foundInCache := false
+				for _, old := range oldEntries {
+					if old.Path == path {
+						changed++
+						foundInCache = true
+						break
+					}
+				}
+				if !foundInCache {
+					continue // missing file not in cache → ignore
+				}
+			} else {
+				fmt.Printf("Skipping %s: %s\n", reason, file)
+				continue
+			}
+		}
+
+		entries, fileChanged := processFileUpdate(file, path, oldMap)
+		if fileChanged {
+			changed++
+		}
+		newEntries = append(newEntries, entries...)
+	}
+
+	// Merge old entries that were not updated
+	newEntries = append(newEntries, mergeOldEntries(notesDir, oldEntries, preservedPaths)...)
+
+	if changed > 0 {
+		saveIndex(newEntries, cacheFile, keyIDs)
+	}
+
+	return changed
 }
 
 func findFiles(dir, suffix string) []string {
@@ -148,7 +214,7 @@ func findFiles(dir, suffix string) []string {
 	return files
 }
 
-func GetFileInfo(file string) (int64, string) {
+func getFileInfo(file string) (int64, string) {
 	stat, err := os.Stat(file)
 	if err != nil {
 		return 0, ""
@@ -204,4 +270,23 @@ func loadIndex(cacheFile string) []Entry {
 	}
 
 	return DecryptAndLoad(cacheFile)
+}
+
+func isInsideDir(baseDir, targetPath string) bool {
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return false
+	}
+	absTarget, err := filepath.Abs(targetPath)
+	if err != nil {
+		return false
+	}
+
+	rel, err := filepath.Rel(absBase, absTarget)
+	if err != nil {
+		return false
+	}
+
+	// If rel starts with "..", the target is outside of baseDir.
+	return !strings.HasPrefix(rel, "..")
 }

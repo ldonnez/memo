@@ -19,7 +19,7 @@ teardown() {
   run edit_memo ""
   assert_success
   assert_output --partial "Encrypted: $to_be_created_file
-Updated: $(date +%F).md.gpg"
+Cache updated (1 file(s) changed)"
 }
 
 @test "successfully detects no changes edits a memo with todays date because it exists already" {
@@ -54,7 +54,7 @@ Updated: $(date +%F).md.gpg"
   run edit_memo "$file"
   assert_success
   assert_output --partial "Encrypted: $NOTES_DIR/$file.gpg
-Updated: $file.gpg"
+Cache updated (1 file(s) changed)"
 }
 
 @test "fails editting existing file since its not in the notes dir ($NOTES_DIR)" {

@@ -137,7 +137,7 @@ func TestUpdateAllAndLoad(t *testing.T) {
 	}
 }
 
-func TestUpdateSingle(t *testing.T) {
+func TestUpdateMany(t *testing.T) {
 	_, keyIDs := setupGPG(t)
 	notesDir := t.TempDir()
 	cacheFile := filepath.Join(t.TempDir(), "notes.cache")
@@ -147,16 +147,23 @@ func TestUpdateSingle(t *testing.T) {
 	encryptNote(t, keyIDs, "Line 1", notePath)
 	UpdateAll(notesDir, cacheFile, keyIDs)
 
-	// Create a second note and update single
-	notePath2 := filepath.Join(notesDir, "note2.gpg")
-	encryptNote(t, keyIDs, "Line 2", notePath2)
-	changed := UpdateSingle(notesDir, cacheFile, keyIDs, notePath2)
+	os.Remove(notePath)
 
-	if !changed {
-		t.Error("expected change from UpdateSingle")
+	// Create a second note and update many
+	notePath2 := filepath.Join(notesDir, "note2.gpg")
+	notePath3 := filepath.Join(notesDir, "note3.gpg")
+
+	files := []string{notePath, notePath2, notePath3}
+
+	encryptNote(t, keyIDs, "Line 2", notePath2)
+	encryptNote(t, keyIDs, "Line 3", notePath3)
+
+	changed := UpdateManyFiles(notesDir, cacheFile, keyIDs, files)
+
+	if changed != 3 {
+		t.Errorf("expected 3 changes from UpdateManyFiles, got %d", changed)
 	}
 
-	// Verify both notes exist in cache
 	entries := DecryptAndLoad(cacheFile)
 
 	if len(entries) != 2 {
