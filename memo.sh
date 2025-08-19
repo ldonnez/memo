@@ -206,24 +206,43 @@ get_filepath() {
   printf "%s" "$filepath"
 }
 
+build_gpg_recipients() {
+  local key_ids="$1"
+  local output_array="$2"
+
+  local IFS=',' items
+  read -r -a items <<<"$key_ids"
+
+  if [[ ${#items[@]} -eq 0 ]]; then
+    printf "No key ids given" >&2
+    return 1
+  fi
+
+  local id
+  for id in "${items[@]}"; do
+    id=$(trim "$id")
+    [[ -z "$id" ]] && continue
+
+    if ! gpg_keys_exists "$id"; then
+      printf "GPG key(s) not found: %s\n" "$id" >&2
+      return 1
+    fi
+
+    eval "$output_array+=(\"-r\" \"$id\")"
+  done
+}
+
 gpg_encrypt() {
   # Sets output_path to input_path when output_path is not given
   local input_path="$1" output_path="${2-$1}"
 
-  recipients=()
+  local -a recipients=()
 
-  IFS=',' read -ra ids <<<"$KEY_IDS"
-  for id in "${ids[@]}"; do
-    id="$(trim "$id")"
+  if ! build_gpg_recipients "$KEY_IDS" recipients; then
+    return 1
+  fi
 
-    if ! gpg_keys_exists "$id"; then
-      return 1
-    fi
-
-    recipients+=("-r" "$id")
-  done
-
-  gpg --quiet --yes --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
+  gpg --quiet --batch --yes --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
   printf "Encrypted: %s\n" "$output_path"
 }
 
@@ -472,8 +491,13 @@ read_ignore_file() {
 
 memo_encrypt() {
   local dry=0 target
-  local exclude_patterns=()
-  local ignore_patterns=()
+  local -a exclude_patterns=()
+  local -a ignore_patterns=()
+  local -a recipients=()
+
+  if ! build_gpg_recipients "$KEY_IDS" recipients; then
+    return 1
+  fi
 
   # capture .ignore → ignore_patterns[] (Bash 3.2 compatible)
   while IFS= read -r pat; do
@@ -497,18 +521,6 @@ memo_encrypt() {
     printf "Usage: memo encrypt <filename | all> [--dry-run] [--exclude pattern]\n"
     return 1
   fi
-
-  local recipients=()
-  IFS=',' read -ra ids <<<"$KEY_IDS"
-
-  for id in "${ids[@]}"; do
-    id="$(trim "$id")" # trim spaces
-    if ! gpg_keys_exists "$id"; then
-      printf "GPG key not found: %s\n" "$id"
-      return 1
-    fi
-    recipients+=("-r" "$id")
-  done
 
   if [[ "$target" == "all" ]]; then
     local files_to_encrypt=()
