@@ -335,17 +335,11 @@ should_encrypt_file() {
   fi
 }
 
-# TODO: Add tests for this
 encrypt_file() {
-  local input_file="$1" output_file="$2" dry="${3-0}"
+  local input_file="$1" output_file="$2"
 
-  if [[ "$dry" -eq 1 ]]; then
-    printf "Would encrypt: %s → %s.gpg\n" "$input_file" "$output_file"
-    printf "Would delete: %s\n" "$input_file"
-  else
-    gpg_encrypt "$input_file" "$output_file"
-    rm -f "$input_file"
-  fi
+  gpg_encrypt "$input_file" "$output_file"
+  rm -f "$input_file"
 }
 
 is_in_notes_dir() {
