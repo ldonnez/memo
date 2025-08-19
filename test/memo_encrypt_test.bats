@@ -25,12 +25,38 @@ teardown() {
 
   run memo_encrypt "all"
   assert_success
-  assert_output "Encrypted: $file2
-Encrypted: $file1
-Encrypted: $file3"
+  assert_output "Encrypted: test2.md
+Encrypted: test.md
+Encrypted: test_dir/test2.md"
 
   run file_exists "$file1"
   assert_failure
+
+  run file_exists "$file2"
+  assert_failure
+
+  run file_exists "$file3"
+  assert_failure
+}
+
+@test "encrypts multiple files in the notes dir ($NOTES_DIR)" {
+  local file1="$NOTES_DIR/test.md"
+  printf "Hello World" >"$file1"
+
+  local file2="$NOTES_DIR/test2.md"
+  printf "Hello World 2" >"$file2"
+
+  mkdir -p "$NOTES_DIR/test_dir"
+  local file3="$NOTES_DIR/test_dir/test2.md"
+  printf "Hello World 3" >"$file3"
+
+  run memo_encrypt "test2.md" "test_dir/test2.md"
+  assert_success
+  assert_output "Encrypted: test2.md
+Encrypted: test_dir/test2.md"
+
+  run file_exists "$file1"
+  assert_success
 
   run file_exists "$file2"
   assert_failure
@@ -53,8 +79,8 @@ Encrypted: $file3"
 
   run memo_encrypt "test_dir/*"
   assert_success
-  assert_output "Encrypted: $file2
-Encrypted: $file3"
+  assert_output "Encrypted: test_dir/test2.md
+Encrypted: test_dir/test3.md"
 
   run file_exists "$file1"
   assert_success
@@ -85,7 +111,7 @@ Encrypted: $file3"
 
   run memo_encrypt "all"
   assert_success
-  assert_output "Encrypted: $file1"
+  assert_output "Encrypted: test.md"
 
   run file_exists "$file1"
   assert_failure
@@ -111,7 +137,7 @@ Encrypted: $file3"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
-Encrypted: $mdfile"
+Encrypted: test2.md"
 
   run file_exists "$txtfile"
   assert_success
@@ -131,7 +157,7 @@ Encrypted: $mdfile"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
-Encrypted: $mdfile"
+Encrypted: test2.md"
 
   run file_exists "$txtfile"
   assert_success
@@ -152,7 +178,7 @@ Encrypted: $mdfile"
   assert_success
   assert_output "Ignored (.ignore): .git/COMMIT
 Ignored (.ignore): .ignore
-Encrypted: $mdfile"
+Encrypted: test.md"
 
   run file_exists "$gitfile"
   assert_success
@@ -168,7 +194,7 @@ Encrypted: $mdfile"
   run memo_encrypt "all" --exclude "*.txt"
   assert_success
   assert_output "Excluded (--exclude): test2.txt
-Encrypted: $mdfile"
+Encrypted: test2.md"
 
   run file_exists "$txtfile"
   assert_success
@@ -187,9 +213,9 @@ Encrypted: $mdfile"
 
   run memo_encrypt "all" --dry-run
   assert_success
-  assert_output "Would encrypt: $file2
-Would encrypt: $file1
-Would encrypt: $file3"
+  assert_output "Would encrypt: test2.md
+Would encrypt: test.md
+Would encrypt: test_dir/test2.md"
 }
 
 @test "Works with single file" {
@@ -198,7 +224,7 @@ Would encrypt: $file3"
 
   run memo_encrypt "test.md"
   assert_success
-  assert_output "Encrypted: $file"
+  assert_output "Encrypted: test.md"
 
   run file_exists "$file.md"
   assert_failure
@@ -212,7 +238,7 @@ Would encrypt: $file3"
   cd "$NOTES_DIR/test_dir"
   run memo_encrypt "test2.md"
   assert_success
-  assert_output "Encrypted: $file"
+  assert_output "Encrypted: test_dir/test2.md"
 
   run file_exists "$file.md"
   assert_failure
@@ -225,7 +251,7 @@ Would encrypt: $file3"
 
   run memo_encrypt "test_dir/test2.md"
   assert_success
-  assert_output "Encrypted: $file"
+  assert_output "Encrypted: test_dir/test2.md"
 
   run file_exists "$file.md"
   assert_failure

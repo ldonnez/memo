@@ -452,43 +452,48 @@ edit_memo() {
 }
 
 memo_decrypt() {
-  local target="$1"
-  if [[ -z "$target" ]]; then
-    printf "Usage: memo --decrypt <filename.gpg | glob | all>\n"
+  if [[ $# -eq 0 ]]; then
+    printf "Usage: memo --decrypt <filename.gpg | glob | all> ...\n"
     return 1
   fi
 
   local files=()
 
-  if [[ "$target" == "all" ]]; then
-    # collect all *.gpg recursively
-    while IFS= read -r f; do
-      files+=("$f")
-    done < <(find "$NOTES_DIR" -type f -name "*.gpg")
-  else
-    # exact file given relative to cwd
+  for target in "$@"; do
+    if [[ "$target" == "all" ]]; then
+      # collect all *.gpg under NOTES_DIR
+      while IFS= read -r f; do
+        files+=("$f")
+      done < <(find "$NOTES_DIR" -type f -name "*.gpg")
+      continue
+    fi
+
+    # user gave a concrete file relative to CWD
     if [[ -f "$target" ]]; then
       local abs
       abs="$(cd "$(dirname "$target")" && pwd)/$(basename "$target")"
-
-      if [[ "$abs" == "$NOTES_DIR"/* ]]; then
-        files+=("$abs")
-      else
+      if [[ "$abs" != "$NOTES_DIR"/* ]]; then
         printf "File not in %s\n" "$NOTES_DIR"
         return 1
       fi
-    else
-      # glob relative to NOTES_DIR
-      local f
-      for f in "$NOTES_DIR"/$target; do
-        [[ -f "$f" && "$f" == *.gpg ]] && files+=("$f")
-      done
-      if [[ ${#files[@]} -eq 0 ]]; then
-        printf "File not in %s or pattern did not match\n" "$NOTES_DIR"
-        return 1
-      fi
+      files+=("$abs")
+      continue
     fi
-  fi
+
+    # otherwise treat it as a glob relative to $NOTES_DIR
+    local matched=0
+    local f
+    for f in "$NOTES_DIR"/$target; do
+      if [[ -f "$f" && "$f" == *.gpg ]]; then
+        files+=("$f")
+        matched=1
+      fi
+    done
+    [[ $matched -eq 0 ]] && {
+      printf "File not in %s or pattern did not match: %s\n" "$NOTES_DIR" "$target"
+      return 1
+    }
+  done
 
   # Decrypt all at once using gpg --decrypt-files
   gpg --decrypt-files --yes --quiet "${files[@]}"
@@ -515,7 +520,7 @@ read_ignore_file() {
 }
 
 memo_encrypt() {
-  local dry=0 target
+  local dry=0
   local -a exclude_patterns=()
   local -a ignore_patterns=()
   local -a recipients=()
@@ -524,11 +529,13 @@ memo_encrypt() {
     return 1
   fi
 
+  # capture .ignore into ignore_patterns[]
   while IFS= read -r pat; do
     ignore_patterns[${#ignore_patterns[@]}]="$pat"
   done < <(read_ignore_file)
 
   # parse args
+  local args=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
     --dry-run) dry=1 ;;
@@ -536,163 +543,125 @@ memo_encrypt() {
       exclude_patterns+=("$2")
       shift
       ;;
-    *) target="$1" ;;
+    *)
+      args+=("$1")
+      ;;
     esac
     shift
   done
 
-  if [[ -z "$target" ]]; then
-    printf "Usage: memo encrypt <filename | all> [--dry-run] [--exclude pattern]\n"
+  if [[ ${#args[@]} -eq 0 ]]; then
+    printf "Usage: memo encrypt <filename | glob | all> [more files …] [--dry-run] [--exclude pattern]\n"
     return 1
   fi
 
   shopt -s nullglob
-
   local files=()
 
-  if [[ "$target" == "all" ]]; then
-    # Collect all files recursively under NOTES_DIR (except *.gpg)
-    while IFS= read -r f; do
-      [[ -f "$f" && "$f" != *.gpg ]] && files+=("$f")
-    done < <(find "$NOTES_DIR" -type f ! -name "*.gpg")
-  else
-    #
-    # 1) Try resolving the target relative to the current working directory.
-    #    If that file exists AND is inside $NOTES_DIR, use it directly.
-    #
+  #
+  # 1) iterate over ALL provided positional arguments
+  #    (so we support: memo_encrypt file1 file2 dir/*.md)
+  #
+  local target
+  for target in "${args[@]}"; do
+    if [[ "$target" == "all" ]]; then
+      # collect everything (non-gpg) under NOTES_DIR
+      while IFS= read -r f; do
+        [[ -f "$f" && "$f" != *.gpg ]] && files+=("$f")
+      done < <(find "$NOTES_DIR" -type f ! -name "*.gpg")
+      continue
+    fi
+
+    # explicit file relative to current directory
     if [[ -f "$target" ]]; then
       local abs
       abs="$(cd "$(dirname "$target")" && pwd)/$(basename "$target")"
-      # Check it is still under NOTES_DIR
-      if [[ "$abs" == "$NOTES_DIR"/* ]]; then
-        [[ "$abs" != *.gpg ]] && files+=("$abs")
-      else
+
+      if [[ "$abs" != "$NOTES_DIR"/* ]]; then
         printf "File not in %s\n" "$NOTES_DIR"
+        shopt -u nullglob
         return 1
       fi
-    else
-      #
-      # 2) Otherwise treat it as glob relative to NOTES_DIR
-      #
-      local f
-      for f in "$NOTES_DIR"/$target; do
-        # only accept files
-        [[ -f "$f" && "$f" != *.gpg ]] && files+=("$f")
-      done
-    fi
-  fi
-
-  if [[ ${#files[@]} -eq 0 ]]; then
-    printf "File not in %s or pattern did not match\n" "$NOTES_DIR"
-    return 1
-  fi
-
-  local files_to_encrypt=()
-
-  for file in "${files[@]}"; do
-    local rel="${file#"$NOTES_DIR"/}"
-    local skip=0
-
-    # check .ignore patterns
-    if [[ "${#ignore_patterns[@]}" -gt 0 ]]; then
-      for ig in "${ignore_patterns[@]}"; do
-        # shellcheck disable=SC2053
-        if [[ "$rel" == $ig ]]; then
-          skip=1
-          printf "Ignored (.ignore): %s\n" "$rel"
-          break
-        fi
-      done
-      [[ $skip -eq 1 ]] && continue
+      [[ "$abs" != *.gpg ]] && files+=("$abs")
+      continue
     fi
 
-    # check --exclude patterns
-    if [[ "${#exclude_patterns[@]}" -gt 0 ]]; then
-      for ex in "${exclude_patterns[@]}"; do
-        # shellcheck disable=SC2053
-        if [[ "$rel" == $ex ]]; then
-          skip=1
-          printf "Excluded (--exclude): %s\n" "$rel"
-          break
-        fi
-      done
-      [[ $skip -eq 1 ]] && continue
-    fi
-
-    files_to_encrypt+=("$file")
+    # otherwise treat it as a glob relative to NOTES_DIR
+    local matched=0
+    local f
+    for f in "$NOTES_DIR"/$target; do
+      if [[ -f "$f" && "$f" != *.gpg ]]; then
+        files+=("$f")
+        matched=1
+      fi
+    done
+    [[ $matched -eq 0 ]] && {
+      printf "File not in %s or pattern did not match: %s\n" "$NOTES_DIR" "$target"
+      shopt -u nullglob
+      return 1
+    }
   done
 
   shopt -u nullglob
 
-  #while IFS= read -r file; do
-  #  local rel="${file#"$NOTES_DIR"/}"
+  #
+  # 2) Apply ignore/exclude filters
+  #
+  local files_to_encrypt=()
+  local file rel skip ig ex
 
-  #  # check .ignore patterns
-  #  local skip=0
-  #  if [[ "${#ignore_patterns[@]}" -gt 0 ]]; then
-  #    for ig in "${ignore_patterns[@]}"; do
-  #      # shellcheck disable=SC2053
-  #      [[ "$rel" == $ig ]] && skip=1 && break
-  #    done
-  #    [[ $skip -eq 1 ]] && printf "Ignored (.ignore): %s\n" "$rel" && continue
-  #  fi
+  for file in "${files[@]}"; do
+    rel="${file#"$NOTES_DIR"/}"
+    skip=0
 
-  #  # check --exclude patterns
-  #  if [[ "${#exclude_patterns[@]}" -gt 0 ]]; then
-  #    for ex in "${exclude_patterns[@]}"; do
-  #      # shellcheck disable=SC2053
-  #      [[ "$rel" == $ex ]] && skip=1 && break
-  #    done
-  #    [[ $skip -eq 1 ]] && printf "Excluded (--exclude): %s\n" "$rel" && continue
-  #  fi
+    # .ignore
+    for ig in "${ignore_patterns[@]}"; do
+      # shellcheck disable=SC2053
+      if [[ "$rel" == $ig ]]; then
+        printf "Ignored (.ignore): %s\n" "$rel"
+        skip=1
+        break
+      fi
+    done
+    [[ $skip -eq 1 ]] && continue
 
-  #  [[ $skip -eq 1 ]] && continue
+    # --exclude
+    for ex in "${exclude_patterns[@]}"; do
+      # shellcheck disable=SC2053
+      if [[ "$rel" == $ex ]]; then
+        printf "Excluded (--exclude): %s\n" "$rel"
+        skip=1
+        break
+      fi
+    done
+    [[ $skip -eq 1 ]] && continue
 
-  #  files_to_encrypt+=("$file")
-  #done < <($files)
+    files_to_encrypt+=("$file")
+  done
 
   if [[ ${#files_to_encrypt[@]} -eq 0 ]]; then
     printf "Nothing to encrypt.\n"
     return 0
   fi
 
+  #
+  # 3) Encrypt in a single gpg --encrypt-files call
+  #
   if [[ $dry -eq 1 ]]; then
-    printf "Would encrypt: %s\n" "${files_to_encrypt[@]}"
+    for f in "${files_to_encrypt[@]}"; do
+      printf "Would encrypt: %s\n" "${f#"$NOTES_DIR"/}"
+    done
   else
     gpg --encrypt-files --quiet --yes "${recipients[@]}" "${files_to_encrypt[@]}"
 
-    local to_remove=()
+    local f
     for f in "${files_to_encrypt[@]}"; do
-      [[ -f "$f.gpg" ]] && to_remove+=("$f")
+      if [[ -f "$f.gpg" ]]; then
+        rm -f "$f"
+        printf "Encrypted: %s\n" "${f#"$NOTES_DIR"/}"
+      fi
     done
-
-    if ((${#to_remove[@]} > 0)); then
-      rm -f "${to_remove[@]}"
-      printf "Encrypted: %s\n" "${to_remove[@]}"
-    fi
   fi
-  # else
-  #   # resolve target file
-  #   if file=$(find_note_file "$target"); then
-  #     local rel_file
-  #     rel_file="${file#"$NOTES_DIR"/}"
-  #     if [[ $dry -eq 1 ]]; then
-  #       printf "Would encrypt: %s\n" "$rel_file"
-  #     else
-  #       gpg --encrypt-files --quiet --yes "${recipients[@]}" "$file"
-  #       local enc_file="$file.gpg"
-  #       if [[ -f "$enc_file" ]]; then
-  #         rm -f "$NOTES_DIR/$file"
-  #         printf "Encrypted: %s\n" "$rel_file"
-  #       else
-  #         printf "Encryption failed, keeping plaintext: %s\n" "$rel_file"
-  #       fi
-  #     fi
-  #   else
-  #     printf "File not in %s\n" "$NOTES_DIR"
-  #     return 1
-  #   fi
-  # fi
 }
 
 find_memos() {

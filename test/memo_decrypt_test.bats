@@ -39,6 +39,37 @@ teardown() {
   assert_output ""
 }
 
+@test "can decrypt multiple files" {
+  local file="$NOTES_DIR/test.md"
+  printf "Hello World" >"$file"
+
+  gpg_encrypt "$file" "$file.gpg"
+  rm -f "$file"
+
+  local file2="$NOTES_DIR/test2.md"
+  printf "Hello World 2" >"$file2"
+
+  gpg_encrypt "$file2" "$file2.gpg"
+  rm -f "$file2"
+
+  local file3="$NOTES_DIR/test3.md"
+  printf "Hello World 3" >"$file3"
+
+  gpg_encrypt "$file3" "$file3.gpg"
+  rm -f "$file3"
+
+  run memo_decrypt "test2.md.gpg" "test3.md.gpg"
+  assert_success
+  assert_output "Decrypted: $file2
+Decrypted: $file3"
+
+  run file_exists "$file2"
+  assert_success
+
+  run file_exists "$file3"
+  assert_success
+}
+
 @test "decrypts all files in test_dir/* ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
   printf "Hello World" >"$file"
