@@ -39,6 +39,33 @@ Encrypted: $file3"
   assert_failure
 }
 
+@test "encrypts all the files in test_dir and removes the originals" {
+  local file1="$NOTES_DIR/test.md"
+  printf "Hello World" >"$file1"
+
+  mkdir -p "$NOTES_DIR/test_dir"
+
+  local file2="$NOTES_DIR/test_dir/test2.md"
+  printf "Hello World 2" >"$file2"
+
+  local file3="$NOTES_DIR/test_dir/test3.md"
+  printf "Hello World 3" >"$file3"
+
+  run memo_encrypt "test_dir/*"
+  assert_success
+  assert_output "Encrypted: $file2
+Encrypted: $file3"
+
+  run file_exists "$file1"
+  assert_success
+
+  run file_exists "$file2"
+  assert_failure
+
+  run file_exists "$file3"
+  assert_failure
+}
+
 @test "Does not encrypt .gpg files" {
   local file1="$NOTES_DIR/test.md"
   printf "Hello World" >"$file1"
@@ -171,7 +198,7 @@ Would encrypt: $file3"
 
   run memo_encrypt "test.md"
   assert_success
-  assert_output "Encrypted: test.md"
+  assert_output "Encrypted: $file"
 
   run file_exists "$file.md"
   assert_failure
@@ -185,7 +212,7 @@ Would encrypt: $file3"
   cd "$NOTES_DIR/test_dir"
   run memo_encrypt "test2.md"
   assert_success
-  assert_output "Encrypted: test_dir/test2.md"
+  assert_output "Encrypted: $file"
 
   run file_exists "$file.md"
   assert_failure
@@ -198,7 +225,7 @@ Would encrypt: $file3"
 
   run memo_encrypt "test_dir/test2.md"
   assert_success
-  assert_output "Encrypted: test_dir/test2.md"
+  assert_output "Encrypted: $file"
 
   run file_exists "$file.md"
   assert_failure
