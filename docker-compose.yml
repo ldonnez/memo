@@ -1,6 +1,0 @@
-services:
-  memo-sh:
-    build: .
-    stdin_open: true
-    volumes:
-      - .:/opt
