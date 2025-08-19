@@ -644,9 +644,6 @@ memo_encrypt() {
     return 0
   fi
 
-  #
-  # 3) Encrypt in a single gpg --encrypt-files call
-  #
   if [[ $dry -eq 1 ]]; then
     for f in "${files_to_encrypt[@]}"; do
       printf "Would encrypt: %s\n" "${f#"$NOTES_DIR"/}"
