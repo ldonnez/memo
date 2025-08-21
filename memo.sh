@@ -91,13 +91,15 @@ build_cache_binary() {
 
 # Set default values if unset
 set_default_values() {
+  local script_path="$1"
+
   : "${KEY_IDS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
-  : "${CACHE_BUILDER_BIN:=$1/bin/cache_builder}"
+  : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
 }
 
 # TODO: Add tests for this
