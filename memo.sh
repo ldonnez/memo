@@ -751,7 +751,7 @@ Options:
 
 Commands:
   --delete  [filename]      Delete a memo & updates cache
-  --find                    List all memos in $NOTES_DIR with rg and fzf
+  --files                   List all memos in $NOTES_DIR with rg and fzf
   --grep                    Uses rg and the $CACHE_FILE to grep all notes
   --decrypt [filename|all]  Decrypt one or all memos
   --encrypt [filename|all]  Encrypt one or all memos
@@ -821,7 +821,7 @@ parse_args() {
   fi
 
   # unknown command
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|--find|--grep|--encrypt|--decrypt|--cache]\n"
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|--files|--grep|--encrypt|--decrypt|--cache]\n"
   exit 1
 }
 
