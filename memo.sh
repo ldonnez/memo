@@ -20,10 +20,13 @@ file_is_gpg() {
 get_hash() {
   local filename="$1"
 
-  if [[ "$(uname -s)" == "Darwin" ]]; then
+  if command -v md5sum >/dev/null 2>&1; then
+    md5sum "$filename" | awk '{print $1}'
+  elif command -v md5 >/dev/null 2>&1; then
     md5 -q "$filename"
   else
-    md5sum "$filename" | awk '{print $1}'
+    printf "Error: Neither md5sum nor md5 command found." >&2
+    return 1
   fi
 }
 
@@ -799,15 +802,15 @@ parse_args() {
       memo_cache "$@"
       return
       ;;
-    --) # end of options
+    --)
       shift
       break
       ;;
-    -*) # unknown short option
+    -*)
       show_help
       exit 1
       ;;
-    *) # positional argument (subcommand/date)
+    *)
       arg="$1"
       shift
       break
@@ -820,7 +823,7 @@ parse_args() {
     return
   fi
 
-  # unknown command
+  # unknown option
   printf "Usage: memo [today|esterday|YYYY-MM-DD|--files|--grep|--encrypt|--decrypt|--cache]\n"
   exit 1
 }
