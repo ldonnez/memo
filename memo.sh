@@ -600,11 +600,10 @@ memo_encrypt() {
   # 2) Apply ignore/exclude filters
   #
   local files_to_encrypt=()
-  local file rel skip ig ex
 
   for file in "${files[@]}"; do
-    rel="${file#"$NOTES_DIR"/}"
-    skip=0
+    local rel="${file#"$NOTES_DIR"/}"
+    local skip=0
 
     # .ignore
     for ig in "${ignore_patterns[@]}"; do
