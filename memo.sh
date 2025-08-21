@@ -27,7 +27,7 @@ get_hash() {
   fi
 }
 
-file_content_is_equal() {
+compare_files() {
   local file1_hash
   file1_hash=$(get_hash "$1") || return 1
 
@@ -326,7 +326,7 @@ should_encrypt_file() {
   local tmp_file
   tmp_file=$(decrypt_file_to_temp "$encrypted_file")
 
-  if file_content_is_equal "$plaintext" "$tmp_file"; then
+  if compare_files "$plaintext" "$tmp_file"; then
     rm -f "$tmp_file"
     return 1
   else

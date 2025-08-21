@@ -12,21 +12,32 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/{,.}*
 }
 
-@test "returns success when 2 file contents are equal" {
+@test "returns success when 2 files are equal" {
   local file1="$NOTES_DIR/test1.md"
   printf "Hello World" >"$file1"
 
   local file2="$NOTES_DIR/test2.md"
   printf "Hello World" >"$file2"
 
-  run file_content_is_equal "$file1" "$file2"
+  run compare_files "$file1" "$file2"
   assert_success
+}
+
+@test "returns failure when 2 files not equal" {
+  local file1="$NOTES_DIR/test1.md"
+  printf "Hello World" >"$file1"
+
+  local file2="$NOTES_DIR/test2.md"
+  printf "Hello NOT World" >"$file2"
+
+  run compare_files "$file1" "$file2"
+  assert_failure
 }
 
 @test "returns failure when file path does not exist" {
   local file1="$NOTES_DIR/does-not-exist.md"
   local file2="$NOTES_DIR/does-not-exist"
 
-  run file_content_is_equal "$file1" "$file2"
+  run compare_files "$file1" "$file2"
   assert_failure
 }
