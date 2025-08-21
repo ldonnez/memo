@@ -16,7 +16,7 @@ teardown() {
   local to_be_created_file
   to_be_created_file=$JOURNAL_NOTES_DIR/$(date +%F).md.gpg
 
-  run edit_memo ""
+  run memo_edit ""
   assert_success
   assert_output --partial "Encrypted: $to_be_created_file
 Cache updated (1 file(s) changed)"
@@ -31,7 +31,7 @@ Cache updated (1 file(s) changed)"
 
   gpg_encrypt "$file" "$file.gpg"
 
-  run edit_memo ""
+  run memo_edit ""
   assert_success
   assert_output ""
 }
@@ -43,7 +43,7 @@ Cache updated (1 file(s) changed)"
 
   gpg_encrypt "$file" "$file.gpg"
 
-  run edit_memo "$file.gpg"
+  run memo_edit "$file.gpg"
   assert_success
   assert_output ""
 }
@@ -51,7 +51,7 @@ Cache updated (1 file(s) changed)"
 @test "successfully creates new file in notes dir ($NOTES_DIR)" {
   local file="new-file-test.md"
 
-  run edit_memo "$file"
+  run memo_edit "$file"
   assert_success
   assert_output --partial "Encrypted: $NOTES_DIR/$file.gpg
 Cache updated (1 file(s) changed)"
@@ -64,7 +64,7 @@ Cache updated (1 file(s) changed)"
 
   gpg_encrypt "$file" "$file.gpg"
 
-  run edit_memo "$file.gpg"
+  run memo_edit "$file.gpg"
   assert_failure
   assert_output "Error: File is not a valid gpg memo in the notes directory."
 

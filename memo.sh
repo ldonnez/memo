@@ -423,7 +423,7 @@ find_note_file() {
 }
 
 # Commands
-edit_memo() {
+memo_edit() {
   local input="$1"
 
   local filepath
@@ -659,7 +659,7 @@ memo_files() {
 
   [[ -z "$result" ]] && return
 
-  edit_memo "$result"
+  memo_edit "$result"
 }
 
 memo_delete() {
@@ -738,7 +738,7 @@ grep() {
     local filename
     filename=$(printf "%s" "$selected_line" | awk -F: '{print $1}')
 
-    edit_memo "$NOTES_DIR/$filename"
+    memo_edit "$NOTES_DIR/$filename"
   fi
 }
 
@@ -816,7 +816,7 @@ parse_args() {
   done
 
   if [[ -z "$arg" || "$arg" == "today" || "$arg" == "yesterday" || "$arg" == "tomorrow" || "$arg" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ || -n "$arg" ]]; then
-    edit_memo "$arg"
+    memo_edit "$arg"
     return
   fi
 
