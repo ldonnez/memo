@@ -284,13 +284,10 @@ decrypt_file_to_temp() {
   fi
 }
 
-# TODO: Add tests for this
-# TODO: Can't we make this simpler by not asking for it. It can be annoying.
-save_file() {
+sync_and_encrypt_file() {
   local decrypted_file="$1"
   local encrypted_file="$2"
 
-  # If the encrypted file doesn't exist, skip comparison and prompt for encryption
   if ! file_exists "$encrypted_file"; then
     encrypt_file "$decrypted_file" "$encrypted_file"
     build_notes_cache "$encrypted_file"
@@ -437,9 +434,9 @@ edit_memo() {
   "$EDITOR_CMD" "$tmpfile"
 
   if file_is_gpg "$filepath"; then
-    save_file "$tmpfile" "$filepath"
+    sync_and_encrypt_file "$tmpfile" "$filepath"
   else
-    save_file "$tmpfile" "$filepath.gpg"
+    sync_and_encrypt_file "$tmpfile" "$filepath.gpg"
   fi
 
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
