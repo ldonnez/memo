@@ -9,7 +9,7 @@ setup() {
 }
 
 @test "returns the absolute path the script is run" {
-  run get_script_path
+  run resolve_script_path
   assert_success
   assert_output "/opt"
 }

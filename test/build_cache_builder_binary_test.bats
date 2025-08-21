@@ -15,8 +15,8 @@ teardown() {
   rm -rf "$TEST_DIR"
 }
 
-@test "build_cache_binary builds binary if missing" {
-  run build_cache_binary "/opt" "$BINARY_PATH"
+@test "builds binary if missing" {
+  run build_cache_builder_binary "/opt" "$BINARY_PATH"
   assert_success
   assert_output "Building cache binary..."
 }
@@ -28,7 +28,7 @@ teardown() {
 
   chmod +x "$binary"
 
-  run build_cache_binary "/opt" "$BINARY_PATH"
+  run build_cache_builder_binary "/opt" "$BINARY_PATH"
   assert_success
   assert_output ""
 }

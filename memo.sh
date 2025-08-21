@@ -30,6 +30,7 @@ get_hash() {
   fi
 }
 
+# compares 2 files by hashing both its contents and compares them.
 compare_files() {
   local file1_hash
   file1_hash=$(get_hash "$1") || return 1
@@ -44,17 +45,15 @@ compare_files() {
   return 1
 }
 
+# Check if filename matches YYYY-MM-DD format
 filename_is_date() {
-  local filename="$1"
-
-  # Strip path and isolate base name
-  filename="${filename##*/}"
+  local filepath="$1"
 
   # Example: 2025-08-05.md.gpg → 2025-08-05
-  local base="${filename%%.*}"
+  local filename
+  filename=$(strip_extensions "$(strip_path "$filepath")")
 
-  # Check if base name matches YYYY-MM-DD format
-  if [[ "$base" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+  if [[ "$filename" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
     return 0
   else
     return 1
@@ -62,7 +61,7 @@ filename_is_date() {
 }
 
 # Resolve the absolute path of where this script is run (it follows symlinks)
-get_script_path() {
+resolve_script_path() {
   local source="${BASH_SOURCE[0]}"
   while [ -h "$source" ]; do
     local dir
@@ -75,7 +74,7 @@ get_script_path() {
 }
 
 # Build the cache_builder binary if not found
-build_cache_binary() {
+build_cache_builder_binary() {
   local script_path="$1"
   local binary="$2"
 
@@ -92,7 +91,7 @@ build_cache_binary() {
   fi
 }
 
-# Set default values if unset
+# Set default values
 set_default_values() {
   local script_path="$1"
 
@@ -105,6 +104,7 @@ set_default_values() {
   : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
 }
 
+# Loads config from config file (default: ~/.config/memo/config)
 load_config() {
   local config_file="$1"
   local script_path="$2"
@@ -120,6 +120,7 @@ load_config() {
 
 }
 
+# Trim leading or trailing spaces of a string
 trim() {
   local string="$1"
 
@@ -151,7 +152,6 @@ gpg_keys_exists() {
   fi
 }
 
-# TODO: Add tests for this
 create_dirs() {
   # Create directories if not exist
   mkdir -p "$NOTES_DIR"
@@ -831,13 +831,13 @@ parse_args() {
 # Entrypoint
 main() {
   local script_path
-  script_path="$(get_script_path)"
+  script_path="$(resolve_script_path)"
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
   load_config "$CONFIG_FILE" "$script_path"
   gpg_keys_exists "$KEY_IDS"
   create_dirs
-  build_cache_binary "$script_path" "$CACHE_BUILDER_BIN"
+  build_cache_builder_binary "$script_path" "$CACHE_BUILDER_BIN"
 
   parse_args "$@"
 }
