@@ -13,7 +13,7 @@ teardown() {
   rm -f "$CACHE_FILE"
 }
 
-@test "grep should successfully find and edit a note" {
+@test "should successfully find and edit a note" {
 
   # Create a mock encrypted cache file
   local file="$NOTES_DIR/file.md"
@@ -43,13 +43,13 @@ teardown() {
     fi
   }
 
-  run grep ""
+  run memo_grep ""
 
   assert_success
   assert_output "memo_edit called with correct file"
 }
 
-@test "grep should do nothing when no line is selected in fzf" {
+@test "should do nothing when no line is selected in fzf" {
 
   # Create a mock encrypted cache file
   local file="$NOTES_DIR/file.md"
@@ -69,7 +69,7 @@ teardown() {
     return 1
   }
 
-  run grep ""
+  run memo_grep ""
 
   assert_success
   refute_output "memo_edit was called unexpectedly"

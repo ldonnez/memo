@@ -713,7 +713,7 @@ memo_cache() {
   $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$@"
 }
 
-grep() {
+memo_grep() {
   local query="${1-""}"
 
   local temp_index=
@@ -782,7 +782,7 @@ parse_args() {
       return
       ;;
     --grep)
-      grep
+      memo_grep
       return
       ;;
     --decrypt)
