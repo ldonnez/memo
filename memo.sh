@@ -102,7 +102,6 @@ set_default_values() {
   : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
 }
 
-# TODO: Add tests for this
 load_config() {
   local config_file="$1"
   local script_path="$2"
