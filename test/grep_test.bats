@@ -10,6 +10,7 @@ setup() {
 
 teardown() {
   rm -rf "${NOTES_DIR:?}"/{,.}*
+  rm -f "$CACHE_FILE"
 }
 
 @test "grep should successfully find and edit a note" {
@@ -20,7 +21,7 @@ teardown() {
 
   gpg_encrypt "$file" "$file.gpg"
 
-  build_notes_cache
+  memo_cache
 
   # Mock fzf to return the selected line
   # shellcheck disable=SC2329
@@ -56,7 +57,7 @@ teardown() {
 
   gpg_encrypt "$file" "$file.gpg"
 
-  build_notes_cache
+  memo_cache
 
   fzf() {
     printf ""

@@ -291,13 +291,13 @@ sync_and_encrypt_file() {
 
   if ! file_exists "$encrypted_file"; then
     encrypt_file "$decrypted_file" "$encrypted_file"
-    build_notes_cache "$encrypted_file"
+    memo_cache "$encrypted_file"
     return
   fi
 
   if should_encrypt_file "$decrypted_file" "$encrypted_file"; then
     encrypt_file "$decrypted_file" "$encrypted_file"
-    build_notes_cache "$encrypted_file"
+    memo_cache "$encrypted_file"
   fi
 }
 
@@ -703,13 +703,13 @@ memo_delete() {
   if [ ${#delete_list[@]} -gt 0 ]; then
     rm -f "${delete_list[@]}"
     printf "Deleted: %s\n" "${delete_list[*]}"
-    build_notes_cache "${delete_list[@]}"
+    memo_cache "${delete_list[@]}"
   fi
 }
 
 # --- Main ---
-# Incrementally update note index
-build_notes_cache() {
+# Incrementally update note cache
+memo_cache() {
   $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$@"
 }
 
@@ -721,7 +721,7 @@ grep() {
 
   if [[ ! -f "$CACHE_FILE" ]]; then
     printf "Cache not found. Building it now...\n"
-    build_notes_cache
+    memo_cache
   fi
 
   gpg_decrypt "$CACHE_FILE" "$temp_index"
@@ -796,7 +796,7 @@ parse_args() {
       return
       ;;
     --cache)
-      build_notes_cache "$@"
+      memo_cache "$@"
       return
       ;;
     --) # end of options

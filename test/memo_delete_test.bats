@@ -10,6 +10,7 @@ setup() {
 
 teardown() {
   rm -rf "${NOTES_DIR:?}"/{,.}*
+  rm -f "$CACHE_FILE"
 }
 
 @test "deletes the file and does not cache because file does not exist in cache" {
@@ -48,7 +49,7 @@ Cache updated (0 file(s) changed)"
 
   gpg_encrypt "$file2" "$file2.gpg"
 
-  build_notes_cache
+  memo_cache
 
   run memo_delete --force "$file.gpg" "$file2.gpg"
   assert_success
