@@ -12,7 +12,7 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/{,.}*
 }
 
-@test "find_memos should correctly find and edit a .gpg file" {
+@test "should correctly find and edit a .gpg file" {
   # Setup: Create a temporary directory and a test file
   local file="$NOTES_DIR/file.md"
   printf "Hello world" >"$file"
@@ -40,7 +40,7 @@ teardown() {
     fi
   }
 
-  run find_memos
+  run memo_files
 
   assert_success
   assert_output "edit_memo called with correct file"

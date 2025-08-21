@@ -652,7 +652,7 @@ memo_encrypt() {
   fi
 }
 
-find_memos() {
+memo_files() {
   local result
 
   result=$(rg --files --glob "*.gpg" "$NOTES_DIR" | fzf --preview "gpg --quiet --decrypt {} 2>/dev/null | head -100")
@@ -777,8 +777,8 @@ parse_args() {
       memo_delete "$@"
       return
       ;;
-    --find)
-      find_memos
+    --files)
+      memo_files
       return
       ;;
     --grep)
