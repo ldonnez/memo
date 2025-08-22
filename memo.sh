@@ -17,35 +17,8 @@ file_is_gpg() {
   [[ "$filepath" == *".gpg" ]]
 }
 
-get_hash() {
-  local filename="$1"
-
-  if command -v md5sum >/dev/null 2>&1; then
-    md5sum "$filename" | awk '{print $1}'
-  elif command -v md5 >/dev/null 2>&1; then
-    md5 -q "$filename"
-  else
-    printf "Error: Neither md5sum nor md5 command found." >&2
-    return 1
-  fi
-}
-
-# compares 2 files by hashing both its contents and compares them.
-compare_files() {
-  local file1_hash
-  file1_hash=$(get_hash "$1") || return 1
-
-  local file2_hash
-  file2_hash=$(get_hash "$2") || return 1
-
-  if [[ "$file1_hash" == "$file2_hash" ]]; then
-    return 0
-  fi
-
-  return 1
-}
-
-# Check if filename matches YYYY-MM-DD format
+# Check if filename matches YYYY-MM-DD format.
+# Strips path and extensions before determining. (e.g example.md.gpg -> example)
 filename_is_date() {
   local filepath="$1"
 
@@ -60,7 +33,7 @@ filename_is_date() {
   fi
 }
 
-# Resolve the absolute path of where this script is run (it follows symlinks)
+# Resolves the absolute path of where this script is run (it will follows symlinks)
 resolve_script_path() {
   local source="${BASH_SOURCE[0]}"
   while [ -h "$source" ]; do
@@ -73,7 +46,7 @@ resolve_script_path() {
   cd -P "$(dirname "$source")" && pwd
 }
 
-# Build the cache_builder binary if not found
+# Build the cache_builder binary if not found and puts it in the bin directory relative to script path (the location where the script is ran from)
 build_cache_builder_binary() {
   local script_path="$1"
   local binary="$2"
@@ -91,7 +64,7 @@ build_cache_builder_binary() {
   fi
 }
 
-# Set default values
+# Set default global variables
 set_default_values() {
   local script_path="$1"
 
@@ -102,6 +75,7 @@ set_default_values() {
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
   : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
+  : "${MEMO_NEOVIM_INTEGRATION:=true}"
 }
 
 # Loads config from config file (default: ~/.config/memo/config)
@@ -132,7 +106,7 @@ trim() {
   printf "%s" "$string"
 }
 
-# Validates if all the given key_ids exist in GPG keyring
+# Validates if all the given key_ids exist in GPG keyring.
 gpg_keys_exists() {
   local key_ids="$1"
   local missing_keys=()
@@ -152,6 +126,7 @@ gpg_keys_exists() {
   fi
 }
 
+# Initializes $NOTES_DIR, $JOURNAL_NOTES_DIR, $CACHE_DIR
 create_dirs() {
   # Create directories if not exist
   mkdir -p "$NOTES_DIR"
@@ -160,6 +135,7 @@ create_dirs() {
   chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
 }
 
+# Maps today, yesterday, tomorrow to YYYY-MM-DD date.
 determine_filename() {
   local input="$1"
 
@@ -187,6 +163,8 @@ determine_filename() {
   return 0
 }
 
+# Returns filepath based on input file name.
+# When input filename is date, the file is classified as a file belonging in the journals directory ($JOURNAL_NOTES_DIR.
 get_filepath() {
   local input="$1"
   local filename
@@ -210,16 +188,36 @@ get_filepath() {
   printf "%s" "$filepath"
 }
 
+# Builds the gpg recipients (-r param in gpg) based on given key_ids
+# When no key_ids is empty --default-recipient-self is given, which means the first key found in the keyring is used as a recipient.
+# returns array of "-r <key_id> -r <key_id2>"
+#
+# Usage:
+#
+# ```
+# local -a recipients=()
+#
+# if ! build_gpg_recipients "$KEY_IDS" recipients; then
+#   return 1
+# fi
+#
+# gpg --quiet --yes --armor --encrypt "${recipients[@]}"...
+# ```
 build_gpg_recipients() {
   local key_ids="$1"
   local output_array="$2"
+
+  if [[ -z "$key_ids" ]]; then
+    eval "$output_array+=(\"--default-recipient-self\")"
+    return 0
+  fi
 
   local IFS=',' items
   read -r -a items <<<"$key_ids"
 
   if [[ ${#items[@]} -eq 0 ]]; then
-    printf "No key ids given" >&2
-    return 1
+    eval "$output_array+=(\"--default-recipient-self\")"
+    return 0
   fi
 
   local id
@@ -236,9 +234,16 @@ build_gpg_recipients() {
   done
 }
 
+# Encrypts the content of given input file (path) to given output file (path)
+# This will NOT encrypt the file itself only the content. (gpg --armor)
 gpg_encrypt() {
   # Sets output_path to input_path when output_path is not given
   local input_path="$1" output_path="${2-$1}"
+
+  if ! file_exists "$input_path"; then
+    printf "File not found: %s" "$input_path"
+    exit 1
+  fi
 
   local -a recipients=()
 
@@ -246,19 +251,36 @@ gpg_encrypt() {
     return 1
   fi
 
-  gpg --quiet --batch --yes --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
-  printf "Encrypted: %s\n" "$output_path"
+  gpg --quiet --yes --armor --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
 }
 
+# Decrypts given input file (path) to given output file (path)
+# When output_path is not given (default) it will decrypt content to stdout. This is important when decrypting to external buffers like in Neovim.
 gpg_decrypt() {
-  local input_path="$1" output_path="$2"
+  local input_path="$1" output_path="${2-""}"
 
-  gpg --quiet --yes --decrypt "$input_path" >"$output_path" || {
-    printf "Failed to decrypt %s\n" "$input_path"
-    return 1
-  }
+  if ! file_exists "$input_path"; then
+    printf "File not found: %s" "$input_path"
+    exit 1
+  fi
+
+  # Send output to stdout.
+  if [[ -z "$output_path" ]]; then
+    gpg --quiet --yes --decrypt "$input_path" || {
+      printf "Failed to decrypt %s\n" "$input_path" >&2
+      return 1
+    }
+  else
+    # Redirect output to the specified file.
+    gpg --quiet --yes --decrypt "$input_path" >"$output_path" || {
+      printf "Failed to decrypt %s\n" "$input_path" >&2
+      return 1
+    }
+  fi
 }
 
+# Creates a tempfile used for temporary storing decrypted content.
+# When on Linux it will create the tempfile on memory (/dev/shm), otherwise (e.g MacOS) /tmp is used.
 make_tempfile() {
   local encrypted_file="$1"
   local relname="${encrypted_file##*/}" # remove path /path/to/2025-01-01.md.gpg -> 2025-01-01.md.gpg
@@ -275,40 +297,13 @@ make_tempfile() {
   printf "%s" "$tmpfile"
 }
 
-decrypt_file_to_temp() {
-  local encfile="$1"
-  local basename="${encfile##*/}"
-  local tmpfile
-  tmpfile=$(make_tempfile "$basename")
-
-  if gpg_decrypt "$encfile" "$tmpfile"; then
-    printf "%s" "$tmpfile"
-  else
-    return 1
-  fi
-}
-
-sync_and_encrypt_file() {
-  local decrypted_file="$1"
-  local encrypted_file="$2"
-
-  if ! file_exists "$encrypted_file"; then
-    encrypt_file "$decrypted_file" "$encrypted_file"
-    memo_cache "$encrypted_file"
-    return
-  fi
-
-  if should_encrypt_file "$decrypted_file" "$encrypted_file"; then
-    encrypt_file "$decrypted_file" "$encrypted_file"
-    memo_cache "$encrypted_file"
-  fi
-}
-
+# /path/to/example.md -> example.md
 strip_path() {
   local filepath="$1"
   printf "%s" "${filepath##*/}"
 }
 
+# example.md.gpg -> example
 strip_extensions() {
   local filename="$1"
   while [[ "$filename" == *.* ]]; do
@@ -317,32 +312,7 @@ strip_extensions() {
   printf "%s" "$filename"
 }
 
-should_encrypt_file() {
-  # Sets encrypted_file to plaintext when encrypted_file is not given
-  local plaintext="$1" encrypted_file="${2-$1}"
-
-  if ! file_exists "$encrypted_file"; then
-    return 0
-  fi
-  local tmp_file
-  tmp_file=$(decrypt_file_to_temp "$encrypted_file")
-
-  if compare_files "$plaintext" "$tmp_file"; then
-    rm -f "$tmp_file"
-    return 1
-  else
-    rm -f "$tmp_file"
-    return 0
-  fi
-}
-
-encrypt_file() {
-  local input_file="$1" output_file="$2"
-
-  gpg_encrypt "$input_file" "$output_file"
-  rm -f "$input_file"
-}
-
+# Checks if given path is inside $NOTES_DIR. Also works if the file is in subdir of $NOTES_DIR
 is_in_notes_dir() {
   local fullpath="$1"
   local notes_dir="$NOTES_DIR"
@@ -357,6 +327,10 @@ is_in_notes_dir() {
   fi
 }
 
+# Determines destination path of given input.
+# Given empty will get classified as daily memo e.g YYYY-MM-DD
+# When file or path is inside notes directory ($NOTES_DIR) it will return the fullpath path of the input file. This also works when working dir is inside the notes dir. For example `cd $NOTES_DIR/example/example.md.gpg` -> `get_target_filepath "example.md.gpg"` returns the full path of example.md.gpg.
+# New file will get created if input does not exist.
 get_target_filepath() {
   local input="$1"
   local fullpath
@@ -383,25 +357,8 @@ get_target_filepath() {
   fi
 }
 
-make_or_edit_file() {
-  local filepath="$1"
-
-  local tmpfile
-  tmpfile=$(make_tempfile "${filepath##*/}")
-
-  if file_exists "$filepath.gpg"; then
-    gpg_decrypt "$filepath.gpg" "$tmpfile"
-  elif file_is_gpg "$filepath"; then
-    gpg_decrypt "$filepath" "$tmpfile"
-  else
-    local header
-    header=$(strip_extensions "$(strip_path "$filepath")")
-    printf "# %s\n\n" "$header" >"$tmpfile"
-  fi
-
-  printf "%s\n" "$tmpfile"
-}
-
+# Finds note file path relative of $NOTES_DIR.
+# When working dir is inside $NOTES_DIR it will return the path relat
 find_note_file() {
   local target="$1"
   local file=""
@@ -425,81 +382,69 @@ find_note_file() {
   printf "%s" "$file"
 }
 
-# Commands
-memo_edit() {
-  local input="$1"
-
-  local filepath
-  filepath=$(get_target_filepath "$1") || return 1
+# Edits given file in temporary file.
+# Creates new file with filename as header if not exists. e.g example.md -> # example
+make_or_edit_file() {
+  local filepath="$1"
 
   local tmpfile
-  tmpfile=$(make_or_edit_file "$filepath")
+  tmpfile=$(make_tempfile "${filepath##*/}")
 
-  "$EDITOR_CMD" "$tmpfile"
-
-  if file_is_gpg "$filepath"; then
-    sync_and_encrypt_file "$tmpfile" "$filepath"
+  local gpg_file
+  if gpg_file=$(get_gpg_filepath "$filepath"); then
+    gpg_decrypt "$gpg_file" "$tmpfile"
   else
-    sync_and_encrypt_file "$tmpfile" "$filepath.gpg"
+    create_file_header "$filepath" "$tmpfile"
   fi
 
-  shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
+  printf "%s\n" "$tmpfile"
 }
 
-memo_decrypt() {
-  if [[ $# -eq 0 ]]; then
-    printf "Usage: memo --decrypt <filename.gpg | glob | all> ...\n"
+# Determines correct GPG file path
+get_gpg_filepath() {
+  local filepath="$1"
+
+  if file_exists "$filepath.gpg"; then
+    printf "%s.gpg\n" "$filepath"
+  elif file_is_gpg "$filepath"; then
+    printf "%s\n" "$filepath"
+  else
     return 1
   fi
-
-  local files=()
-
-  for target in "$@"; do
-    if [[ "$target" == "all" ]]; then
-      # collect all *.gpg under NOTES_DIR
-      while IFS= read -r f; do
-        files+=("$f")
-      done < <(find "$NOTES_DIR" -type f -name "*.gpg")
-      continue
-    fi
-
-    # user gave a concrete file relative to CWD
-    if [[ -f "$target" ]]; then
-      local abs
-      abs="$(cd "$(dirname "$target")" && pwd)/$(basename "$target")"
-      if [[ "$abs" != "$NOTES_DIR"/* ]]; then
-        printf "File not in %s\n" "$NOTES_DIR"
-        return 1
-      fi
-      files+=("$abs")
-      continue
-    fi
-
-    # otherwise treat it as a glob relative to $NOTES_DIR
-    local matched=0
-    local f
-    for f in "$NOTES_DIR"/$target; do
-      if [[ -f "$f" && "$f" == *.gpg ]]; then
-        files+=("$f")
-        matched=1
-      fi
-    done
-    [[ $matched -eq 0 ]] && {
-      printf "File not in %s or pattern did not match: %s\n" "$NOTES_DIR" "$target"
-      return 1
-    }
-  done
-
-  # Decrypt all at once using gpg --decrypt-files
-  gpg --decrypt-files --yes --quiet "${files[@]}"
-
-  # Print status to match memo_encrypt
-  local f
-  for f in "${files[@]}"; do
-    printf "Decrypted: %s\n" "${f%.gpg}"
-  done
 }
 
+# Determines the output GPG file path used before encryption
+get_output_gpg_filepath() {
+  local filepath="$1"
+
+  if file_is_gpg "$filepath"; then
+    printf "%s\n" "$filepath"
+  else
+    printf "%s.gpg\n" "$filepath"
+  fi
+}
+
+# Creates a file header used when new file is created
+create_file_header() {
+  local filepath="$1"
+  local output_file="$2"
+
+  local header
+  header=$(strip_extensions "$(strip_path "$filepath")")
+  printf "# %s\n\n" "$header" >"$output_file"
+}
+
+# Loads ignore file into space separated string.
+#
+# Usage:
+#
+# ```
+# local -a ignore_patterns=()
+#
+# while IFS= read -r pat; do
+#   ignore_patterns+=("$pat")
+# done < <(read_ignore_file)
+# ```
 read_ignore_file() {
   local ignore_file=$NOTES_DIR/.ignore
   if file_exists "$ignore_file"; then
@@ -514,147 +459,6 @@ read_ignore_file() {
   fi
 }
 
-memo_encrypt() {
-  local dry=0
-  local -a exclude_patterns=()
-  local -a ignore_patterns=()
-  local -a recipients=()
-
-  if ! build_gpg_recipients "$KEY_IDS" recipients; then
-    return 1
-  fi
-
-  # capture .ignore into ignore_patterns[]
-  while IFS= read -r pat; do
-    ignore_patterns[${#ignore_patterns[@]}]="$pat"
-  done < <(read_ignore_file)
-
-  # parse args
-  local args=()
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-    --dry-run) dry=1 ;;
-    --exclude)
-      exclude_patterns+=("$2")
-      shift
-      ;;
-    *)
-      args+=("$1")
-      ;;
-    esac
-    shift
-  done
-
-  if [[ ${#args[@]} -eq 0 ]]; then
-    printf "Usage: memo encrypt <filename | glob | all> [more files …] [--dry-run] [--exclude pattern]\n"
-    return 1
-  fi
-
-  shopt -s nullglob
-  local files=()
-
-  #
-  # 1) iterate over ALL provided positional arguments
-  #    (so we support: memo_encrypt file1 file2 dir/*.md)
-  #
-  local target
-  for target in "${args[@]}"; do
-    if [[ "$target" == "all" ]]; then
-      # collect everything (non-gpg) under NOTES_DIR
-      while IFS= read -r f; do
-        [[ -f "$f" && "$f" != *.gpg ]] && files+=("$f")
-      done < <(find "$NOTES_DIR" -type f ! -name "*.gpg")
-      continue
-    fi
-
-    # explicit file relative to current directory
-    if [[ -f "$target" ]]; then
-      local abs
-      abs="$(cd "$(dirname "$target")" && pwd)/$(basename "$target")"
-
-      if [[ "$abs" != "$NOTES_DIR"/* ]]; then
-        printf "File not in %s\n" "$NOTES_DIR"
-        shopt -u nullglob
-        return 1
-      fi
-      [[ "$abs" != *.gpg ]] && files+=("$abs")
-      continue
-    fi
-
-    # otherwise treat it as a glob relative to NOTES_DIR
-    local matched=0
-    local f
-    for f in "$NOTES_DIR"/$target; do
-      if [[ -f "$f" && "$f" != *.gpg ]]; then
-        files+=("$f")
-        matched=1
-      fi
-    done
-    [[ $matched -eq 0 ]] && {
-      printf "File not in %s or pattern did not match: %s\n" "$NOTES_DIR" "$target"
-      shopt -u nullglob
-      return 1
-    }
-  done
-
-  shopt -u nullglob
-
-  #
-  # 2) Apply ignore/exclude filters
-  #
-  local files_to_encrypt=()
-
-  for file in "${files[@]}"; do
-    local rel="${file#"$NOTES_DIR"/}"
-    local skip=0
-
-    # .ignore
-    for ig in "${ignore_patterns[@]}"; do
-      # shellcheck disable=SC2053
-      if [[ "$rel" == $ig ]]; then
-        printf "Ignored (.ignore): %s\n" "$rel"
-        skip=1
-        break
-      fi
-    done
-    [[ $skip -eq 1 ]] && continue
-
-    # --exclude
-    for ex in "${exclude_patterns[@]}"; do
-      # shellcheck disable=SC2053
-      if [[ "$rel" == $ex ]]; then
-        printf "Excluded (--exclude): %s\n" "$rel"
-        skip=1
-        break
-      fi
-    done
-    [[ $skip -eq 1 ]] && continue
-
-    files_to_encrypt+=("$file")
-  done
-
-  if [[ ${#files_to_encrypt[@]} -eq 0 ]]; then
-    printf "Nothing to encrypt.\n"
-    return 0
-  fi
-
-  if [[ $dry -eq 1 ]]; then
-    for f in "${files_to_encrypt[@]}"; do
-      printf "Would encrypt: %s\n" "${f#"$NOTES_DIR"/}"
-    done
-  else
-    gpg --encrypt-files --quiet --yes "${recipients[@]}" "${files_to_encrypt[@]}"
-
-    local f
-    for f in "${files_to_encrypt[@]}"; do
-      if [[ -f "$f.gpg" ]]; then
-        rm -f "$f"
-        printf "Encrypted: %s\n" "${f#"$NOTES_DIR"/}"
-      fi
-    done
-  fi
-}
-
 memo_files() {
   local result
 
@@ -662,7 +466,7 @@ memo_files() {
 
   [[ -z "$result" ]] && return
 
-  memo_edit "$result"
+  memo "$result"
 }
 
 memo_delete() {
@@ -710,12 +514,6 @@ memo_delete() {
   fi
 }
 
-# --- Main ---
-# Incrementally update note cache
-memo_cache() {
-  $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$@"
-}
-
 memo_grep() {
   local query="${1-""}"
 
@@ -741,28 +539,260 @@ memo_grep() {
     local filename
     filename=$(printf "%s" "$selected_line" | awk -F: '{print $1}')
 
-    memo_edit "$NOTES_DIR/$filename"
+    memo "$NOTES_DIR/$filename"
   fi
+}
+
+memo_decrypt_files() {
+  if [[ $# -eq 0 ]]; then
+    printf "Usage: memo --decrypt <filename.gpg | glob | all> ...\n"
+    return 1
+  fi
+
+  local files=()
+
+  for target in "$@"; do
+    if [[ "$target" == "all" ]]; then
+      while IFS= read -r f; do
+        files+=("$f")
+      done < <(find "$NOTES_DIR" -type f -name "*.gpg")
+      continue
+    fi
+
+    if [[ -f "$target" ]]; then
+      local abs
+      abs="$(cd "$(dirname "$target")" && pwd)/$(basename "$target")"
+      if [[ "$abs" != "$NOTES_DIR"/* ]]; then
+        printf "File not in %s\n" "$NOTES_DIR"
+        return 1
+      fi
+      [[ "$abs" == *.gpg ]] && files+=("$abs")
+      continue
+    fi
+
+    local matched=0
+    local f
+    for f in "$NOTES_DIR"/$target; do
+      if [[ -f "$f" && "$f" == *.gpg ]]; then
+        files+=("$f")
+        matched=1
+      fi
+    done
+    [[ $matched -eq 0 ]] && {
+      printf "File not in %s or not a .gpg file: %s\n" "$NOTES_DIR" "$target"
+      return 1
+    }
+  done
+
+  local f tmp out
+  for f in "${files[@]}"; do
+    tmp=$(mktemp)
+    out="${f%.gpg}"
+
+    if gpg_decrypt "$f" "$tmp" 2>/dev/null; then
+      mv "$tmp" "$out"
+      rm -f "$f"
+      printf "Decrypted: %s\n" "$out"
+    else
+      rm -f "$tmp"
+      printf "Failed to decrypt: %s\n" "$f"
+    fi
+  done
+}
+
+memo_encrypt_files() {
+  local dry=0
+  local -a exclude_patterns=()
+  local -a ignore_patterns=()
+  local -a recipients=()
+
+  if ! build_gpg_recipients "$KEY_IDS" recipients; then
+    return 1
+  fi
+
+  # capture .ignore into ignore_patterns[]
+  while IFS= read -r pat; do
+    ignore_patterns+=("$pat")
+  done < <(read_ignore_file)
+
+  # parse args
+  local args=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --dry-run) dry=1 ;;
+    --exclude)
+      exclude_patterns+=("$2")
+      shift
+      ;;
+    *)
+      args+=("$1")
+      ;;
+    esac
+    shift
+  done
+
+  if [[ ${#args[@]} -eq 0 ]]; then
+    printf "Usage: memo encrypt <filename | glob | all> [more files …] [--dry-run] [--exclude pattern]\n"
+    return 1
+  fi
+
+  shopt -s nullglob
+  local files=()
+  local target
+
+  # Collect candidate files
+  for target in "${args[@]}"; do
+    if [[ "$target" == "all" ]]; then
+      while IFS= read -r f; do
+        [[ -f "$f" && "$f" != *.gpg ]] && files+=("$f")
+      done < <(find "$NOTES_DIR" -type f ! -name "*.gpg")
+      continue
+    fi
+
+    if [[ -f "$target" ]]; then
+      local abs
+      abs="$(cd "$(dirname "$target")" && pwd)/$(basename "$target")"
+      [[ "$abs" == "$NOTES_DIR"/* ]] || {
+        printf "File not in %s\n" "$NOTES_DIR"
+        shopt -u nullglob
+        return 1
+      }
+      [[ "$abs" != *.gpg ]] && files+=("$abs")
+      continue
+    fi
+
+    local matched=0
+    local f
+    for f in "$NOTES_DIR"/$target; do
+      [[ -f "$f" && "$f" != *.gpg ]] && {
+        files+=("$f")
+        matched=1
+      }
+    done
+    [[ $matched -eq 0 ]] && {
+      printf "File not in %s or pattern did not match: %s\n" "$NOTES_DIR" "$target"
+      shopt -u nullglob
+      return 1
+    }
+  done
+  shopt -u nullglob
+
+  # Apply ignore/exclude filters
+  local files_to_encrypt=()
+  for file in "${files[@]}"; do
+    local rel="${file#"$NOTES_DIR"/}"
+    local skip=0
+
+    if ((${#ignore_patterns[@]} > 0)); then
+      for ig in "${ignore_patterns[@]}"; do
+        # shellcheck disable=SC2053
+        [[ "$rel" == $ig ]] && {
+          printf "Ignored (.ignore): %s\n" "$rel"
+          skip=1
+          break
+        }
+      done
+    fi
+    [[ $skip -eq 1 ]] && continue
+
+    if ((${#exclude_patterns[@]} > 0)); then
+      for ex in "${exclude_patterns[@]}"; do
+        # shellcheck disable=SC2053
+        [[ "$rel" == $ex ]] && {
+          printf "Excluded (--exclude): %s\n" "$rel"
+          skip=1
+          break
+        }
+      done
+    fi
+    [[ $skip -eq 1 ]] && continue
+
+    files_to_encrypt+=("$file")
+  done
+
+  if [[ ${#files_to_encrypt[@]} -eq 0 ]]; then
+    printf "Nothing to encrypt.\n"
+    return 0
+  fi
+
+  # Encrypt
+  if [[ $dry -eq 1 ]]; then
+    for f in "${files_to_encrypt[@]}"; do
+      printf "Would encrypt to: %s.gpg\n" "${f#"$NOTES_DIR"/}"
+    done
+  else
+    local f
+    for f in "${files_to_encrypt[@]}"; do
+      local outfile="$f.gpg"
+      if ! gpg_encrypt "$f" "$outfile.tmp"; then
+        printf "Failed to encrypt: %s\n" "$f"
+        rm -f "$outfile.tmp"
+        return 1
+      fi
+      mv "$outfile.tmp" "$outfile"
+      rm -f "$f"
+      printf "Encrypted: %s -> %s\n" "${f#"$NOTES_DIR"/}" "${outfile#"$NOTES_DIR"/}"
+    done
+  fi
+}
+
+memo_encrypt() {
+  local input_file="$1"
+  local output_file="$2"
+
+  gpg_encrypt "$input_file" "$output_file"
+}
+
+memo_decrypt() {
+  local input_file="$1"
+
+  gpg_decrypt "$input_file"
+}
+
+memo() {
+  local input="$1"
+
+  local filepath
+  filepath=$(get_target_filepath "$1") || return 1
+
+  if [[ "${MEMO_NEOVIM_INTEGRATION:-}" == true && "$EDITOR_CMD" == "nvim" ]]; then
+    local gpg_file
+    if gpg_file=$(get_gpg_filepath "$filepath"); then
+      "$EDITOR_CMD" "$gpg_file"
+    else
+      create_file_header "$filepath" "$filepath.gpg"
+      "$EDITOR_CMD" "$filepath.gpg"
+    fi
+    return
+  fi
+
+  local tmpfile
+  tmpfile=$(make_or_edit_file "$filepath")
+
+  # open tmpfile in editor
+  "$EDITOR_CMD" "$tmpfile"
+
+  # encrypt back
+  local output_file
+  output_file=$(get_output_gpg_filepath "$filepath")
+  gpg_encrypt "$tmpfile" "$output_file"
+
+  # cleanup
+  shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
+}
+
+memo_cache() {
+  $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$@"
 }
 
 show_help() {
   cat <<EOF
-Usage: memo [OPTIONS] [COMMAND] [ARGS]
+Usage: memo [--encrypt INFILE OUTFILE | --decrypt FILE.gpg]
 
 Options:
-  -h, --help                Show this help message and exit
-
-Commands:
-  --delete  [filename]      Delete a memo & updates cache
-  --files                   List all memos in $NOTES_DIR with rg and fzf
-  --grep                    Uses rg and the $CACHE_FILE to grep all notes
-  --decrypt [filename|all]  Decrypt one or all memos
-  --encrypt [filename|all]  Encrypt one or all memos
-  --cache                   Builds the cache file (incrementally)
-  today                     Shortcut for editing today's memo
-  yesterday                 Shortcut for editing yesterday's memo
-  tomorrow                  Shortcut for editing tomorrow's memo
-  YYYY-MM-DD                Edit memo for a specific date
+  --encrypt INFILE OUTFILE     Encrypt plaintext from stdin into FILE.gpg
+  --decrypt FILE.gpg           Decrypt file including ciphertext and print plaintext to stdout
+  --help                       Show this message
 EOF
 }
 
@@ -775,22 +805,14 @@ parse_args() {
       show_help
       exit 0
       ;;
-    --delete)
-      shift
-      memo_delete "$@"
-      return
-      ;;
-    --files)
-      memo_files
-      return
-      ;;
-    --grep)
-      memo_grep
-      return
-      ;;
     --decrypt)
       shift
-      memo_encrypt "$@"
+      memo_decrypt "$@"
+      return
+      ;;
+    --decrypt-files)
+      shift
+      memo_decrypt_files "$@"
       return
       ;;
     --encrypt)
@@ -798,7 +820,22 @@ parse_args() {
       memo_encrypt "$@"
       return
       ;;
+    --encrypt-files)
+      shift
+      memo_encrypt_files "$@"
+      return
+      ;;
+    --grep)
+      shift
+      memo_grep "$@"
+      return
+      ;;
+    --files)
+      memo_files
+      return
+      ;;
     --cache)
+      shift
       memo_cache "$@"
       return
       ;;
@@ -819,7 +856,7 @@ parse_args() {
   done
 
   if [[ -z "$arg" || "$arg" == "today" || "$arg" == "yesterday" || "$arg" == "tomorrow" || "$arg" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ || -n "$arg" ]]; then
-    memo_edit "$arg"
+    memo "$arg"
     return
   fi
 

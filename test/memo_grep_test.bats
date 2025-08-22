@@ -33,20 +33,20 @@ teardown() {
     printf "%s" "$fzf_input"
   }
 
-  # Mock memo_edit to verify it's called with the correct arguments
+  # Mock memo to verify it's called with the correct arguments
   # shellcheck disable=SC2329
-  memo_edit() {
+  memo() {
     if [[ "$1" == "$NOTES_DIR/file.md.gpg" ]]; then
-      printf "memo_edit called with correct file\n"
+      printf "memo called with correct file\n"
     else
-      printf "memo_edit called with wrong file\n" >&2
+      printf "memo called with wrong file\n" >&2
     fi
   }
 
   run memo_grep ""
 
   assert_success
-  assert_output "memo_edit called with correct file"
+  assert_output "memo called with correct file"
 }
 
 @test "should do nothing when no line is selected in fzf" {
@@ -63,14 +63,14 @@ teardown() {
     printf ""
   }
 
-  # Mock memo_edit to verify it's called with the correct arguments
-  memo_edit() {
-    printf "memo_edit was called unexpectedly\n" >&2
+  # Mock memo to verify it's called with the correct arguments
+  memo() {
+    printf "memo was called unexpectedly\n" >&2
     return 1
   }
 
   run memo_grep ""
 
   assert_success
-  refute_output "memo_edit was called unexpectedly"
+  refute_output "memo was called unexpectedly"
 }

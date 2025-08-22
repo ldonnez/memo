@@ -29,13 +29,13 @@ teardown() {
     printf "%s/file.gpg" "$NOTES_DIR"
   }
 
-  # Mock for memo_edit
-  memo_edit() {
+  # Mock for memo
+  memo() {
     if [[ "$1" == "$NOTES_DIR/file.gpg" ]]; then
-      printf "memo_edit called with correct file\n"
+      printf "memo called with correct file\n"
       return 0
     else
-      printf "memo_edit called with wrong file\n" >&2
+      printf "memo called with wrong file\n" >&2
       return 1
     fi
   }
@@ -43,5 +43,5 @@ teardown() {
   run memo_files
 
   assert_success
-  assert_output "memo_edit called with correct file"
+  assert_output "memo called with correct file"
 }

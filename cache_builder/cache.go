@@ -48,7 +48,12 @@ func UpdateAll(notesDir string, cacheFile string, keyIDs []string) int {
 	currentFiles := make(map[string]bool)
 
 	for _, file := range files {
-		path := strings.TrimPrefix(file, notesDir+"/")
+		relPath, err := filepath.Rel(notesDir, file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Skipping file (cannot make relative): %s\n", file)
+			continue
+		}
+		path := filepath.ToSlash(relPath)
 		currentFiles[path] = true
 
 		size, hash := getFileInfo(file)
@@ -63,7 +68,7 @@ func UpdateAll(notesDir string, cacheFile string, keyIDs []string) int {
 			}
 		} else {
 			if canDecrypt(file) { // <-- new check before decrypting
-				entries := processFile(file, path, size, hash)
+				entries := processInlinePGPFile(file, path, size, hash)
 				newEntries = append(newEntries, entries...)
 				changed++
 			} else {
@@ -131,7 +136,7 @@ func processFileUpdate(file string, path string, oldMap map[string]Entry) ([]Ent
 		return []Entry{old}, false
 	}
 	if canDecrypt(file) {
-		entries := processFile(file, path, size, hash)
+		entries := processInlinePGPFile(file, path, size, hash)
 		return entries, true
 	}
 	fmt.Printf("Skipping undecryptable file: %s\n", file)
@@ -164,7 +169,12 @@ func UpdateManyFiles(notesDir string, cacheFile string, keyIDs []string, files [
 	preservedPaths := make(map[string]bool)
 
 	for _, file := range files {
-		path := strings.TrimPrefix(file, notesDir+"/")
+		relPath, err := filepath.Rel(notesDir, file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Skipping file (cannot make relative): %s\n", file)
+			continue
+		}
+		path := filepath.ToSlash(relPath)
 		preservedPaths[path] = true
 
 		if skip, reason := shouldSkipFile(notesDir, file); skip {

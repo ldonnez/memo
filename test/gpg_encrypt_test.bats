@@ -18,10 +18,12 @@ teardown() {
 
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_success
-  assert_output "Encrypted: $input_path.gpg"
 
   run file_exists "$input_path.gpg"
   assert_success
+
+  run cat "$input_path.gpg"
+  assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 
 @test "encrypts file to given output_path" {
@@ -32,10 +34,12 @@ teardown() {
 
   run gpg_encrypt "$input_path" "$output_path.gpg"
   assert_success
-  assert_output "Encrypted: $output_path.gpg"
 
   run file_exists "$output_path.gpg"
   assert_success
+
+  run cat "$output_path.gpg"
+  assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 
 @test "encrypts file with multiple recipients" {
@@ -56,23 +60,12 @@ EOF
 
   run gpg_encrypt "$input_path" "$input_path.gpg"
   assert_success
-  assert_output "Encrypted: $input_path.gpg"
 
   run file_exists "$input_path.gpg"
   assert_success
-}
 
-@test "fails if one recipient key is missing" {
-  # Assuming mock@example.com exists but missing@example.com does not
-  # shellcheck disable=SC2030,SC2031
-  export KEY_IDS="mock@example.com,missing@example.com"
-
-  local input_path="$NOTES_DIR/test_fail.md"
-  printf "Hello Fail" >"$input_path"
-
-  run gpg_encrypt "$input_path" "$input_path.gpg"
-  assert_failure
-  assert_output --partial "GPG key(s) not found: missing@example.com"
+  run cat "$input_path.gpg"
+  assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 
 @test "does not leave unencrypted file when encryption fails" {

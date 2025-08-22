@@ -46,11 +46,14 @@ EOF
   assert_equal "${recipients[*]}" "-r mock@example.com -r test2@example.com"
 }
 
-@test "failure when no gpg key given" {
+@test "sets --default-recipient-self when no gpg keys given" {
   local key_ids=""
   local -a recipients=()
 
-  run build_gpg_recipients "$key_ids" recipients
-  assert_failure
-  assert_output "No key ids given"
+  build_gpg_recipients "$key_ids" recipients
+  # capture return code
+  local rc=$?
+
+  assert_equal $rc 0
+  assert_equal "${recipients[*]}" "--default-recipient-self"
 }

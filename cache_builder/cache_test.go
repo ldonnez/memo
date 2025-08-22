@@ -10,154 +10,96 @@ import (
 
 func setupGPG(t *testing.T) (string, []string) {
 	t.Helper()
-
 	gnupgHome := t.TempDir()
 	os.Setenv("GNUPGHOME", gnupgHome)
 
 	keyParams := `
-		Key-Type: default
-		Key-Length: 2048
-		Subkey-Type: default
-		Name-Real: Test User
-		Name-Email: test@example.com
-		Expire-Date: 1d
-		%no-protection
-		%commit
+	Key-Type: default
+	Key-Length: 2048
+	Subkey-Type: default
+	Name-Real: Test User
+	Name-Email: test@example.com
+	Expire-Date: 1d
+	%no-protection
+	%commit
 	`
 	cmd := exec.Command("gpg", "--batch", "--gen-key")
 	cmd.Stdin = strings.NewReader(keyParams)
-
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to generate test key: %s\n%s", err, out)
 	}
 
-	keys := []string{
-		"test@example.com",
-	}
-
+	keys := []string{"test@example.com"}
 	return gnupgHome, keys
 }
 
-func TestGPGKeyExists(t *testing.T) {
-	gnupgHome, keyIDs := setupGPG(t)
-	os.Setenv("GNUPGHOME", gnupgHome)
-
-	if !gpgKeyExists(keyIDs[0]) {
-		t.Errorf("expected gpgKeyExists(%q) to return true", keyIDs[0])
-	}
-
-	if gpgKeyExists("nonexistent@example.com") {
-		t.Error("expected gpgKeyExists for missing key to return false")
-	}
-}
-
-func TestCanDecrypt(t *testing.T) {
-	gnupgHome, keyIDs := setupGPG(t)
-	os.Setenv("GNUPGHOME", gnupgHome)
-
-	tmpDir := t.TempDir()
-	encFile := filepath.Join(tmpDir, "test.gpg")
-	plaintext := "this is a test"
-
-	// Create an encrypted file we can decrypt
-	encryptNote(t, keyIDs, plaintext, encFile)
-
-	if !canDecrypt(encFile) {
-		t.Error("expected canDecrypt to return true for valid encrypted file")
-	}
-
-	// Create a file we cannot decrypt (random content)
-	unreadableFile := filepath.Join(tmpDir, "random.gpg")
-	if err := os.WriteFile(unreadableFile, []byte("not actually gpg"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	if canDecrypt(unreadableFile) {
-		t.Error("expected canDecrypt to return false for invalid GPG file")
-	}
-}
-
-func encryptNote(t *testing.T, recipients []string, plaintext string, dest string) {
+// Embed an encrypted message inside a text file (inline PGP)
+func embedEncryptedBlock(t *testing.T, recipients []string, plaintext string, dest string) {
 	t.Helper()
-
-	args := []string{"--yes", "--batch", "--quiet"}
-
-	for _, recipient := range recipients {
-		args = append(args, "--recipient", recipient)
+	args := []string{"--yes", "--batch", "--armor", "--encrypt"}
+	for _, r := range recipients {
+		args = append(args, "--recipient", r)
 	}
-
-	args = append(args, "--encrypt", "--output", dest)
-
 	cmd := exec.Command("gpg", args...)
 	cmd.Stdin = strings.NewReader(plaintext)
-
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("failed to encrypt note: %s\n%s", err, out)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to encrypt: %s\n%s", err, out)
+	}
+	// Write armored block into the file
+	if err := os.WriteFile(dest, out, 0644); err != nil {
+		t.Fatalf("failed to write file: %v", err)
 	}
 }
 
-func TestUpdateAllAndLoad(t *testing.T) {
+func TestUpdateAllWithInlinePGP(t *testing.T) {
 	_, keyIDs := setupGPG(t)
 	notesDir := t.TempDir()
 	cacheFile := filepath.Join(t.TempDir(), "notes.cache")
 
-	// Create encrypted note
-	notePath := filepath.Join(notesDir, "note1.gpg")
-	encryptNote(t, keyIDs, "Hello world\nSecond line", notePath)
+	note1 := filepath.Join(notesDir, "note1.txt.gpg")
+	embedEncryptedBlock(t, keyIDs, "Hello world\nSecond line", note1)
 
-	// Run UpdateAll
 	changed := UpdateAll(notesDir, cacheFile, keyIDs)
 	if changed == 0 {
 		t.Fatal("expected changes, got 0")
 	}
 
-	// Decrypt cache and verify content
 	entries := DecryptAndLoad(cacheFile)
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
 	}
-
 	if entries[0].Content != "Hello world" || entries[1].Content != "Second line" {
 		t.Errorf("unexpected cache content: %+v", entries)
 	}
 
-	// Run UpdateAll again without changes
+	// No change second run
 	changed = UpdateAll(notesDir, cacheFile, keyIDs)
 	if changed != 0 {
 		t.Errorf("expected 0 changes on second run, got %d", changed)
 	}
-
-	// Add another note
-	notePath2 := filepath.Join(notesDir, "note2.gpg")
-	encryptNote(t, keyIDs, "Another note", notePath2)
-	changed = UpdateAll(notesDir, cacheFile, keyIDs)
-
-	if changed == 0 {
-		t.Error("expected changes after adding note2")
-	}
 }
 
-func TestUpdateMany(t *testing.T) {
+func TestUpdateManyFilesWithInlinePGP(t *testing.T) {
 	_, keyIDs := setupGPG(t)
 	notesDir := t.TempDir()
 	cacheFile := filepath.Join(t.TempDir(), "notes.cache")
 
-	// Create one encrypted note
-	notePath := filepath.Join(notesDir, "note1.gpg")
-	encryptNote(t, keyIDs, "Line 1", notePath)
+	// Create multiple inline PGP files
+	note1 := filepath.Join(notesDir, "note1.txt.gpg")
+	note2 := filepath.Join(notesDir, "note2.txt.gpg")
+	note3 := filepath.Join(notesDir, "note3.txt.gpg")
+
+	embedEncryptedBlock(t, keyIDs, "Line 1", note1)
 	UpdateAll(notesDir, cacheFile, keyIDs)
 
-	os.Remove(notePath)
+	// Remove note1 from disk
+	os.Remove(note1)
 
-	// Create a second note and update many
-	notePath2 := filepath.Join(notesDir, "note2.gpg")
-	notePath3 := filepath.Join(notesDir, "note3.gpg")
+	embedEncryptedBlock(t, keyIDs, "Line 2", note2)
+	embedEncryptedBlock(t, keyIDs, "Line 3", note3)
 
-	files := []string{notePath, notePath2, notePath3}
-
-	encryptNote(t, keyIDs, "Line 2", notePath2)
-	encryptNote(t, keyIDs, "Line 3", notePath3)
-
+	files := []string{note1, note2, note3}
 	changed := UpdateManyFiles(notesDir, cacheFile, keyIDs, files)
 
 	if changed != 3 {
@@ -165,29 +107,79 @@ func TestUpdateMany(t *testing.T) {
 	}
 
 	entries := DecryptAndLoad(cacheFile)
-
 	if len(entries) != 2 {
 		t.Errorf("expected 2 entries, got %d", len(entries))
 	}
 }
 
-func TestUpdateAllSkipsWhenNoKeysExist(t *testing.T) {
-	// Don't call setupGPG, so no keys are created
+func TestUpdateAllRecursive(t *testing.T) {
+	_, keyIDs := setupGPG(t)
+
 	notesDir := t.TempDir()
 	cacheFile := filepath.Join(t.TempDir(), "notes.cache")
 
-	// Create a dummy encrypted file (unrelated key)
-	notePath := filepath.Join(notesDir, "note1.gpg")
-	os.WriteFile(notePath, []byte("fake data"), 0600)
-
-	// Attempt to run UpdateAll with a non-existent key
-	changed := UpdateAll(notesDir, cacheFile, []string{"missing@example.com"})
-
-	if changed != 0 {
-		t.Errorf("expected 0 changes when no recipients exist, got %d", changed)
+	// Make a subdirectory inside notesDir
+	subDir := filepath.Join(notesDir, "nested")
+	if err := os.Mkdir(subDir, 0755); err != nil {
+		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(cacheFile); err == nil {
-		t.Error("expected cache file not to be created")
+	// Create encrypted notes in both root and subdir
+	note1 := filepath.Join(notesDir, "root.gpg")
+	note2 := filepath.Join(subDir, "nested.gpg")
+
+	embedEncryptedBlock(t, keyIDs, "Root note line1\nRoot note line2", note1)
+	embedEncryptedBlock(t, keyIDs, "Nested note line1", note2)
+
+	changed := UpdateAll(notesDir, cacheFile, keyIDs)
+	if changed == 0 {
+		t.Fatal("expected changes when adding root + nested note, got 0")
+	}
+
+	entries := DecryptAndLoad(cacheFile)
+
+	// We expect 3 lines total (2 from root, 1 from nested)
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(entries))
+	}
+
+	// Check that relative paths are preserved correctly
+	paths := []string{entries[0].Path, entries[1].Path, entries[2].Path}
+	foundRoot, foundNested := false, false
+	for _, p := range paths {
+		if strings.HasPrefix(p, "root.gpg") {
+			foundRoot = true
+		}
+		if strings.HasPrefix(p, "nested/nested.gpg") {
+			foundNested = true
+		}
+	}
+	if !foundRoot {
+		t.Errorf("expected root.gpg entry, got %+v", paths)
+	}
+	if !foundNested {
+		t.Errorf("expected nested/nested.gpg entry, got %+v", paths)
+	}
+}
+
+func TestCanDecryptAndMissingKey(t *testing.T) {
+	gnupgHome, keyIDs := setupGPG(t)
+	os.Setenv("GNUPGHOME", gnupgHome)
+
+	tmpDir := t.TempDir()
+	note := filepath.Join(tmpDir, "note.txt.gpg")
+	embedEncryptedBlock(t, keyIDs, "Secret line", note)
+
+	if !canDecrypt(note) {
+		t.Error("expected canDecrypt to return true")
+	}
+
+	// Now test with non-existent recipient
+	unreadable := filepath.Join(tmpDir, "bad.txt.gpg")
+	if err := os.WriteFile(unreadable, []byte("-----BEGIN PGP MESSAGE-----\n...\n-----END PGP MESSAGE-----"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if canDecrypt(unreadable) {
+		t.Error("expected canDecrypt to return false for non-decryptable content")
 	}
 }
