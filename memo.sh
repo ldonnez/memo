@@ -812,11 +812,11 @@ memo_cache() {
 
 show_help() {
   cat <<EOF
-Usage: memo [--encrypt INFILE OUTFILE | --decrypt FILE.gpg]
+Usage: memo [OPTIONS...] FILES...
 
 Options:
-  --encrypt INFILE OUTFILE     Encrypt plaintext from stdin into FILE.gpg
-  --decrypt FILE.gpg           Decrypt file including ciphertext and print plaintext to stdout
+  --encrypt INFILE OUTFILE     Encrypt SOURCE_FILE into FILE.gpg
+  --decrypt FILE.gpg           Decrypt file including ciphertext to stdout
   --help                       Show this message
 EOF
 }
@@ -886,7 +886,7 @@ parse_args() {
   fi
 
   # unknown option
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|--files|--grep|--encrypt|--decrypt|--cache]\n"
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|--files|--grep|--encrypt|--decrypt|--encrypt-files|--decrypt-files|--cache]\n"
   exit 1
 }
 
