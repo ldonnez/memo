@@ -529,17 +529,22 @@ memo_grep() {
 
   local selected_line
 
-  # Print only the filename and content, removing the size and hash.
-  selected_line=$(awk -F'|' '{print $1 ":" $4}' "$temp_index" | fzf --ansi -q "$query")
+  # Print only the filename, content and line number, removing the size and hash.
+  selected_line=$(
+    awk -F'|' '{print $1 ":" $2 ":" $5}' "$temp_index" |
+      rg --color=always "$query" |
+      fzf --ansi
+  )
 
   rm "$temp_index"
 
   if [[ -n "$selected_line" ]]; then
-    # The filename is the first word on the selected line, up to the first colon eg. "filename.md.gpg:content"
-    local filename
-    filename=$(printf "%s" "$selected_line" | awk -F: '{print $1}')
+    # The filename is the first word on the selected line, up to the first colon eg. "filename.md.gpg:content:line"
+    local filename line
+    filename=$(printf "%s" "$selected_line" | cut -d: -f1)
+    line=$(printf "%s" "$selected_line" | cut -d: -f2)
 
-    memo "$NOTES_DIR/$filename"
+    memo "$NOTES_DIR/$filename" "$line"
   fi
 }
 
@@ -751,6 +756,8 @@ memo_decrypt() {
 
 memo() {
   local input="$1"
+  local lineNum="${2-1}"
+  local lineNum="${2-1}"
 
   local filepath
   filepath=$(get_target_filepath "$1") || return 1
@@ -758,7 +765,7 @@ memo() {
   if [[ "${MEMO_NEOVIM_INTEGRATION:-}" == true && "$EDITOR_CMD" == "nvim" ]]; then
     local gpg_file
     if gpg_file=$(get_gpg_filepath "$filepath"); then
-      "$EDITOR_CMD" "$gpg_file"
+      "$EDITOR_CMD" +"$lineNum" "$gpg_file"
     else
       create_file_header "$filepath" "$filepath.gpg"
       "$EDITOR_CMD" "$filepath.gpg"

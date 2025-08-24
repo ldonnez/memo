@@ -72,6 +72,12 @@ func TestUpdateAllWithInlinePGP(t *testing.T) {
 	if entries[0].Content != "Hello world" || entries[1].Content != "Second line" {
 		t.Errorf("unexpected cache content: %+v", entries)
 	}
+	if entries[0].LineNum != 1 {
+		t.Errorf("unexpected linenumber: %+v", entries)
+	}
+	if entries[1].LineNum != 2 {
+		t.Errorf("unexpected linenumber: %+v", entries)
+	}
 
 	// No change second run
 	changed = UpdateAll(notesDir, cacheFile, keyIDs)

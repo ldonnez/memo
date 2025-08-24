@@ -14,6 +14,7 @@ import (
 
 type Entry struct {
 	Path    string
+	LineNum int64
 	Size    int64
 	Hash    string
 	Content string

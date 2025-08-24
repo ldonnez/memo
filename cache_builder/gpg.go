@@ -72,33 +72,17 @@ func processInlinePGPFile(file, path string, size int64, hash string) []Entry {
 		}
 
 		scanner := bufio.NewScanner(strings.NewReader(decrypted))
+		lineNum := int64(1)
 		for scanner.Scan() {
 			entries = append(entries, Entry{
 				Path:    path,
+				LineNum: lineNum,
 				Size:    size,
 				Hash:    hash,
 				Content: scanner.Text(),
 			})
+			lineNum++
 		}
-	}
-	return entries
-}
-
-func processFile(file, path string, size int64, hash string) []Entry {
-	cmd := exec.Command("gpg", "--quiet", "--decrypt", file)
-	output, err := cmd.Output()
-	if err != nil {
-		return []Entry{}
-	}
-	var entries []Entry
-	scanner := bufio.NewScanner(strings.NewReader(string(output)))
-	for scanner.Scan() {
-		entries = append(entries, Entry{
-			Path:    path,
-			Size:    size,
-			Hash:    hash,
-			Content: scanner.Text(),
-		})
 	}
 	return entries
 }
@@ -112,14 +96,16 @@ func DecryptAndLoad(cacheFile string) []Entry {
 	var entries []Entry
 	scanner := bufio.NewScanner(strings.NewReader(string(output)))
 	for scanner.Scan() {
-		parts := strings.SplitN(scanner.Text(), "|", 4)
-		if len(parts) == 4 {
-			size, _ := strconv.ParseInt(parts[1], 10, 64)
+		parts := strings.SplitN(scanner.Text(), "|", 5)
+		if len(parts) == 5 {
+			lineNum, _ := strconv.ParseInt(parts[1], 10, 64)
+			size, _ := strconv.ParseInt(parts[2], 10, 64)
 			entries = append(entries, Entry{
 				Path:    parts[0],
+				LineNum: lineNum,
 				Size:    size,
-				Hash:    parts[2],
-				Content: parts[3],
+				Hash:    parts[3],
+				Content: parts[4],
 			})
 		}
 	}
@@ -129,7 +115,7 @@ func DecryptAndLoad(cacheFile string) []Entry {
 func EncryptAndWrite(entries []Entry, cacheFile string, keyIDs []string) {
 	var content strings.Builder
 	for _, entry := range entries {
-		fmt.Fprintf(&content, "%s|%d|%s|%s\n", entry.Path, entry.Size, entry.Hash, entry.Content)
+		fmt.Fprintf(&content, "%s|%d|%d|%s|%s\n", entry.Path, entry.LineNum, entry.Size, entry.Hash, entry.Content)
 	}
 
 	args := []string{"--yes", "--batch", "--quiet"}
