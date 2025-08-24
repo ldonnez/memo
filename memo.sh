@@ -2,7 +2,10 @@
 
 set -euo pipefail
 
-# Helpers
+###############################################################################
+# Helpers (private)
+###############################################################################
+
 dir_exists() {
   [[ -d "$1" ]]
 }
@@ -15,6 +18,21 @@ file_exists() {
 file_is_gpg() {
   local filepath="$1"
   [[ "$filepath" == *".gpg" ]]
+}
+
+# /path/to/example.md -> example.md
+strip_path() {
+  local filepath="$1"
+  printf "%s" "${filepath##*/}"
+}
+
+# example.md.gpg -> example
+strip_extensions() {
+  local filename="$1"
+  while [[ "$filename" == *.* ]]; do
+    filename="${filename%.*}"
+  done
+  printf "%s" "$filename"
 }
 
 # Check if command exists in PATH
@@ -41,67 +59,6 @@ filename_is_date() {
   else
     return 1
   fi
-}
-
-# Resolves the absolute path of where this script is run (it will follows symlinks)
-resolve_script_path() {
-  local source="${BASH_SOURCE[0]}"
-  while [ -h "$source" ]; do
-    local dir
-    dir="$(cd -P "$(dirname "$source")" && pwd)"
-
-    source="$(readlink "$source")"
-    [[ $source != /* ]] && source="$dir/$source"
-  done
-  cd -P "$(dirname "$source")" && pwd
-}
-
-# Build the cache_builder binary if not found and puts it in the bin directory relative to script path (the location where the script is ran from)
-build_cache_builder_binary() {
-  local script_path="$1"
-  local binary="$2"
-
-  if [ ! -x "$binary" ]; then
-    printf "Building cache binary...\n"
-    mkdir -p "$(dirname "$binary")"
-
-    (cd "$script_path" && go build -o "$binary" ./cmd/cache_builder) || {
-      printf "Error: Failed to build cache binary\n" >&2
-      exit 1
-    }
-
-    chmod +x "$binary"
-  fi
-}
-
-# Set default global variables
-set_default_values() {
-  local script_path="$1"
-
-  : "${KEY_IDS:=}"
-  : "${NOTES_DIR:=$HOME/notes}"
-  : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
-  : "${EDITOR_CMD:=${EDITOR:-nano}}"
-  : "${CACHE_DIR:=$HOME/.cache/memo}"
-  : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
-  : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
-  : "${MEMO_NEOVIM_INTEGRATION:=true}"
-}
-
-# Loads config from config file (default: ~/.config/memo/config)
-load_config() {
-  local config_file="$1"
-  local script_path="$2"
-
-  set_default_values "$script_path"
-
-  if file_exists "$config_file"; then
-    # shellcheck source=/dev/null
-    source "$config_file"
-  else
-    printf "Config file not found: %s\n" "$config_file" >&2
-  fi
-
 }
 
 # Trim leading or trailing spaces of a string
@@ -134,15 +91,6 @@ gpg_keys_exists() {
     printf "GPG key(s) not found: %s\n" "${missing_keys[*]}" >&2
     exit 1
   fi
-}
-
-# Initializes $NOTES_DIR, $JOURNAL_NOTES_DIR, $CACHE_DIR
-create_dirs() {
-  # Create directories if not exist
-  mkdir -p "$NOTES_DIR"
-  mkdir -p "$JOURNAL_NOTES_DIR"
-  mkdir -p "$CACHE_DIR"
-  chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
 }
 
 # Maps today, yesterday, tomorrow to YYYY-MM-DD date.
@@ -307,21 +255,6 @@ make_tempfile() {
   printf "%s" "$tmpfile"
 }
 
-# /path/to/example.md -> example.md
-strip_path() {
-  local filepath="$1"
-  printf "%s" "${filepath##*/}"
-}
-
-# example.md.gpg -> example
-strip_extensions() {
-  local filename="$1"
-  while [[ "$filename" == *.* ]]; do
-    filename="${filename%.*}"
-  done
-  printf "%s" "$filename"
-}
-
 # Checks if given path is inside $NOTES_DIR. Also works if the file is in subdir of $NOTES_DIR
 is_in_notes_dir() {
   local fullpath="$1"
@@ -469,11 +402,14 @@ read_ignore_file() {
   fi
 }
 
+###############################################################################
+# Core API
+###############################################################################
+
 # Interactively select a memo note from all available notes using fzf.
 #
 # Ensures that the required commands (`gpg`, `rg`, `fzf`) are present before running.
 # Uses `ripgrep` to list all note files (`*.gpg`) under NOTES_DIR.
-#
 #
 # Usage:
 #   memo_files
@@ -491,6 +427,15 @@ memo_files() {
   memo "$result"
 }
 
+# Deletes one or more memo files.
+#
+# Will only work on files inside notes dir
+# Function supports glob patterns like <dir>/* and multiple files <file1> <file2>
+# Updates cache afterwards
+#
+# Usage:
+#   memo_delete <file1> <file2>
+#   memo_delete --force <file1> <file2>
 memo_delete() {
   local force=""
   while [ "$1" = "--force" ]; do
@@ -869,13 +814,116 @@ memo_cache() {
 
 show_help() {
   cat <<EOF
-Usage: memo [OPTIONS...] FILES...
+Usage: memo [FILE] [LINE]
+       memo [COMMAND] [ARGS...]
 
-Options:
-  --encrypt INFILE OUTFILE     Encrypt SOURCE_FILE into FILE.gpg
-  --decrypt FILE.gpg           Decrypt file including ciphertext to stdout
-  --help                       Show this message
+Description:
+  Opening and editing files is the default action:
+    - "memo"           Opens today's journal memo or creates it if missing
+    - "memo FILE"      Opens or creates a file named FILE
+
+Commands:
+  --encrypt INPUTFILE OUTPUTFILE      Encrypt INFILE into OUTFILE.gpg
+  --decrypt FILE.gpg                  Decrypt FILE.gpg and print plaintext to stdout
+
+  --encrypt-files [FILES...]          Encrypt files in-place inside notes dir
+                                      - Accepts 'all' or explicit files
+                                      - Supports glob patterns (e.g. dir/*)
+
+  --decrypt-files [FILES...]          Decrypt .gpg files in-place inside notes dir
+                                      - Accepts 'all' or explicit .gpg files
+                                      - Supports glob patterns (e.g. dir/*.gpg)
+
+  --delete [FILES...]                 Delete one or more files and update cache
+  --files                             Browse all files in fzf (decrypts preview)
+  --grep <query>                      Search through files using cached index
+  --cache [FILES...]                  Builds the memo cache incrementally for fast searching with ripgrep.
+
+  --help                              Show this help message
+
+Examples:
+  memo                                Open today's journal
+  memo todo.md                        Open or create "todo.md" inside notes dir
+  memo --encrypt notes.txt out.gpg    Encrypt notes.txt into out.gpg
+  memo --decrypt out.gpg              Decrypt out.gpg in stdout
+  memo --encrypt-files all            Encrypt all files in notes dir
+  memo --decrypt-files *.gpg          Decrypt matching .gpg files
+  memo --memo-grep projectX           Search all notes which includes the text "projectX"
 EOF
+}
+
+###############################################################################
+# Setup
+###############################################################################
+
+# Resolves the absolute path of where this script is run (it will follows symlinks)
+resolve_script_path() {
+  local source="${BASH_SOURCE[0]}"
+  while [ -h "$source" ]; do
+    local dir
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+
+    source="$(readlink "$source")"
+    [[ $source != /* ]] && source="$dir/$source"
+  done
+  cd -P "$(dirname "$source")" && pwd
+}
+
+# Build the cache_builder binary if not found and puts it in the bin directory relative to script path (the location where the script is ran from)
+build_cache_builder_binary() {
+  local script_path="$1"
+  local binary="$2"
+
+  if [ ! -x "$binary" ]; then
+    printf "Building cache binary...\n"
+    mkdir -p "$(dirname "$binary")"
+
+    (cd "$script_path" && go build -o "$binary" ./cmd/cache_builder) || {
+      printf "Error: Failed to build cache binary\n" >&2
+      exit 1
+    }
+
+    chmod +x "$binary"
+  fi
+}
+
+# Set default global variables
+set_default_values() {
+  local script_path="$1"
+
+  : "${KEY_IDS:=}"
+  : "${NOTES_DIR:=$HOME/notes}"
+  : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
+  : "${EDITOR_CMD:=${EDITOR:-nano}}"
+  : "${CACHE_DIR:=$HOME/.cache/memo}"
+  : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
+  : "${CACHE_BUILDER_BIN:=$script_path/bin/cache_builder}"
+  : "${MEMO_NEOVIM_INTEGRATION:=true}"
+}
+
+# Initializes $NOTES_DIR, $JOURNAL_NOTES_DIR, $CACHE_DIR
+create_dirs() {
+  # Create directories if not exist
+  mkdir -p "$NOTES_DIR"
+  mkdir -p "$JOURNAL_NOTES_DIR"
+  mkdir -p "$CACHE_DIR"
+  chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
+}
+
+# Loads config from config file (default: ~/.config/memo/config)
+load_config() {
+  local config_file="$1"
+  local script_path="$2"
+
+  set_default_values "$script_path"
+
+  if file_exists "$config_file"; then
+    # shellcheck source=/dev/null
+    source "$config_file"
+  else
+    printf "Config file not found: %s\n" "$config_file" >&2
+  fi
+
 }
 
 parse_args() {
