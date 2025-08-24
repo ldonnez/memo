@@ -757,7 +757,6 @@ memo_decrypt() {
 memo() {
   local input="$1"
   local lineNum="${2-1}"
-  local lineNum="${2-1}"
 
   local filepath
   filepath=$(get_target_filepath "$1") || return 1
