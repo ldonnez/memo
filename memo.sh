@@ -469,6 +469,14 @@ read_ignore_file() {
   fi
 }
 
+# Interactively select a memo note from all available notes using fzf.
+#
+# Ensures that the required commands (`gpg`, `rg`, `fzf`) are present before running.
+# Uses `ripgrep` to list all note files (`*.gpg`) under NOTES_DIR.
+#
+#
+# Usage:
+#   memo_files
 memo_files() {
   if ! check_cmd gpg || ! check_cmd rg || ! check_cmd fzf; then
     printf "Error: gpg, rg and fzf are required for memo_files" >&2
@@ -528,6 +536,15 @@ memo_delete() {
   fi
 }
 
+# Search through memo notes using a query, displaying results in fzf.
+#
+# Won't work when gpg, rpg and fzf is not available in PATH.
+# Uses the decrypted cache. If the cache is missing, it is automatically rebuilt.
+# Extracts filename, content, line number to display in fzf.
+# Opens the selected note at the corresponding line using the `memo` function.
+#
+# Usage:
+#   memo_grep [query]
 memo_grep() {
   if ! check_cmd gpg || ! check_cmd rg || ! check_cmd fzf; then
     printf "Error: gpg, rg and fzf are required for memo_grep" >&2
@@ -567,9 +584,17 @@ memo_grep() {
   fi
 }
 
+# Decrypts a set of note files that were encrypted with GPG.
+#
+# This function operates in-place: each `.gpg` file is decrypted and replaces the original encrypted file.
+# A temporary file is used during decryption to ensure that a failed operation never overwrites the original file.
+# Function supports glob patterns like <dir>/* and multiple files <file1> <file2>
+#
+# Usage:
+#   memo_decrypt_files <file1.gpg | glob | all> [file2.gpg ...]
 memo_decrypt_files() {
   if [[ $# -eq 0 ]]; then
-    printf "Usage: memo --decrypt <filename.gpg | glob | all> ...\n"
+    printf "Usage: memo --decrypt-files <filename.gpg | glob | all> ...\n"
     return 1
   fi
 
@@ -624,6 +649,15 @@ memo_decrypt_files() {
   done
 }
 
+# Encrypts a set of note files using GPG, respecting user-defined rules like `.ignore` and `--exclude` patterns.
+#
+# Each file is encrypted in-place with `.gpg` extension, using a temp file while preserving the original file name semantics.
+# Errors are reported and skipped files are logged with its source.
+# When giving `--dry-run` flag, it simulates the operation without making changes.
+# The function supports glob patterns like <dir>/* and multiple files <file1> <file2>
+#
+# Usage:
+#   memo_encrypt_files <file1|glob|all> [file2 ...] [--exclude pattern] [--dry-run]
 memo_encrypt_files() {
   local dry=0
   local -a exclude_patterns=()
@@ -639,7 +673,7 @@ memo_encrypt_files() {
     ignore_patterns+=("$pat")
   done < <(read_ignore_file)
 
-  # parse args
+  # parse extra args like --dry-run, --exclude...
   local args=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -656,7 +690,7 @@ memo_encrypt_files() {
   done
 
   if [[ ${#args[@]} -eq 0 ]]; then
-    printf "Usage: memo encrypt <filename | glob | all> [more files …] [--dry-run] [--exclude pattern]\n"
+    printf "Usage: memo encrypt-files <filename | glob | all> [more files …] [--dry-run] [--exclude pattern]\n"
     return 1
   fi
 
@@ -760,6 +794,10 @@ memo_encrypt_files() {
   fi
 }
 
+# Encrypts the text in given input file to given output file.
+#
+# Usage:
+#   memo_encrypt <input_file> <output_file>.gpg
 memo_encrypt() {
   local input_file="$1"
   local output_file="$2"
@@ -767,12 +805,27 @@ memo_encrypt() {
   gpg_encrypt "$input_file" "$output_file"
 }
 
+# Decrypts given input file with a PGP MESSAGE to stdout.
+#
+# Usage:
+#   memo_decrypt <input_file>.gpg <output_file>
 memo_decrypt() {
   local input_file="$1"
 
   gpg_decrypt "$input_file"
 }
 
+# Opens or creates a note for editing.
+#
+# If Neovim integration is enabled, opens the corresponding `.gpg` file directly
+# and ensures syntax highlighting and buffer safety. Otherwise, uses a temporary
+# plaintext file that is encrypted back into a `.gpg` file after editing.
+#
+# The function supports optional line numbers for jumping to a specific position in a file.
+# in the note. Temporary files are removed after  encryption.
+#
+# Usage:
+#   memo <file> [line_number]
 memo() {
   local input="$1"
   local lineNum="${2-1}"
@@ -794,18 +847,22 @@ memo() {
   local tmpfile
   tmpfile=$(make_or_edit_file "$filepath")
 
-  # open tmpfile in editor
   "$EDITOR_CMD" "$tmpfile"
 
-  # encrypt back
   local output_file
   output_file=$(get_output_gpg_filepath "$filepath")
   gpg_encrypt "$tmpfile" "$output_file"
 
-  # cleanup
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
 
+# Builds the memo cache incrementally for fast searching with ripgrep in memo_grep.
+#
+# Delegates arguments to cache_builder. When no arguments are given, it incrementally updates the cache.
+# Supports glob patterns like dir/*
+#
+# Usage:
+#   memo_cache <file1> <file2>
 memo_cache() {
   $CACHE_BUILDER_BIN "$NOTES_DIR" "$CACHE_FILE" "$KEY_IDS" "$@"
 }
@@ -848,6 +905,11 @@ parse_args() {
     --encrypt-files)
       shift
       memo_encrypt_files "$@"
+      return
+      ;;
+    --delete)
+      shift
+      memo_delete "$@"
       return
       ;;
     --grep)
