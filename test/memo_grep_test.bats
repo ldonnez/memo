@@ -26,11 +26,20 @@ teardown() {
   # Mock fzf to return the selected line
   # shellcheck disable=SC2329
   fzf() {
-    # Verify the input to fzf
     local fzf_input
     read -r -d '' fzf_input
 
     printf "%s" "$fzf_input"
+  }
+
+  # Mock rg to return the selected line
+  # shellcheck disable=SC2329
+  rg() {
+    local rg_input
+    read -r -d '' rg_input
+
+    printf "%s" "$rg_input"
+
   }
 
   # Mock memo to verify it's called with the correct arguments
@@ -63,6 +72,10 @@ teardown() {
     printf ""
   }
 
+  rg() {
+    printf ""
+  }
+
   # Mock memo to verify it's called with the correct arguments
   memo() {
     printf "memo was called unexpectedly\n" >&2
@@ -73,4 +86,11 @@ teardown() {
 
   assert_success
   refute_output "memo was called unexpectedly"
+}
+
+@test "returns error if fzf and rg is not found in PATH" {
+
+  run memo_grep ""
+  assert_failure
+  assert_output "Error: gpg, rg and fzf are required for memo_grep"
 }

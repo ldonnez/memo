@@ -20,11 +20,13 @@ teardown() {
   gpg_encrypt "$file" "$file.gpg"
 
   # Mock rg
+  # shellcheck disable=SC2329
   rg() {
     printf "%s/file.gpg" "$NOTES_DIR"
   }
 
   # Mock fzf command
+  # shellcheck disable=SC2329
   fzf() {
     printf "%s/file.gpg" "$NOTES_DIR"
   }
@@ -44,4 +46,28 @@ teardown() {
 
   assert_success
   assert_output "memo called with correct file"
+}
+
+@test "Returns error because rg does not exist" {
+  # Mock fzf command
+  # shellcheck disable=SC2329
+  fzf() {
+    printf "%s/file.gpg" "$NOTES_DIR"
+  }
+
+  run memo_files
+  assert_failure
+  assert_output "Error: gpg, rg and fzf are required for memo_files"
+}
+
+@test "Returns error because fzf does not exist" {
+  # Mock rg
+  # shellcheck disable=SC2329
+  rg() {
+    printf "%s/file.gpg" "$NOTES_DIR"
+  }
+
+  run memo_files
+  assert_failure
+  assert_output "Error: gpg, rg and fzf are required for memo_files"
 }
