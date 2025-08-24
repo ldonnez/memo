@@ -17,6 +17,16 @@ file_is_gpg() {
   [[ "$filepath" == *".gpg" ]]
 }
 
+# Check if command exists in PATH
+check_cmd() {
+  local cmd="$1"
+  if command -v "$cmd" >/dev/null 2>&1; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Check if filename matches YYYY-MM-DD format.
 # Strips path and extensions before determining. (e.g example.md.gpg -> example)
 filename_is_date() {
@@ -460,8 +470,12 @@ read_ignore_file() {
 }
 
 memo_files() {
-  local result
+  if ! check_cmd gpg || ! check_cmd rg || ! check_cmd fzf; then
+    printf "Error: gpg, rg and fzf are required for memo_files" >&2
+    exit 1
+  fi
 
+  local result
   result=$(rg --files --glob "*.gpg" "$NOTES_DIR" | fzf --preview "gpg --quiet --decrypt {} 2>/dev/null | head -100")
 
   [[ -z "$result" ]] && return
@@ -515,6 +529,11 @@ memo_delete() {
 }
 
 memo_grep() {
+  if ! check_cmd gpg || ! check_cmd rg || ! check_cmd fzf; then
+    printf "Error: gpg, rg and fzf are required for memo_grep" >&2
+    exit 1
+  fi
+
   local query="${1-""}"
 
   local temp_index=
@@ -875,6 +894,11 @@ parse_args() {
 main() {
   local script_path
   script_path="$(resolve_script_path)"
+
+  if ! check_cmd gpg; then
+    printf "Error: gpg not found in PATH" >&2
+    exit 1
+  fi
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
   load_config "$CONFIG_FILE" "$script_path"
