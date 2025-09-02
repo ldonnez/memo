@@ -1,0 +1,11 @@
+{
+  "release-type": "simple",
+  "extra-files": [
+    {
+      "type": "regex",
+      "path": "memo.sh",
+      "regex": "VERSION=.*",
+      "replacement": "VERSION=${version}"
+    }
+  ]
+}
