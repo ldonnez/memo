@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/ldonnez/memo/compare/v0.0.1...v0.1.0) (2025-09-03)
+
+
+### Features
+
+* add release please ([c46ce2e](https://github.com/ldonnez/memo/commit/c46ce2e9a4263e990ce6eb1342c9cfbc6e5ba61f))
+
 ## [0.2.0](https://github.com/ldonnez/memo/compare/v0.1.0...v0.2.0) (2025-09-03)
 
 
