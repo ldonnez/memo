@@ -545,7 +545,7 @@ _get_latest_version() {
 }
 
 # Determines if current installed version is older then given version. Returns exit code 1 when no upgrade is necessary, otherwise will return 0.
-# Caution! Does not work with version strings like v0.1.0-alpha. Wil only work with strings like v0.1.0, v0.1.2 etc.
+# Caution! Does not work with version strings like v1.0.0 Wil only work with strings like v0.1.0, v0.1.2 etc.
 # See test/check_upgrade_test.bats
 _check_upgrade() {
   local version="$1"
