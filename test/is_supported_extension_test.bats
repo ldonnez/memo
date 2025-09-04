@@ -23,8 +23,19 @@ setup() {
   assert_success
 }
 
+@test "success when file is extension md.gpg" {
+  run _is_supported_extension "test.md.gpg"
+  assert_success
+}
+
 @test "fail when file has no extension" {
   run _is_supported_extension "test"
+  assert_failure
+  assert_output "Extension:  not supported"
+}
+
+@test "fail when file extension just gpg" {
+  run _is_supported_extension "test.gpg"
   assert_failure
   assert_output "Extension:  not supported"
 }

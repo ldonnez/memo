@@ -104,12 +104,16 @@ _filename_is_date() {
 # Common (private)
 ###############################################################################
 
-# Check if the filename ends with .txt OR .md OR .org
+# Check if the filename ends with .txt OR .md OR .org.
+# Will remove .gpg extension if present before checking, for example test.md.gpg -> test.md
 _is_supported_extension() {
   local filename="$1"
 
+  # Remove .gpg extension if present
+  local tmp_filename="${filename%.gpg}"
+
   local extension
-  extension="$(_get_extension "$filename")"
+  extension="$(_get_extension "$tmp_filename")"
 
   local -a supported_extensions
   IFS=',' read -r -a supported_extensions <<<"$SUPPORTED_EXTENSIONS"
