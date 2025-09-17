@@ -6,17 +6,17 @@ setup_suite() {
   export XDG_CONFIG_HOME="$TEST_HOME/.config"
   export HOME="$TEST_HOME"
   export NOTES_DIR="$TEST_HOME/notes"
-  export JOURNAL_NOTES_DIR="$NOTES_DIR/journal"
   export CACHE_DIR="$TEST_HOME/.cache/memo"
   export CACHE_FILE="$CACHE_DIR/notes.cache"
   export EDITOR_CMD="true" # avoid launching an actual editor
   export KEY_IDS="mock@example.com"
   export SUPPORTED_EXTENSIONS="md,org,txt"
   export DEFAULT_EXTENSION="md"
+  export DEFAULT_FILE="inbox.$DEFAULT_EXTENSION"
   export DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
 
   mkdir -p "$XDG_CONFIG_HOME/memo"
-  mkdir -p "$NOTES_DIR" "$JOURNAL_NOTES_DIR" "$CACHE_DIR"
+  mkdir -p "$NOTES_DIR" "$CACHE_DIR"
 
   # Optional: provide a mock config file
   cat >"$XDG_CONFIG_HOME/memo/config" <<EOF
