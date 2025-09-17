@@ -1094,7 +1094,7 @@ memo() {
   local lineNum="${2-1}"
 
   local filepath
-  filepath=$(_get_target_filepath "$1") || return 1
+  filepath=$(_get_target_filepath "$input") || return 1
 
   if [[ "${MEMO_NEOVIM_INTEGRATION:-}" == true && "$EDITOR_CMD" == "nvim" ]]; then
     local gpg_file
