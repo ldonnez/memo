@@ -14,7 +14,7 @@ build:
 	@printf "Building $GO_BINARY_NAME binary...\n"
 	go build -o bin/$(GO_BINARY_NAME) ./cmd/cache_builder
 
-install-dev: build
+dev: build
 	@printf "Symlinking $(CURDIR)/bin/$(GO_BINARY_NAME) -> $(CACHE_BUILDER_INSTALL_DIR)/$(GO_BINARY_NAME)...\n"
 	mkdir -p $(CACHE_BUILDER_INSTALL_DIR)
 	ln -sf $(CURDIR)/bin/$(GO_BINARY_NAME) $(CACHE_BUILDER_INSTALL_DIR)/$(GO_BINARY_NAME)
