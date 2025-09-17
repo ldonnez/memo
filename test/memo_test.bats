@@ -21,7 +21,7 @@ teardown() {
   local to_be_created_file
   to_be_created_file=$JOURNAL_NOTES_DIR/"$date.md.gpg"
 
-  run memo ""
+  run memo
   assert_success
   assert_output "Updated files in cache:
 - journal/$date.md.gpg"

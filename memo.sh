@@ -411,7 +411,7 @@ _is_in_notes_dir() {
 # New file will get created if input does not exist.
 # Caution! This will follow symlinks!
 _get_target_filepath() {
-  local input="$1"
+  local input="${1-""}"
   local fullpath
 
   if [[ -z "$input" ]]; then
@@ -1090,7 +1090,7 @@ memo_integrity_check() {
 # Usage:
 #   memo <file> [line_number]
 memo() {
-  local input="$1"
+  local input="${1-""}"
   local lineNum="${2-1}"
 
   local filepath
