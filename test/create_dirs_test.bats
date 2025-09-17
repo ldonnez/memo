@@ -18,13 +18,11 @@ teardown() {
   # Run in subshell to prevent collision in other tests
   (
     local NOTES_DIR="$TEMP/test_notes"
-    local JOURNAL_NOTES_DIR="$NOTES_DIR/journal"
     local CACHE_DIR="$TEMP/cache"
 
     _create_dirs
 
     assert_equal "" "$([[ -d "$NOTES_DIR" ]])"
-    assert_equal "" "$([[ -d "$JOURNAL_NOTES_DIR" ]])"
     assert_equal "" "$([[ -d "$CACHE_DIR" ]])"
 
     # Determine the correct stat command based on the OS

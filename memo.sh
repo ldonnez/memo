@@ -199,7 +199,12 @@ _gpg_keys_exists() {
 _determine_filename() {
   local input="$1"
 
-  if [[ -z "$input" || "$input" == "today" ]]; then
+  if [[ -z "$input" ]]; then
+    printf "%s" "$DEFAULT_FILE"
+    return 0
+  fi
+
+  if [[ "$input" == "today" ]]; then
     printf "%s.%s" "$(date +%F)" "$DEFAULT_EXTENSION"
     return 0
   fi
@@ -235,7 +240,6 @@ _determine_filename() {
 }
 
 # Returns filepath based on input file name.
-# When input filename is date, the file is classified as a file belonging in the journals directory ($JOURNAL_NOTES_DIR.
 _get_filepath() {
   local input="$1"
 
@@ -243,9 +247,7 @@ _get_filepath() {
   if filename=$(_determine_filename "$input"); then
     local filepath
 
-    if _filename_is_date "$filename"; then
-      filepath="$JOURNAL_NOTES_DIR/$filename"
-    elif [[ "$PWD" == "$NOTES_DIR"* ]]; then
+    if [[ -n "$input" && "$PWD" == "$NOTES_DIR"* ]]; then
       filepath="$PWD/$input"
     elif _file_exists "$filename" && _file_is_gpg "$filename"; then
       filepath="$filename"
@@ -1228,7 +1230,7 @@ Usage: memo [FILE] [LINE]
 
 Description:
   Opening and editing files is the default action:
-    - "memo"           Opens today's journal memo or creates it if missing
+    - "memo"           Opens default memo or creates it if missing
     - "memo FILE"      Opens or creates a file named FILE
 
 Commands:
@@ -1255,7 +1257,7 @@ Commands:
   --help                              Show this help message
 
 Examples:
-  memo                                Open today's journal
+  memo                                Open default file
   memo todo.md                        Open or create "todo.md" inside notes dir
   memo --encrypt notes.txt out.gpg    Encrypt notes.txt into out.gpg
   memo --decrypt out.gpg              Decrypt out.gpg to stdout
@@ -1273,7 +1275,6 @@ EOF
 _set_default_values() {
   : "${KEY_IDS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
-  : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
@@ -1282,18 +1283,17 @@ _set_default_values() {
   : "${MEMO_NEOVIM_INTEGRATION:=true}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
+  : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store"}"
 
   # Resolve absolute paths
   NOTES_DIR="$(_get_absolute_path "$NOTES_DIR")"
-  JOURNAL_NOTES_DIR="$(_get_absolute_path "$NOTES_DIR/journal")"
 }
 
-# Initializes $NOTES_DIR, $JOURNAL_NOTES_DIR, $CACHE_DIR
+# Initializes $NOTES_DIR, $CACHE_DIR
 _create_dirs() {
   # Create directories if not exist
   mkdir -p "$NOTES_DIR"
-  mkdir -p "$JOURNAL_NOTES_DIR"
   mkdir -p "$CACHE_DIR"
   chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
 }

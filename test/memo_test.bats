@@ -13,18 +13,15 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/*
 }
 
-@test "successfully creates a new memo with todays date as filename when it does not exist" {
-
-  local date=
-  date=$(date +%F)
+@test "successfully creates a new memo with $DEFAULT_FILE as filename when it does not exist" {
 
   local to_be_created_file
-  to_be_created_file=$JOURNAL_NOTES_DIR/"$date.md.gpg"
+  to_be_created_file="$NOTES_DIR/$DEFAULT_FILE.gpg"
 
   run memo
   assert_success
   assert_output "Updated files in cache:
-- journal/$date.md.gpg"
+- $DEFAULT_FILE.gpg"
 
   run _file_exists "$to_be_created_file"
   assert_success
@@ -33,17 +30,14 @@ teardown() {
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 
-@test "successfully creates a new memo with todays date as filename and header when it does not exist when MEMO_NEOVIM_INTEGRATION = true" {
+@test "successfully creates a new memo with $DEFAULT_FILE as filename and header when it does not exist when MEMO_NEOVIM_INTEGRATION = true" {
   # Run in subshell to avoid collision with other tests
   (
     local MEMO_NEOVIM_INTEGRATION=true
     local EDITOR_CMD="nvim"
 
-    local date=
-    date=$(date +%F)
-
     local to_be_created_file
-    to_be_created_file=$JOURNAL_NOTES_DIR/"$date.md.gpg"
+    to_be_created_file="$NOTES_DIR/$DEFAULT_FILE.gpg"
 
     # Mock nvim
     # shellcheck disable=SC2329
@@ -56,7 +50,7 @@ teardown() {
     assert_output "$to_be_created_file"
 
     run cat "$to_be_created_file"
-    assert_output "# $date"
+    assert_output "# inbox"
   )
 }
 
