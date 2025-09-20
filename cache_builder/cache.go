@@ -22,18 +22,6 @@ type Entry struct {
 
 func UpdateAll(notesDir string, cacheFile string, keyIDs []string) []string {
 	validKeys := []string{}
-	for _, key := range keyIDs {
-		if gpgKeyExists(key) {
-			validKeys = append(validKeys, key)
-		} else {
-			fmt.Fprintf(os.Stderr, "Skipping missing recipient: %s\n", key)
-		}
-	}
-
-	if len(validKeys) == 0 {
-		fmt.Fprintln(os.Stderr, "No valid recipients found — skipping cache build.")
-		return nil
-	}
 
 	oldEntries := loadIndex(cacheFile)
 	oldMap := loadOldEntriesMap(oldEntries)
@@ -86,13 +74,6 @@ func UpdateAll(notesDir string, cacheFile string, keyIDs []string) []string {
 
 	sort.Strings(keys)
 	return keys
-}
-
-func gpgKeyExists(keyID string) bool {
-	cmd := exec.Command("gpg", "--list-keys", keyID)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	return cmd.Run() == nil
 }
 
 func canDecrypt(file string) bool {
@@ -246,31 +227,7 @@ func getFileInfo(file string) (int64, string) {
 	return stat.Size(), fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// Checks if a GPG public key exists in the keyring
-func keyExists(id string) bool {
-	cmd := exec.Command("gpg", "--list-keys", id)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run() == nil
-}
-
 func saveIndex(entries []Entry, cacheFile string, keyIDs []string) {
-	// Filter valid recipients
-	var validKeys []string
-	for _, id := range keyIDs {
-		if keyExists(id) {
-			validKeys = append(validKeys, id)
-		} else {
-			fmt.Printf("Skipping missing recipient: %s\n", id)
-		}
-	}
-
-	// No valid recipients? Skip cache creation.
-	if len(validKeys) == 0 {
-		fmt.Println("No valid recipients found — skipping cache build")
-		return
-	}
-
 	sort.Slice(entries, func(i, j int) bool {
 		if entries[i].Path == entries[j].Path {
 			return entries[i].Content < entries[j].Content

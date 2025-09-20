@@ -13,9 +13,9 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/*
 }
 
-@test "returns daily notes path with todays date as filename if empty arg" {
+@test "returns default file as filename if empty arg" {
   local to_be_created_file
-  to_be_created_file=$JOURNAL_NOTES_DIR/$(date +%F).md
+  to_be_created_file=$NOTES_DIR/$DEFAULT_FILE
 
   run _get_target_filepath ""
   assert_success

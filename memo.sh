@@ -133,6 +133,45 @@ _is_supported_extension() {
   return 1
 }
 
+# _gpg_pinentry: Ensure GPG agent has the passphrase cached
+#
+# Behavior:
+#   - If passphrase is cached: does nothing.
+#   - If not cached and $GPG_PASSPHRASE is set: use loopback mode with that passphrase. (Used for environments without TTY like tests, CI, etc...)
+#   - If not cached and $GPG_PASSPHRASE is unset: pinentry will prompt.
+#
+# Usage:
+#   _gpg_pinentry <keyid>
+_gpg_pinentry() {
+  local keyid="${1:-}"
+
+  # Step 1: test if cached (no pinentry triggered)
+  if ! printf 'test' | gpg --sign \
+    --batch --no-tty --pinentry-mode=error \
+    ${keyid:+--local-user "$keyid"} \
+    -o /dev/null 2>/dev/null; then
+
+    printf 'Passphrase not cached — prompting...\n' >&2
+
+    # Step 2: cache passphrase either via loopback or pinentry
+    if [[ -n "${GPG_PASSPHRASE:-}" ]]; then
+      printf 'test' | gpg --sign \
+        --batch --yes --pinentry-mode=loopback \
+        --passphrase "$GPG_PASSPHRASE" \
+        ${keyid:+--local-user "$keyid"} \
+        -o /dev/null
+    else
+      export GPG_TTY
+      GPG_TTY=$(tty 2>/dev/null || true)
+
+      printf 'test' | gpg --sign \
+        --batch --no-tty \
+        ${keyid:+--local-user "$keyid"} \
+        -o /dev/null
+    fi
+  fi
+}
+
 # Validates if all the given key_ids exist in GPG keyring.
 _gpg_keys_exists() {
   local key_ids="$1"
@@ -160,7 +199,12 @@ _gpg_keys_exists() {
 _determine_filename() {
   local input="$1"
 
-  if [[ -z "$input" || "$input" == "today" ]]; then
+  if [[ -z "$input" ]]; then
+    printf "%s" "$DEFAULT_FILE"
+    return 0
+  fi
+
+  if [[ "$input" == "today" ]]; then
     printf "%s.%s" "$(date +%F)" "$DEFAULT_EXTENSION"
     return 0
   fi
@@ -196,7 +240,6 @@ _determine_filename() {
 }
 
 # Returns filepath based on input file name.
-# When input filename is date, the file is classified as a file belonging in the journals directory ($JOURNAL_NOTES_DIR.
 _get_filepath() {
   local input="$1"
 
@@ -204,9 +247,7 @@ _get_filepath() {
   if filename=$(_determine_filename "$input"); then
     local filepath
 
-    if _filename_is_date "$filename"; then
-      filepath="$JOURNAL_NOTES_DIR/$filename"
-    elif [[ "$PWD" == "$NOTES_DIR"* ]]; then
+    if [[ -n "$input" && "$PWD" == "$NOTES_DIR"* ]]; then
       filepath="$PWD/$input"
     elif _file_exists "$filename" && _file_is_gpg "$filename"; then
       filepath="$filename"
@@ -372,7 +413,7 @@ _is_in_notes_dir() {
 # New file will get created if input does not exist.
 # Caution! This will follow symlinks!
 _get_target_filepath() {
-  local input="$1"
+  local input="${1-""}"
   local fullpath
 
   if [[ -z "$input" ]]; then
@@ -668,12 +709,12 @@ memo_grep() {
   local temp_index=
   temp_index=$(mktemp)
 
-  if [[ ! -f "$CACHE_FILE" ]]; then
+  if [[ ! -f "$_CACHE_FILE" ]]; then
     printf "Cache not found. Building it now...\n"
     memo_cache
   fi
 
-  _gpg_decrypt "$CACHE_FILE" "$temp_index"
+  _gpg_decrypt "$_CACHE_FILE" "$temp_index"
 
   local selected_line
 
@@ -1051,11 +1092,11 @@ memo_integrity_check() {
 # Usage:
 #   memo <file> [line_number]
 memo() {
-  local input="$1"
+  local input="${1-""}"
   local lineNum="${2-1}"
 
   local filepath
-  filepath=$(_get_target_filepath "$1") || return 1
+  filepath=$(_get_target_filepath "$input") || return 1
 
   if [[ "${MEMO_NEOVIM_INTEGRATION:-}" == true && "$EDITOR_CMD" == "nvim" ]]; then
     local gpg_file
@@ -1121,8 +1162,8 @@ memo_upgrade() {
       printf "Upgrade memo in %s...\n" "$script_path"
       install -m 0700 /tmp/memo/memo "$script_path"/memo
 
-      printf "Upgrade cache builder in %s...\n" "$CACHE_BUILDER_DIR"
-      install -m 0700 /tmp/memo/bin/cache_builder "$CACHE_BUILDER_DIR"/cache_builder
+      printf "Upgrade cache builder in %s...\n" "$_CACHE_BUILDER_DIR"
+      install -m 0700 /tmp/memo/bin/cache_builder "$_CACHE_BUILDER_DIR"/cache_builder
 
       rm -rf /tmp/memo
       rm -rf /tmp/memo.tar.gz
@@ -1154,8 +1195,8 @@ memo_uninstall() {
   local script_path
   script_path=$(_resolve_script_path)
 
-  rm -rf "$CACHE_BUILDER_DIR"
-  printf "Deleted %s\n" "$CACHE_BUILDER_DIR"
+  rm -rf "$_CACHE_BUILDER_DIR"
+  printf "Deleted %s\n" "$_CACHE_BUILDER_DIR"
 
   rm -rf "$script_path/memo"
   printf "Deleted %s\n" "$script_path/memo"
@@ -1179,7 +1220,7 @@ memo_version() {
 # Usage:
 #   memo_cache <file1> <file2>
 memo_cache() {
-  $CACHE_BUILDER_BIN "$(_get_absolute_path "$NOTES_DIR")" "$CACHE_FILE" "$KEY_IDS" "$@"
+  $_CACHE_BUILDER_BIN "$(_get_absolute_path "$NOTES_DIR")" "$_CACHE_FILE" "$KEY_IDS" "$@"
 }
 
 show_help() {
@@ -1189,7 +1230,7 @@ Usage: memo [FILE] [LINE]
 
 Description:
   Opening and editing files is the default action:
-    - "memo"           Opens today's journal memo or creates it if missing
+    - "memo"           Opens default memo or creates it if missing
     - "memo FILE"      Opens or creates a file named FILE
 
 Commands:
@@ -1216,7 +1257,7 @@ Commands:
   --help                              Show this help message
 
 Examples:
-  memo                                Open today's journal
+  memo                                Open default file
   memo todo.md                        Open or create "todo.md" inside notes dir
   memo --encrypt notes.txt out.gpg    Encrypt notes.txt into out.gpg
   memo --decrypt out.gpg              Decrypt out.gpg to stdout
@@ -1231,30 +1272,29 @@ EOF
 ###############################################################################
 
 # Set default global variables
+# Variables prefixed with _ should not be overriden in $XDG_CONFIG_HOME/.config/memo
 _set_default_values() {
   : "${KEY_IDS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
-  : "${JOURNAL_NOTES_DIR:=$NOTES_DIR/journal}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
-  : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
-  : "${CACHE_BUILDER_DIR:=$HOME/.local/libexec/memo}"
-  : "${CACHE_BUILDER_BIN:=$CACHE_BUILDER_DIR/cache_builder}"
-  : "${MEMO_NEOVIM_INTEGRATION:=true}"
+  : "${_CACHE_FILE:=$CACHE_DIR/notes.cache}"
+  : "${_CACHE_BUILDER_DIR:=$HOME/.local/libexec/memo}"
+  : "${_CACHE_BUILDER_BIN:=$_CACHE_BUILDER_DIR/cache_builder}"
+  : "${MEMO_NEOVIM_INTEGRATION:=false}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
+  : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store"}"
 
   # Resolve absolute paths
   NOTES_DIR="$(_get_absolute_path "$NOTES_DIR")"
-  JOURNAL_NOTES_DIR="$(_get_absolute_path "$NOTES_DIR/journal")"
 }
 
-# Initializes $NOTES_DIR, $JOURNAL_NOTES_DIR, $CACHE_DIR
+# Initializes $NOTES_DIR, $CACHE_DIR
 _create_dirs() {
   # Create directories if not exist
   mkdir -p "$NOTES_DIR"
-  mkdir -p "$JOURNAL_NOTES_DIR"
   mkdir -p "$CACHE_DIR"
   chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
 }
@@ -1371,6 +1411,8 @@ main() {
     printf "Error: gpg not found in PATH" >&2
     exit 1
   fi
+
+  _gpg_pinentry
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
   _load_config "$CONFIG_FILE"

@@ -11,7 +11,7 @@ setup() {
 teardown() {
   rm -rf "${NOTES_DIR:?}"/.*
   rm -rf "${NOTES_DIR:?}"/*
-  rm -f "$CACHE_FILE"
+  rm -f "$_CACHE_FILE"
 }
 
 @test "deletes the file and does not cache because file does not exist in cache" {
