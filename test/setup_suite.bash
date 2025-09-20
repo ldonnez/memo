@@ -7,7 +7,7 @@ setup_suite() {
   export HOME="$TEST_HOME"
   export NOTES_DIR="$TEST_HOME/notes"
   export CACHE_DIR="$TEST_HOME/.cache/memo"
-  export CACHE_FILE="$CACHE_DIR/notes.cache"
+  export _CACHE_FILE="$CACHE_DIR/notes.cache"
   export EDITOR_CMD="true" # avoid launching an actual editor
   export KEY_IDS="mock@example.com"
   export SUPPORTED_EXTENSIONS="md,org,txt"

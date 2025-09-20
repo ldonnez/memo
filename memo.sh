@@ -709,12 +709,12 @@ memo_grep() {
   local temp_index=
   temp_index=$(mktemp)
 
-  if [[ ! -f "$CACHE_FILE" ]]; then
+  if [[ ! -f "$_CACHE_FILE" ]]; then
     printf "Cache not found. Building it now...\n"
     memo_cache
   fi
 
-  _gpg_decrypt "$CACHE_FILE" "$temp_index"
+  _gpg_decrypt "$_CACHE_FILE" "$temp_index"
 
   local selected_line
 
@@ -1220,7 +1220,7 @@ memo_version() {
 # Usage:
 #   memo_cache <file1> <file2>
 memo_cache() {
-  $CACHE_BUILDER_BIN "$(_get_absolute_path "$NOTES_DIR")" "$CACHE_FILE" "$KEY_IDS" "$@"
+  $CACHE_BUILDER_BIN "$(_get_absolute_path "$NOTES_DIR")" "$_CACHE_FILE" "$KEY_IDS" "$@"
 }
 
 show_help() {
@@ -1277,7 +1277,7 @@ _set_default_values() {
   : "${NOTES_DIR:=$HOME/notes}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
-  : "${CACHE_FILE:=$CACHE_DIR/notes.cache}"
+  : "${_CACHE_FILE:=$CACHE_DIR/notes.cache}"
   : "${CACHE_BUILDER_DIR:=$HOME/.local/libexec/memo}"
   : "${CACHE_BUILDER_BIN:=$CACHE_BUILDER_DIR/cache_builder}"
   : "${MEMO_NEOVIM_INTEGRATION:=true}"

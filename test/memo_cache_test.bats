@@ -11,11 +11,11 @@ setup() {
 teardown() {
   rm -rf "${NOTES_DIR:?}"/.*
   rm -rf "${NOTES_DIR:?}"/*
-  rm -f "$CACHE_FILE"
+  rm -f "$_CACHE_FILE"
 }
 
 @test "caches all current files when giving no files" {
-  run _file_exists "$CACHE_FILE"
+  run _file_exists "$_CACHE_FILE"
   assert_failure
 
   local file="$NOTES_DIR/test.md"
