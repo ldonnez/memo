@@ -16,7 +16,7 @@ setup() {
     local EDITOR_CMD
     local CACHE_DIR
     local _CACHE_FILE
-    local CACHE_BUILDER_BIN
+    local _CACHE_BUILDER_BIN
     local DEFAULT_EXTENSION
     local SUPPORTED_EXTENSIONS
     local DEFAULT_FILE
@@ -29,7 +29,7 @@ setup() {
     assert_equal "$EDITOR_CMD" "nano"
     assert_equal "$CACHE_DIR" "$HOME/.cache/memo"
     assert_equal "$_CACHE_FILE" "$CACHE_DIR/notes.cache"
-    assert_equal "$CACHE_BUILDER_BIN" "$HOME/.local/libexec/memo/cache_builder"
+    assert_equal "$_CACHE_BUILDER_BIN" "$HOME/.local/libexec/memo/cache_builder"
     assert_equal "$DEFAULT_EXTENSION" "md"
     assert_equal "$SUPPORTED_EXTENSIONS" "md,org,txt"
     assert_equal "$DEFAULT_FILE" "inbox.md"

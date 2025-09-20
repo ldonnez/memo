@@ -11,11 +11,11 @@ setup() {
 @test "Uninstalls memo when confirming" {
   # Run in subshell to avaoid collision with other tests
   (
-    local CACHE_BUILDER_DIR="/tmp/cache_builder/bin"
+    local _CACHE_BUILDER_DIR="/tmp/cache_builder/bin"
     local temp_script_path="/tmp/memo"
 
     # mock cache_builder path and memo script path
-    mkdir -p "$CACHE_BUILDER_DIR"
+    mkdir -p "$_CACHE_BUILDER_DIR"
     mkdir -p "$temp_script_path"
 
     # mock memo binary to delete
@@ -28,7 +28,7 @@ setup() {
     run memo_uninstall <<<""
     assert_success
     assert_output "Proceeding with uninstall...
-Deleted $CACHE_BUILDER_DIR
+Deleted $_CACHE_BUILDER_DIR
 Deleted $temp_script_path/memo
 Uninstall completed."
   )
