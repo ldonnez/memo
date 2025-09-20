@@ -1281,7 +1281,7 @@ _set_default_values() {
   : "${_CACHE_FILE:=$CACHE_DIR/notes.cache}"
   : "${_CACHE_BUILDER_DIR:=$HOME/.local/libexec/memo}"
   : "${_CACHE_BUILDER_BIN:=$_CACHE_BUILDER_DIR/cache_builder}"
-  : "${MEMO_NEOVIM_INTEGRATION:=true}"
+  : "${MEMO_NEOVIM_INTEGRATION:=false}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
   : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
