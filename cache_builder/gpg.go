@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -119,8 +120,16 @@ func EncryptAndWrite(entries []Entry, cacheFile string, keyIDs []string) {
 	}
 
 	args := []string{"--yes", "--batch", "--quiet"}
-	for _, id := range keyIDs {
-		args = append(args, "--recipient", id)
+
+	// Check if keyIDs is empty and use --default-recipient-self if it is.
+	if len(keyIDs) == 0 {
+		args = append(args, "--default-recipient-self")
+	} else {
+		for _, id := range keyIDs {
+			if gpgKeyExists(id) {
+				args = append(args, "--recipient", id)
+			}
+		}
 	}
 
 	args = append(args, "--encrypt", "--output", cacheFile)
@@ -132,4 +141,11 @@ func EncryptAndWrite(entries []Entry, cacheFile string, keyIDs []string) {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+}
+
+func gpgKeyExists(keyID string) bool {
+	cmd := exec.Command("gpg", "--list-keys", keyID)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	return cmd.Run() == nil
 }

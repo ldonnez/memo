@@ -72,3 +72,44 @@ func TestProcessInlinePGPFile(t *testing.T) {
 		t.Errorf("line numbers not assigned correctly: %+v", entries)
 	}
 }
+
+func TestEncryptDecryptNoKeyIDs(t *testing.T) {
+	setupTestGPG(t)
+
+	tmp := t.TempDir()
+	cache := filepath.Join(tmp, "cache.gpg")
+
+	entries := []Entry{
+		{Path: "file.txt", LineNum: 1, Size: 123, Hash: "deadbeef", Content: "hello world"},
+	}
+
+	EncryptAndWrite(entries, cache, []string{})
+	if _, err := os.Stat(cache); err != nil {
+		t.Fatalf("cache file not written: %v", err)
+	}
+
+	loaded := DecryptAndLoad(cache)
+	if len(loaded) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(loaded))
+	}
+	got := loaded[0]
+	if got.Content != "hello world" || got.Path != "file.txt" {
+		t.Errorf("wrong roundtrip result: %+v", got)
+	}
+}
+
+func TestEncryptDecryptInvalidKeyIDs(t *testing.T) {
+	setupTestGPG(t)
+
+	tmp := t.TempDir()
+	cache := filepath.Join(tmp, "cache.gpg")
+
+	entries := []Entry{
+		{Path: "file.txt", LineNum: 1, Size: 123, Hash: "deadbeef", Content: "hello world"},
+	}
+
+	EncryptAndWrite(entries, cache, []string{"notfound@example.com"})
+	if _, err := os.Stat(cache); err == nil {
+		t.Fatalf("cache file written when it should not be writte")
+	}
+}
