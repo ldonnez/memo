@@ -1272,6 +1272,7 @@ EOF
 ###############################################################################
 
 # Set default global variables
+# Variables prefixed with _ should not be overriden in $XDG_CONFIG_HOME/.config/memo
 _set_default_values() {
   : "${KEY_IDS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
