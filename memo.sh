@@ -1162,8 +1162,8 @@ memo_upgrade() {
       printf "Upgrade memo in %s...\n" "$script_path"
       install -m 0700 /tmp/memo/memo "$script_path"/memo
 
-      printf "Upgrade cache builder in %s...\n" "$CACHE_BUILDER_DIR"
-      install -m 0700 /tmp/memo/bin/cache_builder "$CACHE_BUILDER_DIR"/cache_builder
+      printf "Upgrade cache builder in %s...\n" "$_CACHE_BUILDER_DIR"
+      install -m 0700 /tmp/memo/bin/cache_builder "$_CACHE_BUILDER_DIR"/cache_builder
 
       rm -rf /tmp/memo
       rm -rf /tmp/memo.tar.gz
@@ -1195,8 +1195,8 @@ memo_uninstall() {
   local script_path
   script_path=$(_resolve_script_path)
 
-  rm -rf "$CACHE_BUILDER_DIR"
-  printf "Deleted %s\n" "$CACHE_BUILDER_DIR"
+  rm -rf "$_CACHE_BUILDER_DIR"
+  printf "Deleted %s\n" "$_CACHE_BUILDER_DIR"
 
   rm -rf "$script_path/memo"
   printf "Deleted %s\n" "$script_path/memo"
@@ -1220,7 +1220,7 @@ memo_version() {
 # Usage:
 #   memo_cache <file1> <file2>
 memo_cache() {
-  $CACHE_BUILDER_BIN "$(_get_absolute_path "$NOTES_DIR")" "$_CACHE_FILE" "$KEY_IDS" "$@"
+  $_CACHE_BUILDER_BIN "$(_get_absolute_path "$NOTES_DIR")" "$_CACHE_FILE" "$KEY_IDS" "$@"
 }
 
 show_help() {
@@ -1278,8 +1278,8 @@ _set_default_values() {
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${CACHE_DIR:=$HOME/.cache/memo}"
   : "${_CACHE_FILE:=$CACHE_DIR/notes.cache}"
-  : "${CACHE_BUILDER_DIR:=$HOME/.local/libexec/memo}"
-  : "${CACHE_BUILDER_BIN:=$CACHE_BUILDER_DIR/cache_builder}"
+  : "${_CACHE_BUILDER_DIR:=$HOME/.local/libexec/memo}"
+  : "${_CACHE_BUILDER_BIN:=$_CACHE_BUILDER_DIR/cache_builder}"
   : "${MEMO_NEOVIM_INTEGRATION:=true}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"

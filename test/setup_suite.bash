@@ -48,16 +48,16 @@ EOF
 setup_cache_builder() {
   # Set paths
   PROJECT_ROOT="$(cd "$(dirname "${BATS_TEST_DIRNAME}")/" && pwd)"
-  export CACHE_BUILDER_DIR="$HOME/.local/libexec/memo"
+  export _CACHE_BUILDER_DIR="$HOME/.local/libexec/memo"
 
-  mkdir -p "$CACHE_BUILDER_DIR"
+  mkdir -p "$_CACHE_BUILDER_DIR"
 
   # Build the Go binary
   printf "Building cache_builder...\n"
-  (cd "$PROJECT_ROOT" && go build -o "$CACHE_BUILDER_DIR/cache_builder" ./cmd/cache_builder)
+  (cd "$PROJECT_ROOT" && go build -o "$_CACHE_BUILDER_DIR/cache_builder" ./cmd/cache_builder)
 
   # Make sure it's executable
-  chmod +x "$CACHE_BUILDER_DIR/cache_builder"
+  chmod +x "$_CACHE_BUILDER_DIR/cache_builder"
 
-  export CACHE_BUILDER_BIN=$CACHE_BUILDER_DIR/cache_builder
+  export _CACHE_BUILDER_BIN=$_CACHE_BUILDER_DIR/cache_builder
 }
