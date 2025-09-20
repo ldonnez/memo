@@ -17,20 +17,25 @@ func main() {
 	cacheFile := os.Args[2]
 
 	keyIDs := strings.Split(os.Args[3], ",")
-	for i := range keyIDs {
-		keyIDs[i] = strings.TrimSpace(keyIDs[i])
+	trimmedKeyIDs := []string{}
+
+	for _, id := range keyIDs {
+		trimmedID := strings.TrimSpace(id)
+		if trimmedID != "" {
+			trimmedKeyIDs = append(trimmedKeyIDs, trimmedID)
+		}
 	}
 
 	args := os.Args[4:]
 	files := args
 
 	if len(files) > 0 {
-		updatedFiles := cache_builder.UpdateManyFiles(notesDir, cacheFile, keyIDs, files)
+		updatedFiles := cache_builder.UpdateManyFiles(notesDir, cacheFile, trimmedKeyIDs, files)
 		printResult(updatedFiles)
 		return
 	}
 
-	updatedFiles := cache_builder.UpdateAll(notesDir, cacheFile, keyIDs)
+	updatedFiles := cache_builder.UpdateAll(notesDir, cacheFile, trimmedKeyIDs)
 	printResult(updatedFiles)
 }
 
