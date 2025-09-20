@@ -15,7 +15,7 @@ setup() {
     local NOTES_DIR
     local EDITOR_CMD
     local CACHE_DIR
-    local CACHE_FILE
+    local _CACHE_FILE
     local CACHE_BUILDER_BIN
     local DEFAULT_EXTENSION
     local SUPPORTED_EXTENSIONS
@@ -28,7 +28,7 @@ setup() {
     # Use readlink -f to follow symlinks here since macOS symlinks temp from /var/... to /private/var/
     assert_equal "$EDITOR_CMD" "nano"
     assert_equal "$CACHE_DIR" "$HOME/.cache/memo"
-    assert_equal "$CACHE_FILE" "$CACHE_DIR/notes.cache"
+    assert_equal "$_CACHE_FILE" "$CACHE_DIR/notes.cache"
     assert_equal "$CACHE_BUILDER_BIN" "$HOME/.local/libexec/memo/cache_builder"
     assert_equal "$DEFAULT_EXTENSION" "md"
     assert_equal "$SUPPORTED_EXTENSIONS" "md,org,txt"
