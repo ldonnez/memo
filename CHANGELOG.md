@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/ldonnez/memo/compare/v0.1.1...v0.1.2) (2025-09-21)
+
+
+### Bug Fixes
+
+* ensure correct version check with prefix ([8444258](https://github.com/ldonnez/memo/commit/8444258ad9780fbc128c5d21a807762fb66fcb1d))
+
 ## [0.1.1](https://github.com/ldonnez/memo/compare/v0.1.0...v0.1.1) (2025-09-21)
 
 
