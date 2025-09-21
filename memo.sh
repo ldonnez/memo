@@ -1308,10 +1308,7 @@ _load_config() {
   if _file_exists "$config_file"; then
     # shellcheck source=/dev/null
     source "$config_file"
-  else
-    printf "Config file not found: %s\n" "$config_file" >&2
   fi
-
 }
 
 _parse_args() {

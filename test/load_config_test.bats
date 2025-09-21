@@ -31,8 +31,3 @@ EOF
     assert_equal "$KEY_IDS" "test@example.com"
   )
 }
-
-@test "returns Config file not found when config file does not exist" {
-  run _load_config "i-do-not-exist"
-  assert_output "Config file not found: i-do-not-exist"
-}
