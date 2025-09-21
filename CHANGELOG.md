@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/ldonnez/memo/compare/v0.1.0...v0.1.1) (2025-09-21)
+
+
+### Bug Fixes
+
+* don't show error when no config file found ([83ba055](https://github.com/ldonnez/memo/commit/83ba0557271705823e5ef37d906cc639675ba8b3))
+
 ## [0.1.0](https://github.com/ldonnez/memo/compare/v0.0.1...v0.1.0) (2025-09-21)
 
 
