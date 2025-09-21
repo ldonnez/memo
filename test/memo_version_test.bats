@@ -11,10 +11,10 @@ setup() {
 @test "prints current version" {
   # Run in subshell to avaoid collision with other tests
   (
-    local VERSION="vx.x.x"
+    local VERSION="x.x.x"
 
     run memo_version
     assert_success
-    assert_output "$VERSION"
+    assert_output "v$VERSION"
   )
 }

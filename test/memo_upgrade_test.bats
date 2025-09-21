@@ -35,7 +35,7 @@ teardown() {
 @test "Upgrades memo when confirming" {
   # Run in subshell to avaoid collision with other tests
   (
-    local VERSION="v0.1.0"
+    local VERSION="0.1.0"
 
     # Mock latest version
     # shellcheck disable=SC2329
@@ -59,7 +59,7 @@ Upgrade success!"
 @test "Does not upgrade when not confirming" {
   # Run in subshell to avaoid collision with other tests
   (
-    local VERSION="v0.1.0"
+    local VERSION="0.1.0"
 
     # Mock latest version
     # shellcheck disable=SC2329
@@ -79,7 +79,7 @@ Upgrade cancelled."
 @test "Does not upgrade when _build_tarball_name returns exit code 1" {
   # Run in subshell to avaoid collision with other tests
   (
-    local VERSION="v0.1.0"
+    local VERSION="0.1.0"
 
     # Mock latest version
     # shellcheck disable=SC2329
@@ -100,7 +100,7 @@ Something went wrong when trying to upgrade memo"
 @test "Does not upgrade when latest version = current version" {
   # Run in subshell to avoid collision with other tests
   (
-    local VERSION="v0.1.0"
+    local VERSION="0.1.0"
 
     # Mock latest version
     # shellcheck disable=SC2329
@@ -115,7 +115,7 @@ Something went wrong when trying to upgrade memo"
 @test "Does not upgrade when curl can't resolve host" {
   # Run in subshell to avoid collision with other tests
   (
-    local VERSION="v0.1.0"
+    local VERSION="0.1.0"
 
     # Mock curl
     # shellcheck disable=SC2329

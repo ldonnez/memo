@@ -594,18 +594,19 @@ _get_latest_version() {
 # See test/check_upgrade_test.bats
 _check_upgrade() {
   local version="$1"
+  local current_version="v$VERSION"
 
   local newer
-  newer=$(printf '%s\n' "$version" "$VERSION" | sort -V | tail -n1)
+  newer=$(printf '%s\n' "$version" "$current_version" | sort -V | tail -n1)
 
-  if [ "$version" = "$VERSION" ]; then
+  if [ "$version" = "$current_version" ]; then
     printf "Already up to date\n"
     return 1
   elif [ "$newer" = "$version" ]; then
-    printf "Upgrade available: %s -> %s\n" "$VERSION" "$version"
+    printf "Upgrade available: %s -> %s\n" "$current_version" "$version"
     return 0
   else
-    printf "Current version (%s) is newer than latest %s?\n" "$VERSION" "$version"
+    printf "Current version (%s) is newer than latest %s?\n" "$current_version" "$version"
     return 1
   fi
 }
@@ -1209,7 +1210,7 @@ memo_uninstall() {
 # Usage:
 #   memo --version
 memo_version() {
-  printf "%s\n" "$VERSION"
+  printf "%s\n" "v$VERSION"
 }
 
 # Builds the memo cache incrementally for fast searching with ripgrep in memo_grep.
