@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.0](https://github.com/ldonnez/memo/compare/v0.0.1...v0.1.0) (2025-09-21)
+
+
+### Features
+
+* add release please ([1478ad3](https://github.com/ldonnez/memo/commit/1478ad3258077630fb6db9997079bbfc350ea754))
+* always check if gpg password is cached ([2a60f0d](https://github.com/ldonnez/memo/commit/2a60f0d315e55201fbaf97a2be4e3612f476c8ad))
+* don't pass empty keyids ([febddbf](https://github.com/ldonnez/memo/commit/febddbf3ae03a48a8d99012d5605ccf33beef737))
+* ensure &lt;extension&gt;.gpg gets correctly checked ([9ef6b40](https://github.com/ldonnez/memo/commit/9ef6b40c0c36c8ce00d8904f18fb55e2555d0ae2))
+* open DEFAULT_FILE when running memo ([8bcb22b](https://github.com/ldonnez/memo/commit/8bcb22bfb6ab5234c61b779280bc82ea40a737d3))
+
+
+### Bug Fixes
+
+* ensure default empty input ([5bd0f4d](https://github.com/ldonnez/memo/commit/5bd0f4da8e190d1c7034d4d667dd6edbf50b3409))
+* pass local $input variable ([39cd6c5](https://github.com/ldonnez/memo/commit/39cd6c5c8fa3ac356d0aba3da4bc15fd9f3f4389))
+
 ## [0.2.0](https://github.com/ldonnez/memo/compare/v0.1.0...v0.2.0) (2025-09-03)
 
 
