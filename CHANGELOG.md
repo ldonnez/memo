@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/ldonnez/memo/compare/v0.1.2...v0.1.3) (2025-10-17)
+
+
+### Bug Fixes
+
+* **ci:** migrate to new macos-15-intel label ([7ff629c](https://github.com/ldonnez/memo/commit/7ff629c009daa5861667b8f1262b9d1dc12625be))
+
 ## [0.1.2](https://github.com/ldonnez/memo/compare/v0.1.1...v0.1.2) (2025-09-21)
 
 
