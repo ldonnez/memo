@@ -1287,9 +1287,6 @@ _set_default_values() {
   : "${DEFAULT_EXTENSION:="md"}"
   : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store"}"
-
-  # Resolve absolute paths
-  NOTES_DIR="$(_get_absolute_path "$NOTES_DIR")"
 }
 
 # Initializes $NOTES_DIR, $CACHE_DIR
