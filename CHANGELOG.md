@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/ldonnez/memo/compare/v0.1.2...v0.1.3) (2025-12-18)
+
+
+### Bug Fixes
+
+* don't resolve NOTES_DIR path ([3aea33b](https://github.com/ldonnez/memo/commit/3aea33bb495f3fbcd969b61cbfa287db8f9085cb))
+
 ## [0.1.2](https://github.com/ldonnez/memo/compare/v0.1.1...v0.1.2) (2025-09-21)
 
 
