@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/ldonnez/memo/compare/v0.1.3...v1.0.0) (2025-12-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove pinentry check
+
+### Code Refactoring
+
+* remove pinentry check ([48e6715](https://github.com/ldonnez/memo/commit/48e6715341cb9b79dcc810e826126a998f447c0b))
+
 ## [0.1.3](https://github.com/ldonnez/memo/compare/v0.1.2...v0.1.3) (2025-12-18)
 
 
