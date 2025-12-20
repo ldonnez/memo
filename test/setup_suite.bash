@@ -6,8 +6,6 @@ setup_suite() {
   export XDG_CONFIG_HOME="$TEST_HOME/.config"
   export HOME="$TEST_HOME"
   export NOTES_DIR="$TEST_HOME/notes"
-  export CACHE_DIR="$TEST_HOME/.cache/memo"
-  export _CACHE_FILE="$CACHE_DIR/notes.cache"
   export EDITOR_CMD="true" # avoid launching an actual editor
   export KEY_IDS="mock@example.com"
   export SUPPORTED_EXTENSIONS="md,org,txt"
@@ -16,7 +14,7 @@ setup_suite() {
   export DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
 
   mkdir -p "$XDG_CONFIG_HOME/memo"
-  mkdir -p "$NOTES_DIR" "$CACHE_DIR"
+  mkdir -p "$NOTES_DIR"
 
   # Optional: provide a mock config file
   cat >"$XDG_CONFIG_HOME/memo/config" <<EOF
@@ -34,8 +32,6 @@ Expire-Date: 0
 %commit
 EOF
 
-  setup_cache_builder
-
   # Source your script with mocked env
   # get the containing directory of this file
   # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,
@@ -43,21 +39,4 @@ EOF
   DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")" >/dev/null 2>&1 && pwd)"
   # make executables in src/ visible to PATH
   PATH="$DIR/..:$PATH"
-}
-
-setup_cache_builder() {
-  # Set paths
-  PROJECT_ROOT="$(cd "$(dirname "${BATS_TEST_DIRNAME}")/" && pwd)"
-  export _CACHE_BUILDER_DIR="$HOME/.local/libexec/memo"
-
-  mkdir -p "$_CACHE_BUILDER_DIR"
-
-  # Build the Go binary
-  printf "Building cache_builder...\n"
-  (cd "$PROJECT_ROOT" && go build -o "$_CACHE_BUILDER_DIR/cache_builder" ./cmd/cache_builder)
-
-  # Make sure it's executable
-  chmod +x "$_CACHE_BUILDER_DIR/cache_builder"
-
-  export _CACHE_BUILDER_BIN=$_CACHE_BUILDER_DIR/cache_builder
 }

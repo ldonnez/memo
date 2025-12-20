@@ -14,22 +14,13 @@ teardown() {
   rm -rf "$TEMP"
 }
 
-@test "Creates missing dirs and ensures CACHE_DIR is only writable for current user" {
+@test "Creates missing dirs" {
   # Run in subshell to prevent collision in other tests
   (
     local NOTES_DIR="$TEMP/test_notes"
-    local CACHE_DIR="$TEMP/cache"
 
     _create_dirs
 
     assert_equal "" "$([[ -d "$NOTES_DIR" ]])"
-    assert_equal "" "$([[ -d "$CACHE_DIR" ]])"
-
-    # Determine the correct stat command based on the OS
-    if [[ "$(uname)" == "Darwin" ]]; then
-      assert_equal "700" "$(stat -f "%A" "$CACHE_DIR")"
-    else
-      assert_equal "700" "$(stat -c "%a" "$CACHE_DIR")"
-    fi
   )
 }

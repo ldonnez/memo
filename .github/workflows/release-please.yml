@@ -26,21 +26,15 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  goreleaser:
-    if: needs.release-please.outputs.release_created == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
-          fetch-depth: 0
-      - uses: actions/setup-go@v6
-        with:
-          go-version: "1.24"
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
+      - name: Build and upload Release Asset
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: |
+          VERSION=${{ steps.release.outputs.tag_name }}
+          TARBALL_NAME="memo.tar.gz"
+
+          tar -czf $TARBALL_NAME -C . memo.sh
+
+          gh release upload "$VERSION" $TARBALL_NAME \
+            --repo ${{ github.repository }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}

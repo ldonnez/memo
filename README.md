@@ -38,8 +38,7 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 
 - **Always encrypted** — only `.gpg` files are stored on disk
 - **Transparent editing** — decrypt to a temp file (or inline in $EDITOR), auto-encrypt on save
-- **Fast search** — search with `ripgrep` + `fzf` by using the cache.
-- **Safe deletion** — delete notes interactively (or with `--force`), cache updates automatically
+- **Safe deletion** — delete notes interactively (or with `--force`)
 - **Ignore rules** — `.ignore` file with defaults (`.git/*`, `.DS_Store`, etc.)
 - **Cross-platform** — Linux & macOS
 
@@ -71,7 +70,6 @@ bash install.sh
 This will:
 
 - Download the latest release from Github.
-- Install the Go binary cache_builder into `$HOME/.local/libexec/memo`
 - Install the memo script into `$HOME/.local/bin`
 
 **Ensure ~/.local/bin is in your $PATH**!
@@ -97,9 +95,6 @@ NOTES_DIR=$HOME/notes
 
 # The default text editor for opening notes. If this variable is empty, memo will use the $EDITOR environment variable.
 EDITOR_CMD=$EDITOR
-
-# The directory where memo stores its cache file (notes.cache).
-CACHE_DIR=$HOME/.cache/memo
 
 # A comma-separated list of file extensions that memo supports.
 # This list is used for operations like batch encryption.
@@ -138,10 +133,7 @@ Opening and editing files is the default action:
 | `--decrypt FILE.gpg`             | Decrypt `FILE.gpg` and print plaintext to stdout.                                                                                         |
 | `--encrypt-files [FILES...]`     | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names, or glob patterns (e.g. `dir/*`).                   |
 | `--decrypt-files [FILES...]`     | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names, or glob patterns (e.g. `dir/*.gpg`). |
-| `--delete [FILES...]`            | Delete one or more files and update cache.                                                                                                |
 | `--files`                        | Browse all files in `fzf` (decrypts preview automatically).                                                                               |
-| `--grep <query>`                 | Search through files using cached index.                                                                                                  |
-| `--cache [FILES...]`             | Incrementally build the memo cache for faster searching with ripgrep.                                                                     |
 | `--integrity-check`              | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                              |
 | `--upgrade`                      | Upgrade `memo` in-place.                                                                                                                  |
 | `--uninstall`                    | Uninstall `memo`.                                                                                                                         |
@@ -165,9 +157,6 @@ memo --decrypt out.gpg
 # Encrypt/decrypt multiple files
 memo --encrypt-files all
 memo --decrypt-files *.gpg
-
-# Search notes for "projectX"
-memo --grep projectX
 ```
 
 # Development Guide
@@ -178,7 +167,6 @@ Explains how to work with the **Makefile** and development workflow for memo.
 
 Make sure the following are installed before building or testing:
 
-- [Go](https://go.dev/)
 - [Bats](https://github.com/bats-core/bats-core) (optional if you use Docker)
 - [Docker](https://www.docker.com/)
 
@@ -186,18 +174,12 @@ Make sure the following are installed before building or testing:
 
 memo.sh → Main Bash wrapper script.
 
-cmd/cache_builder/ → Go program for building the memo search cache.
-
-bin/cache_builder → Compiled binary (ignored in Git).
-
 test/ → Bats test files.
 
 ## Dev Install
 
 Useful for rapid development (no need to reinstall after changes). (Ensure ~/.local/bin is in your $PATH.)
 
-- Builds cache builder in bin/cache_builder
-- Symlinks bin/cache_builder → ~/.local/libexec/memo/cache_builder.
 - Symlinks memo.sh → ~/.local/bin/memo.
 
 ```bash
@@ -205,8 +187,6 @@ make dev
 ```
 
 ## Clean
-
-Removes build artifacts (bin/cache_builder).
 
 ```bash
 make clean
@@ -244,8 +224,6 @@ make docker/shell
 ```
 
 ## Run tests
-
-Runs Go tests inside Docker: go test -v ./....
 
 Runs Bats tests inside Docker.
 

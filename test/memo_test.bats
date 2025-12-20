@@ -20,8 +20,7 @@ teardown() {
 
   run memo
   assert_success
-  assert_output "Updated files in cache:
-- $DEFAULT_FILE.gpg"
+  assert_output ""
 
   run _file_exists "$to_be_created_file"
   assert_success
@@ -89,8 +88,7 @@ teardown() {
 
   run memo "$file.gpg"
   assert_success
-  assert_output "Updated files in cache:
-- test.md.gpg"
+  assert_output ""
 }
 
 @test "successfully creates new file in notes dir ($NOTES_DIR)" {
@@ -98,8 +96,7 @@ teardown() {
 
   run memo "$file"
   assert_success
-  assert_output "Updated files in cache:
-- new-file-test.md.gpg"
+  assert_output ""
 
   run cat "$NOTES_DIR/$file.gpg"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"

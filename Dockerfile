@@ -1,4 +1,4 @@
-FROM golang:1.24-trixie
+FROM debian:trixie-slim
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \

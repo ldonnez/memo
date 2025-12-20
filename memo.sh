@@ -509,42 +509,6 @@ _get_ignored_files() {
   fi
 }
 
-# Returns the systems architecture; aarch64 will return arm64.
-# This function gets used to build the name of the tarball that needs to be downloaded from the Github release.
-# Supported architectures are x86_64 and ARM 64. 32-bit systems are not supported.
-_determine_arch() {
-  local arch
-  arch="$(uname -m)"
-
-  if [ "$arch" = "x86_64" ]; then
-    printf "x86_64\n"
-  elif [ "$arch" = "aarch64" ] || [ "$arch" = "arm64" ]; then
-    printf "arm64\n"
-  else
-    printf "Unsupported arch: %s\n" "$arch" >&2
-    return 1
-  fi
-}
-
-# Returns the string in the format of memo_<OS>_<ARCH>.tar.gz based on OS and Arch of the system.
-# Gets used to download the Github release based on tarball name.
-_build_tarball_name() {
-  local os
-  os=$(uname -s)
-
-  if [ "$os" != "Darwin" ] && [ "$os" != "Linux" ]; then
-    printf "Unsupported OS: %s\n" "$os" >&2
-    return 1
-  fi
-
-  local arch
-  if arch=$(_determine_arch); then
-    printf "memo_%s_%s.tar.gz" "$os" "$arch"
-    return 0
-  fi
-  return 1
-}
-
 # Returns latest release version of memo by using the Github API.
 _get_latest_version() {
   curl -s https://api.github.com/repos/$REPO/releases/latest | grep tag_name | cut -d '"' -f4
@@ -595,108 +559,6 @@ memo_files() {
   [[ -z "$result" ]] && return
 
   memo "$result"
-}
-
-# Deletes one or more files.
-#
-# Will only work on files inside notes dir
-# Function supports glob patterns like <dir>/* and multiple files <file1> <file2>
-# Updates cache afterwards
-#
-# Usage:
-#   memo_delete <file1> <file2>
-#   memo_delete --force <file1> <file2>
-memo_delete() {
-  local force=""
-  while [ "$1" = "--force" ]; do
-    force="1"
-    shift
-  done
-
-  if [ $# -eq 0 ]; then
-    printf "No memo filename provided.\n"
-    return 1
-  fi
-
-  # collect files that exist
-  delete_list=()
-  for target in "$@"; do
-    file=$(_find_note_file "$target") || {
-      printf "Memo not found: %s\n" "$target"
-      continue
-    }
-    delete_list+=("$file")
-  done
-
-  # nothing to delete
-  if [ ${#delete_list[@]} -eq 0 ]; then
-    return 1
-  fi
-
-  # prompt once for all files unless --force
-  if [ -z "$force" ]; then
-    printf "Are you sure you want to delete the following files?\n"
-    printf "  %s\n" "${delete_list[@]}"
-    read -rp "[y/N] " confirm
-    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-      printf "Deletion cancelled.\n"
-      return 1
-    fi
-  fi
-
-  if [ ${#delete_list[@]} -gt 0 ]; then
-    rm -f "${delete_list[@]}"
-    printf "Deleted: %s\n" "${delete_list[*]}"
-    memo_cache "${delete_list[@]}"
-  fi
-}
-
-# Search through files using a query, displaying results in fzf.
-#
-# Won't work when gpg, rpg and fzf is not available in PATH.
-# Uses the decrypted cache. If the cache is missing, it is automatically rebuilt.
-# Extracts filename, content, line number to display in fzf.
-# Opens the selected note at the corresponding line using the `memo` function.
-#
-# Usage:
-#   memo_grep [query]
-memo_grep() {
-  if ! _check_cmd gpg || ! _check_cmd rg || ! _check_cmd fzf; then
-    printf "Error: gpg, rg and fzf are required for memo_grep" >&2
-    exit 1
-  fi
-
-  local query="${1-""}"
-
-  local temp_index=
-  temp_index=$(mktemp)
-
-  if [[ ! -f "$_CACHE_FILE" ]]; then
-    printf "Cache not found. Building it now...\n"
-    memo_cache
-  fi
-
-  _gpg_decrypt "$_CACHE_FILE" "$temp_index"
-
-  local selected_line
-
-  # Print only the filename, content and line number, removing the size and hash.
-  selected_line=$(
-    awk -F'|' '{print $1 ":" $2 ":" $5}' "$temp_index" |
-      rg --color=always "$query" |
-      fzf --ansi
-  )
-
-  rm "$temp_index"
-
-  if [[ -n "$selected_line" ]]; then
-    # The filename is the first word on the selected line, up to the first colon eg. "filename.md.gpg:content:line"
-    local filename line
-    filename=$(printf "%s" "$selected_line" | cut -d: -f1)
-    line=$(printf "%s" "$selected_line" | cut -d: -f2)
-
-    memo "$NOTES_DIR/$filename" "$line"
-  fi
 }
 
 # Decrypts a set of files that were encrypted with GPG.
@@ -1044,8 +906,7 @@ memo_integrity_check() {
 # Opens or creates a file for editing.
 #
 # If Neovim integration is enabled, opens the corresponding `.gpg` file directly and ensures syntax highlighting and buffer safety.
-# Neovim will also handle updating the cache internally with memo --cache inside memo.nvim.
-# When neovim integration is not enabled, we use a temporary plaintext file that is encrypted back into a `.gpg` file after editing. The cache will get updated acorrdingly.
+# When neovim integration is not enabled, we use a temporary plaintext file that is encrypted back into a `.gpg` file after editing.
 # It will return error when trying to create a file with an unsupported extension.
 #
 # The function supports optional line numbers for jumping to a specific position in a file.
@@ -1080,8 +941,6 @@ memo() {
   output_file=$(_get_output_gpg_filepath "$filepath")
   _gpg_encrypt "$tmpfile" "$output_file"
 
-  memo_cache "$output_file"
-
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
 
@@ -1109,32 +968,24 @@ memo_upgrade() {
       return 0
     fi
 
-    local tarball
-    if tarball=$(_build_tarball_name); then
-      local url="https://github.com/$REPO/releases/download/$latest_version/$tarball"
+    local url="https://github.com/$REPO/releases/download/$latest_version/memo.tar.gz"
 
-      local script_path
-      script_path=$(_resolve_script_path)
+    local script_path
+    script_path=$(_resolve_script_path)
 
-      printf "Downloading %s\n" "$url"
-      curl -sSL "$url" -o /tmp/memo.tar.gz
+    printf "Downloading %s\n" "$url"
+    curl -sSL "$url" -o /tmp/memo.tar.gz
 
-      mkdir -p /tmp/memo && tar -xzf /tmp/memo.tar.gz -C /tmp/memo
+    mkdir -p /tmp/memo && tar -xzf /tmp/memo.tar.gz -C /tmp/memo
 
-      printf "Upgrade memo in %s...\n" "$script_path"
-      install -m 0700 /tmp/memo/memo "$script_path"/memo
+    printf "Upgrade memo in %s...\n" "$script_path"
+    install -m 0700 /tmp/memo/memo.sh "$script_path"/memo
 
-      printf "Upgrade cache builder in %s...\n" "$_CACHE_BUILDER_DIR"
-      install -m 0700 /tmp/memo/bin/cache_builder "$_CACHE_BUILDER_DIR"/cache_builder
+    rm -rf /tmp/memo
+    rm -rf /tmp/memo.tar.gz
 
-      rm -rf /tmp/memo
-      rm -rf /tmp/memo.tar.gz
-
-      printf "Upgrade success!"
-      return 0
-    fi
-    printf "Something went wrong when trying to upgrade memo"
-    return 1
+    printf "Upgrade success!"
+    return 0
   fi
 }
 
@@ -1157,9 +1008,6 @@ memo_uninstall() {
   local script_path
   script_path=$(_resolve_script_path)
 
-  rm -rf "$_CACHE_BUILDER_DIR"
-  printf "Deleted %s\n" "$_CACHE_BUILDER_DIR"
-
   rm -rf "$script_path/memo"
   printf "Deleted %s\n" "$script_path/memo"
 
@@ -1172,17 +1020,6 @@ memo_uninstall() {
 #   memo --version
 memo_version() {
   printf "%s\n" "v$VERSION"
-}
-
-# Builds the memo cache incrementally for fast searching with ripgrep in memo_grep.
-#
-# Delegates arguments to cache_builder. When no arguments are given, it incrementally updates the cache.
-# Supports glob patterns like dir/*
-#
-# Usage:
-#   memo_cache <file1> <file2>
-memo_cache() {
-  $_CACHE_BUILDER_BIN "$(_get_absolute_path "$NOTES_DIR")" "$_CACHE_FILE" "$KEY_IDS" "$@"
 }
 
 show_help() {
@@ -1207,10 +1044,8 @@ Commands:
                                       - Accepts 'all' or explicit .gpg files
                                       - Supports glob patterns (e.g. dir/*.gpg)
 
-  --delete [FILES...]                 Delete one or more files and update cache
+  --delete [FILES...]                 Delete one or more files
   --files                             Browse all files in fzf (decrypts preview)
-  --grep <query>                      Search through files using cached index
-  --cache [FILES...]                  Builds the memo cache incrementally for fast searching with ripgrep.
   --integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
   --upgrade                           Upgrades memo in-place
   --uninstall                         Uninstalls memo
@@ -1225,7 +1060,6 @@ Examples:
   memo --decrypt out.gpg              Decrypt out.gpg to stdout
   memo --encrypt-files all            Encrypt all files in notes dir
   memo --decrypt-files *.gpg          Decrypt matching .gpg files
-  memo --grep projectX                Search all notes which includes the text "projectX"
 EOF
 }
 
@@ -1239,10 +1073,6 @@ _set_default_values() {
   : "${KEY_IDS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
-  : "${CACHE_DIR:=$HOME/.cache/memo}"
-  : "${_CACHE_FILE:=$CACHE_DIR/notes.cache}"
-  : "${_CACHE_BUILDER_DIR:=$HOME/.local/libexec/memo}"
-  : "${_CACHE_BUILDER_BIN:=$_CACHE_BUILDER_DIR/cache_builder}"
   : "${MEMO_NEOVIM_INTEGRATION:=false}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
@@ -1250,12 +1080,10 @@ _set_default_values() {
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store"}"
 }
 
-# Initializes $NOTES_DIR, $CACHE_DIR
+# Initializes $NOTES_DIR
 _create_dirs() {
   # Create directories if not exist
   mkdir -p "$NOTES_DIR"
-  mkdir -p "$CACHE_DIR"
-  chmod 700 "$CACHE_DIR" # Ensure only current user can write to .cache dir.
 }
 
 # Loads config from config file (default: ~/.config/memo/config)
@@ -1309,18 +1137,8 @@ _parse_args() {
       memo_delete "$@"
       return
       ;;
-    --grep)
-      shift
-      memo_grep "$@"
-      return
-      ;;
     --files)
       memo_files
-      return
-      ;;
-    --cache)
-      shift
-      memo_cache "$@"
       return
       ;;
     --upgrade)
@@ -1357,7 +1175,7 @@ _parse_args() {
   fi
 
   # unknown option
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|--files|--grep|--encrypt|--decrypt|--encrypt-files|--decrypt-files|--integrity-check|--cache|--upgrade|--uninstall]\n"
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|--files|--encrypt|--decrypt|--encrypt-files|--decrypt-files|--integrity-check|--upgrade|--uninstall]\n"
   exit 1
 }
 
