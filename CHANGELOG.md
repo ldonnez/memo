@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/ldonnez/memo/compare/v0.1.3...v0.2.0) (2025-12-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove cache_builder
+* remove pinentry check
+
+### Code Refactoring
+
+* remove cache_builder ([77ee782](https://github.com/ldonnez/memo/commit/77ee782432687fef26a6a2c36c6c7d731c5731a9))
+* remove pinentry check ([98124eb](https://github.com/ldonnez/memo/commit/98124eb127e10689107a735dfc94f33bde281ba9))
+
 ## [0.1.3](https://github.com/ldonnez/memo/compare/v0.1.2...v0.1.3) (2025-12-18)
 
 
