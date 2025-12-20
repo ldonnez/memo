@@ -1370,7 +1370,6 @@ main() {
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
   _load_config "$CONFIG_FILE"
-  _gpg_keys_exists "$KEY_IDS"
   _create_dirs
 
   _parse_args "$@"
