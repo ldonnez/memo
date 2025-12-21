@@ -571,7 +571,7 @@ memo_files() {
 #   memo_decrypt_files <file1.gpg | glob | all> [file2.gpg ...]
 memo_decrypt_files() {
   if [[ $# -eq 0 ]]; then
-    printf "Usage: memo --decrypt-files <filename.gpg | glob | all> ...\n"
+    printf "Usage: memo decrypt-files <filename.gpg | glob | all> ...\n"
     return 1
   fi
 
@@ -935,7 +935,7 @@ memo() {
 # Will replace memo by resolving the path where the script is located, even if it is a symlink.
 #
 # Usage:
-#   memo --upgrade
+#   memo upgrade
 memo_upgrade() {
   local latest_version
 
@@ -980,7 +980,7 @@ memo_upgrade() {
 # Will delete memo by resolving the path where the script is located, even if it is a symlink.
 #
 # Usage:
-#   memo --uninstall
+#   memo uninstall
 memo_uninstall() {
   # Ask to confirm uninstall
   read -r -p "Are you sure you want to uninstall memo? [Y/n] " reply
@@ -1003,7 +1003,7 @@ memo_uninstall() {
 # Prints current version of memo
 #
 # Usage:
-#   memo --version
+#   memo version
 memo_version() {
   printf "%s\n" "v$VERSION"
 }
@@ -1019,33 +1019,32 @@ Description:
     - "memo FILE"      Opens or creates a file named FILE
 
 Commands:
-  --encrypt INPUTFILE OUTPUTFILE      Encrypt INFILE into OUTFILE.gpg
-  --decrypt FILE.gpg                  Decrypt FILE.gpg and print plaintext to stdout
+  encrypt INPUTFILE OUTPUTFILE      Encrypt INFILE into OUTFILE.gpg
+  decrypt FILE.gpg                  Decrypt FILE.gpg and print plaintext to stdout
 
-  --encrypt-files [FILES...]          Encrypt files in-place inside notes dir
+  encrypt-files [FILES...]          Encrypt files in-place inside notes dir
                                       - Accepts 'all' or explicit files
                                       - Supports glob patterns (e.g. dir/*)
 
-  --decrypt-files [FILES...]          Decrypt .gpg files in-place inside notes dir
+  decrypt-files [FILES...]          Decrypt .gpg files in-place inside notes dir
                                       - Accepts 'all' or explicit .gpg files
                                       - Supports glob patterns (e.g. dir/*.gpg)
 
-  --delete [FILES...]                 Delete one or more files
-  --files                             Browse all files in fzf (decrypts preview)
-  --integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
-  --upgrade                           Upgrades memo in-place
-  --uninstall                         Uninstalls memo
+  files                             Browse all files in fzf (decrypts preview)
+  integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
+  upgrade                           Upgrades memo in-place
+  uninstall                         Uninstalls memo
 
-  --version                           Print current version
-  --help                              Show this help message
+  version                           Print current version
+  help                              Show this help message
 
 Examples:
   memo                                Open default file
   memo todo.md                        Open or create "todo.md" inside notes dir
-  memo --encrypt notes.txt out.gpg    Encrypt notes.txt into out.gpg
-  memo --decrypt out.gpg              Decrypt out.gpg to stdout
-  memo --encrypt-files all            Encrypt all files in notes dir
-  memo --decrypt-files *.gpg          Decrypt matching .gpg files
+  memo encrypt notes.txt out.gpg    Encrypt notes.txt into out.gpg
+  memo decrypt out.gpg              Decrypt out.gpg to stdout
+  memo encrypt-files all            Encrypt all files in notes dir
+  memo decrypt-files *.gpg          Decrypt matching .gpg files
 EOF
 }
 
@@ -1088,63 +1087,50 @@ _parse_args() {
 
   while [ $# -gt 0 ]; do
     case "$1" in
-    --help)
+    help)
       show_help
       exit 0
       ;;
-    --decrypt)
+    decrypt)
       shift
       memo_decrypt "$@"
       return
       ;;
-    --decrypt-files)
+    decrypt-files)
       shift
       memo_decrypt_files "$@"
       return
       ;;
-    --encrypt)
+    encrypt)
       shift
       memo_encrypt "$@"
       return
       ;;
-    --encrypt-files)
+    encrypt-files)
       shift
       memo_encrypt_files "$@"
       return
       ;;
-    --integrity-check)
+    integrity-check)
       shift
       memo_integrity_check
       return
       ;;
-    --delete)
-      shift
-      memo_delete "$@"
-      return
-      ;;
-    --files)
+    files)
       memo_files
       return
       ;;
-    --upgrade)
+    upgrade)
       memo_upgrade
       return
       ;;
-    --uninstall)
+    uninstall)
       memo_uninstall
       return
       ;;
-    --version)
+    version)
       memo_version
       return
-      ;;
-    --)
-      shift
-      break
-      ;;
-    -*)
-      show_help
-      exit 1
       ;;
     *)
       arg="$1"
@@ -1160,7 +1146,7 @@ _parse_args() {
   fi
 
   # unknown option
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|--files|--encrypt|--decrypt|--encrypt-files|--decrypt-files|--integrity-check|--upgrade|--uninstall]\n"
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|upgrade|uninstall]\n"
   exit 1
 }
 
