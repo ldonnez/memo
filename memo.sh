@@ -970,7 +970,7 @@ memo_upgrade() {
     rm -rf /tmp/memo
     rm -rf /tmp/memo.tar.gz
 
-    printf "Upgrade success!"
+    printf "Upgrade success!\n"
     return 0
   fi
 }
@@ -997,7 +997,7 @@ memo_uninstall() {
   rm -rf "$script_path/memo"
   printf "Deleted %s\n" "$script_path/memo"
 
-  printf "Uninstall completed."
+  printf "Uninstall completed.\n"
 }
 
 # Prints current version of memo
