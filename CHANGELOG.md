@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/ldonnez/memo/compare/v0.2.0...v0.2.1) (2025-12-21)
+
+
+### Bug Fixes
+
+* **ci:** ensure checkout ([31d9f1a](https://github.com/ldonnez/memo/commit/31d9f1a2bd8a2755b65d2b3181832f9c035b7e91))
+
 ## [0.2.0](https://github.com/ldonnez/memo/compare/v0.1.3...v0.2.0) (2025-12-20)
 
 
