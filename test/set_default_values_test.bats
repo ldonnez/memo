@@ -18,6 +18,7 @@ setup() {
     local SUPPORTED_EXTENSIONS
     local DEFAULT_FILE
     local DEFAULT_IGNORE
+    local DEFAULT_GIT_COMMIT
 
     _set_default_values
     assert_equal "$GPG_RECIPIENTS" ""
@@ -27,6 +28,7 @@ setup() {
     assert_equal "$DEFAULT_EXTENSION" "md"
     assert_equal "$SUPPORTED_EXTENSIONS" "md,org,txt"
     assert_equal "$DEFAULT_FILE" "inbox.md"
-    assert_equal "$DEFAULT_IGNORE" ".ignore,.git/*,.DS_store"
+    assert_equal "$DEFAULT_IGNORE" ".ignore,.git/*,.DS_store,.gitignore"
+    assert_equal "$DEFAULT_GIT_COMMIT" "$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')"
   )
 }

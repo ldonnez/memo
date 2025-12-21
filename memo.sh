@@ -975,6 +975,37 @@ memo_upgrade() {
   fi
 }
 
+# Syncs notes when $NOTES_DIR is a git repository
+#
+# Usage:
+#   memo git-sync
+memo_git_sync() {
+  # Ensure it's a git repo
+  if ! _dir_exists "$NOTES_DIR/.git"; then
+    printf "Not a git repository.\n"
+    return 1
+  fi
+
+  if ! git -C "$NOTES_DIR" pull origin main --rebase --autostash; then
+    printf "Error: Conflict detected during pull.\n"
+    return 1
+  fi
+
+  if git -C "$NOTES_DIR" ls-files -u | grep -q '.*'; then
+    printf "Error: Conflict detected during pull. Please resolve manually.\n"
+    return 1
+  fi
+
+  git -C "$NOTES_DIR" add .
+  if ! git -C "$NOTES_DIR" diff-index --quiet HEAD; then
+    git -C "$NOTES_DIR" commit -m "$DEFAULT_GIT_COMMIT"
+    git -C "$NOTES_DIR" push origin main
+    printf "Sync complete: Changes pushed.\n"
+  else
+    printf "Sync complete: No new commits needed.\n"
+  fi
+}
+
 # Uninstalls memo
 #
 # Will delete memo by resolving the path where the script is located, even if it is a symlink.
@@ -1032,6 +1063,7 @@ Commands:
 
   files                             Browse all files in fzf (decrypts preview)
   integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
+  git-sync                          Creates local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.
   upgrade                           Upgrades memo in-place
   uninstall                         Uninstalls memo
 
@@ -1061,7 +1093,8 @@ _set_default_values() {
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
   : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
-  : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store"}"
+  : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store,.gitignore"}"
+  : "${DEFAULT_GIT_COMMIT:=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')}"
 }
 
 # Initializes $NOTES_DIR
@@ -1120,6 +1153,10 @@ _parse_args() {
       memo_files
       return
       ;;
+    git-sync)
+      memo_git_sync
+      return
+      ;;
     upgrade)
       memo_upgrade
       return
@@ -1146,7 +1183,7 @@ _parse_args() {
   fi
 
   # unknown option
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|upgrade|uninstall]\n"
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|git-sync|upgrade|uninstall]\n"
   exit 1
 }
 

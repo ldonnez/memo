@@ -12,6 +12,8 @@ setup_suite() {
   export DEFAULT_EXTENSION="md"
   export DEFAULT_FILE="inbox.$DEFAULT_EXTENSION"
   export DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
+  export DEFAULT_GIT_COMMIT
+  DEFAULT_GIT_COMMIT="$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')"
 
   mkdir -p "$XDG_CONFIG_HOME/memo"
   mkdir -p "$NOTES_DIR"
