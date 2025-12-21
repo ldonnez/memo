@@ -8,6 +8,7 @@ MEMO_INSTALL_DIR := ~/.local/bin
 .PHONY: test build install install-dev clean uninstall
 
 dev:
+	chmod +x $(CURDIR)/memo.sh
 	@printf "Symlinking $(CURDIR)/memo.sh -> $(MEMO_INSTALL_DIR)/memo...\n"
 	mkdir -p $(MEMO_INSTALL_DIR)
 	ln -sf $(CURDIR)/memo.sh $(MEMO_INSTALL_DIR)/memo
