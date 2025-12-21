@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.2](https://github.com/ldonnez/memo/compare/v0.2.3...v0.3.2) (2025-12-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* cleanup API
+
+### Code Refactoring
+
+* cleanup API ([887b038](https://github.com/ldonnez/memo/commit/887b038b5eca92a667fb91e9fad28d42be1f54a3))
+
 ## [0.2.3](https://github.com/ldonnez/memo/compare/v0.2.2...v0.2.3) (2025-12-21)
 
 
