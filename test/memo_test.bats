@@ -29,56 +29,6 @@ teardown() {
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 
-@test "successfully creates a new memo with $DEFAULT_FILE as filename and header when it does not exist when MEMO_NEOVIM_INTEGRATION = true" {
-  # Run in subshell to avoid collision with other tests
-  (
-    local MEMO_NEOVIM_INTEGRATION=true
-    local EDITOR_CMD="nvim"
-
-    local to_be_created_file
-    to_be_created_file="$NOTES_DIR/$DEFAULT_FILE.gpg"
-
-    # Mock nvim
-    # shellcheck disable=SC2329
-    nvim() {
-      printf "%s" "$to_be_created_file"
-    }
-
-    run memo ""
-    assert_success
-    assert_output "$to_be_created_file"
-
-    run cat "$to_be_created_file"
-    assert_output "# inbox"
-  )
-}
-
-@test "successfully edits existing file when MEMO_NEOVIM_INTEGRATION = true" {
-  # Run in subshell to avoid collision with other tests
-  (
-    local MEMO_NEOVIM_INTEGRATION=true
-    local EDITOR_CMD="nvim"
-
-    local file
-    file="$NOTES_DIR/test.md"
-    printf "Hello World" >"$file"
-
-    _gpg_encrypt "$file" "$file.gpg"
-
-    # Mock nvim
-    # shellcheck disable=SC2329
-    nvim() {
-      printf "%s" "$file"
-    }
-
-    run memo "$file.gpg"
-    assert_success
-
-    run cat "$file.gpg"
-    assert_output --partial "-----BEGIN PGP MESSAGE-----"
-  )
-}
-
 @test "successfully edits existing file" {
   local file
   file="$NOTES_DIR/test.md"

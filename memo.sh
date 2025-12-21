@@ -905,32 +905,18 @@ memo_integrity_check() {
 
 # Opens or creates a file for editing.
 #
-# If Neovim integration is enabled, opens the corresponding `.gpg` file directly and ensures syntax highlighting and buffer safety.
-# When neovim integration is not enabled, we use a temporary plaintext file that is encrypted back into a `.gpg` file after editing.
+# A temporary plaintext file is created that is encrypted back into a `.gpg` file after editing.
 # It will return error when trying to create a file with an unsupported extension.
 #
-# The function supports optional line numbers for jumping to a specific position in a file.
-# Temporary files will get deleted after encryption.
+# The temporary files will get deleted after encryption.
 #
 # Usage:
-#   memo <file> [line_number]
+#   memo <file>
 memo() {
   local input="${1-""}"
-  local lineNum="${2-1}"
 
   local filepath
   filepath=$(_get_target_filepath "$input") || return 1
-
-  if [[ "${MEMO_NEOVIM_INTEGRATION:-}" == true && "$EDITOR_CMD" == "nvim" ]]; then
-    local gpg_file
-    if gpg_file=$(_get_gpg_filepath "$filepath"); then
-      "$EDITOR_CMD" +"$lineNum" "$gpg_file"
-    else
-      _create_file_header "$filepath" "$filepath.gpg"
-      "$EDITOR_CMD" "$filepath.gpg"
-    fi
-    return
-  fi
 
   local tmpfile
   tmpfile=$(_make_or_edit_file "$filepath")
@@ -1073,7 +1059,6 @@ _set_default_values() {
   : "${KEY_IDS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
-  : "${MEMO_NEOVIM_INTEGRATION:=false}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
   : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
