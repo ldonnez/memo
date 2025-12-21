@@ -129,16 +129,16 @@ Opening and editing files is the default action:
 
 | Command                          | Description                                                                                                                               |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `--encrypt INPUTFILE OUTPUTFILE` | Encrypt `INPUTFILE` into `OUTPUTFILE.gpg`.                                                                                                |
-| `--decrypt FILE.gpg`             | Decrypt `FILE.gpg` and print plaintext to stdout.                                                                                         |
-| `--encrypt-files [FILES...]`     | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names, or glob patterns (e.g. `dir/*`).                   |
-| `--decrypt-files [FILES...]`     | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names, or glob patterns (e.g. `dir/*.gpg`). |
-| `--files`                        | Browse all files in `fzf` (decrypts preview automatically).                                                                               |
-| `--integrity-check`              | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                              |
-| `--upgrade`                      | Upgrade `memo` in-place.                                                                                                                  |
-| `--uninstall`                    | Uninstall `memo`.                                                                                                                         |
-| `--version`                      | Print current version.                                                                                                                    |
-| `--help`                         | Show help message.                                                                                                                        |
+| `encrypt INPUTFILE OUTPUTFILE` | Encrypt `INPUTFILE` into `OUTPUTFILE.gpg`.                                                                                                |
+| `decrypt FILE.gpg`             | Decrypt `FILE.gpg` and print plaintext to stdout.                                                                                         |
+| `encrypt-files [FILES...]`     | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names, or glob patterns (e.g. `dir/*`).                   |
+| `decrypt-files [FILES...]`     | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names, or glob patterns (e.g. `dir/*.gpg`). |
+| `files`                        | Browse all files in `fzf` (decrypts preview automatically).                                                                               |
+| `integrity-check`              | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                              |
+| `upgrade`                      | Upgrade `memo` in-place.                                                                                                                  |
+| `uninstall`                    | Uninstall `memo`.                                                                                                                         |
+| `version`                      | Print current version.                                                                                                                    |
+| `help`                         | Show help message.                                                                                                                        |
 
 ## Examples
 
@@ -151,12 +151,12 @@ memo
 memo todo.md
 
 # Encrypt and decrypt notes
-memo --encrypt notes.txt out.gpg
-memo --decrypt out.gpg
+memo encrypt notes.txt out.gpg
+memo decrypt out.gpg
 
 # Encrypt/decrypt multiple files
-memo --encrypt-files all
-memo --decrypt-files *.gpg
+memo encrypt-files all
+memo decrypt-files *.gpg
 ```
 
 # Development Guide
