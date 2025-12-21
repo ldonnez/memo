@@ -54,7 +54,7 @@ Expire-Date: 0
 %commit
 EOF
   # shellcheck disable=SC2030,SC2031
-  export KEY_IDS="mock@example.com,test2@example.com"
+  export GPG_RECIPIENTS="mock@example.com,test2@example.com"
 
   local input_path="$NOTES_DIR/test_multi.md"
   printf "Hello Multiple" >"$input_path"
@@ -71,7 +71,7 @@ EOF
 
 @test "does not leave unencrypted file when encryption fails" {
   # shellcheck disable=SC2030,SC2031
-  export KEY_IDS="missing@example.com"
+  export GPG_RECIPIENTS="missing@example.com"
 
   local input_path="$NOTES_DIR/test_secure.md"
   printf "Sensitive" >"$input_path"

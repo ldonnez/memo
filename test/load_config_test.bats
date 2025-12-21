@@ -22,12 +22,12 @@ teardown() {
     local config_file="$TEMP/.config/memo/config"
 
     cat >"$config_file" <<EOF
-KEY_IDS="test@example.com"
+GPG_RECIPIENTS="test@example.com"
 EDITOR_CMD="vim"
 EOF
 
     _load_config "$config_file"
     assert_equal "$EDITOR_CMD" "vim"
-    assert_equal "$KEY_IDS" "test@example.com"
+    assert_equal "$GPG_RECIPIENTS" "test@example.com"
   )
 }

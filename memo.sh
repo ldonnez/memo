@@ -133,12 +133,12 @@ _is_supported_extension() {
   return 1
 }
 
-# Validates if all the given key_ids exist in GPG keyring.
-_gpg_keys_exists() {
-  local key_ids="$1"
+# Validates if all the given gpg_recipients exist in GPG keyring.
+_gpg_recipients_exists() {
+  local recipients="$1"
   local missing_keys=()
 
-  IFS=',' read -ra keys <<<"$key_ids"
+  IFS=',' read -ra keys <<<"$recipients"
 
   if ((${#keys[@]} > 0)); then
     for key in "${keys[@]}"; do
@@ -151,7 +151,7 @@ _gpg_keys_exists() {
   fi
 
   if ((${#missing_keys[@]} > 0)); then
-    printf "GPG key(s) not found: %s\n" "${missing_keys[*]}" >&2
+    printf "GPG recipient(s) not found: %s\n" "${missing_keys[*]}" >&2
     exit 1
   fi
 }
@@ -238,32 +238,32 @@ _resolve_script_path() {
   cd -P "$(dirname "$source")" && pwd
 }
 
-# Builds the gpg recipients (-r param in gpg) based on given key_ids
-# When given key_ids is empty, --default-recipient-self is given, which means the first key found in the keyring is used as a recipient.
-# returns array of "-r <key_id> -r <key_id2>"
+# Builds the gpg recipients (-r param in gpg) based on given gpg_recipients
+# When given gpg_recipients is empty, --default-recipient-self is given, which means the first key found in the keyring is used as a recipient.
+# returns array of "-r <gpg_recipient> -r <gpg_recipient2>"
 #
 # Usage:
 #
 # ```
 # local -a recipients=()
 #
-# if ! _build_gpg_recipients "$KEY_IDS" recipients; then
+# if ! _build_gpg_recipients "$GPG_RECIPIENTS" recipients; then
 #   return 1
 # fi
 #
 # gpg --quiet --yes --armor --encrypt "${recipients[@]}"...
 # ```
 _build_gpg_recipients() {
-  local key_ids="$1"
+  local gpg_recipients="$1"
   local output_array="$2"
 
-  if [[ -z "$key_ids" ]]; then
+  if [[ -z "$gpg_recipients" ]]; then
     eval "$output_array+=(\"--default-recipient-self\")"
     return 0
   fi
 
   local IFS=',' items
-  read -r -a items <<<"$key_ids"
+  read -r -a items <<<"$gpg_recipients"
 
   if [[ ${#items[@]} -eq 0 ]]; then
     eval "$output_array+=(\"--default-recipient-self\")"
@@ -275,8 +275,8 @@ _build_gpg_recipients() {
     id=$(_trim "$id")
     [[ -z "$id" ]] && continue
 
-    if ! _gpg_keys_exists "$id"; then
-      printf "GPG key(s) not found: %s\n" "$id" >&2
+    if ! _gpg_recipients_exists "$id"; then
+      printf "GPG recipient(s) not found: %s\n" "$id" >&2
       return 1
     fi
 
@@ -297,7 +297,7 @@ _gpg_encrypt() {
 
   local -a recipients=()
 
-  if ! _build_gpg_recipients "$KEY_IDS" recipients; then
+  if ! _build_gpg_recipients "$GPG_RECIPIENTS" recipients; then
     return 1
   fi
 
@@ -649,7 +649,7 @@ memo_encrypt_files() {
   local -a ignore_patterns=()
   local -a recipients=()
 
-  if ! _build_gpg_recipients "$KEY_IDS" recipients; then
+  if ! _build_gpg_recipients "$GPG_RECIPIENTS" recipients; then
     return 1
   fi
 
@@ -1056,7 +1056,7 @@ EOF
 # Set default global variables
 # Variables prefixed with _ should not be overriden in $XDG_CONFIG_HOME/.config/memo
 _set_default_values() {
-  : "${KEY_IDS:=}"
+  : "${GPG_RECIPIENTS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"

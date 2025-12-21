@@ -11,7 +11,7 @@ setup() {
 @test "correctly sets default values" {
   # Run in subshell to prevent collision in other tests
   (
-    local KEY_IDS
+    local GPG_RECIPIENTS
     local NOTES_DIR
     local EDITOR_CMD
     local DEFAULT_EXTENSION
@@ -20,7 +20,7 @@ setup() {
     local DEFAULT_IGNORE
 
     _set_default_values
-    assert_equal "$KEY_IDS" ""
+    assert_equal "$GPG_RECIPIENTS" ""
     assert_equal "$NOTES_DIR" "$HOME/notes"
     # Use readlink -f to follow symlinks here since macOS symlinks temp from /var/... to /private/var/
     assert_equal "$EDITOR_CMD" "nano"

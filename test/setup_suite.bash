@@ -7,7 +7,7 @@ setup_suite() {
   export HOME="$TEST_HOME"
   export NOTES_DIR="$TEST_HOME/notes"
   export EDITOR_CMD="true" # avoid launching an actual editor
-  export KEY_IDS="mock@example.com"
+  export GPG_RECIPIENTS="mock@example.com"
   export SUPPORTED_EXTENSIONS="md,org,txt"
   export DEFAULT_EXTENSION="md"
   export DEFAULT_FILE="inbox.$DEFAULT_EXTENSION"
@@ -18,7 +18,7 @@ setup_suite() {
 
   # Optional: provide a mock config file
   cat >"$XDG_CONFIG_HOME/memo/config" <<EOF
-KEY_ID="$KEY_IDS"
+GPG_RECIPIENTS="$GPG_RECIPIENTS"
 EDITOR_CMD="true"
 EOF
 
@@ -27,7 +27,7 @@ EOF
 Key-Type: RSA
 Key-Length: 1024
 Name-Real: mock user
-Name-Email: $KEY_IDS
+Name-Email: $GPG_RECIPIENTS
 Expire-Date: 0
 %commit
 EOF

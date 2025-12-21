@@ -88,7 +88,7 @@ Here is an example of the configuration file with all the default settings. You 
 ```bash
 # A comma-separated list of public key IDs (e.g., emails or GPG IDs) used for encryption.
 # If left empty, GPG's --default-recipient-self option is used.
-KEY_IDS=
+GPG_RECIPIENTS=
 
 # The directory where all your notes are stored.
 NOTES_DIR=$HOME/notes

@@ -14,10 +14,10 @@ teardown() {
 }
 
 @test "builds single gpg recipient" {
-  local key_ids="$KEY_IDS"
+  local gpg_recipients="$GPG_RECIPIENTS"
   local -a recipients=()
 
-  _build_gpg_recipients "$key_ids" recipients
+  _build_gpg_recipients "$gpg_recipients" recipients
   # capture return code
   local rc=$?
 
@@ -36,10 +36,10 @@ Expire-Date: 0
 %commit
 EOF
   # shellcheck disable=SC2030,SC2031
-  local key_ids="mock@example.com,test2@example.com"
+  local gpg_recipients="mock@example.com,test2@example.com"
   local -a recipients=()
 
-  _build_gpg_recipients "$key_ids" recipients
+  _build_gpg_recipients "$gpg_recipients" recipients
   # capture return code
   local rc=$?
 
@@ -48,10 +48,10 @@ EOF
 }
 
 @test "sets --default-recipient-self when no gpg keys given" {
-  local key_ids=""
+  local gpg_recipients=""
   local -a recipients=()
 
-  _build_gpg_recipients "$key_ids" recipients
+  _build_gpg_recipients "$gpg_recipients" recipients
   # capture return code
   local rc=$?
 
