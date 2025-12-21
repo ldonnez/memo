@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/ldonnez/memo/compare/v0.2.1...v0.2.2) (2025-12-21)
+
+
+### Code Refactoring
+
+* remove MEMO_NEOVIM_INTEGRATION flag ([cc307a8](https://github.com/ldonnez/memo/commit/cc307a850152d1ab5d10dd6fb5f629fc28163e24))
+
 ## [0.2.1](https://github.com/ldonnez/memo/compare/v0.2.0...v0.2.1) (2025-12-21)
 
 
