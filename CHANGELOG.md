@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/ldonnez/memo/compare/v0.2.2...v0.2.3) (2025-12-21)
+
+
+### Bug Fixes
+
+* ensure new line ([d60b345](https://github.com/ldonnez/memo/commit/d60b345725237e9da0ec363f59a2c15c348e3382))
+
 ## [0.2.2](https://github.com/ldonnez/memo/compare/v0.2.1...v0.2.2) (2025-12-21)
 
 
