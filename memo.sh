@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION=0.2.0 # x-release-please-version
+VERSION=0.2.1 # x-release-please-version
 REPO="ldonnez/memo"
 
 ###############################################################################
