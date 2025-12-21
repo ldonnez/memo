@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/ldonnez/memo/compare/v0.3.0...v0.4.0) (2025-12-21)
+
+
+### Features
+
+* add memo git-sync command ([0725c64](https://github.com/ldonnez/memo/commit/0725c64039e5795866aa2ac7d4a47dcc6daf3d4a))
+
 ## [0.3.0](https://github.com/ldonnez/memo/compare/v0.2.3...v0.3.0) (2025-12-21)
 
 
