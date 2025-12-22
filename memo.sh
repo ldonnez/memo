@@ -536,6 +536,37 @@ _check_upgrade() {
   fi
 }
 
+# Syncs notes when $NOTES_DIR is a git repository
+#
+# Usage:
+#   memo git-sync
+_git_sync() {
+  # Ensure it's a git repo
+  if ! _dir_exists "$NOTES_DIR/.git"; then
+    printf "Not a git repository.\n"
+    return 1
+  fi
+
+  if ! git -C "$NOTES_DIR" pull origin main --rebase --autostash; then
+    printf "Error: Conflict detected during pull.\n"
+    return 1
+  fi
+
+  if git -C "$NOTES_DIR" ls-files -u | grep -q '.*'; then
+    printf "Error: Conflict detected during pull. Please resolve manually.\n"
+    return 1
+  fi
+
+  git -C "$NOTES_DIR" add .
+  if ! git -C "$NOTES_DIR" diff-index --quiet HEAD; then
+    git -C "$NOTES_DIR" commit -m "$DEFAULT_GIT_COMMIT"
+    git -C "$NOTES_DIR" push origin main
+    printf "Sync complete: Changes pushed.\n"
+  else
+    printf "Sync complete: No new commits needed.\n"
+  fi
+}
+
 ###############################################################################
 # Core API
 ###############################################################################
@@ -978,32 +1009,31 @@ memo_upgrade() {
 # Syncs notes when $NOTES_DIR is a git repository
 #
 # Usage:
-#   memo git-sync
-memo_git_sync() {
-  # Ensure it's a git repo
-  if ! _dir_exists "$NOTES_DIR/.git"; then
-    printf "Not a git repository.\n"
-    return 1
-  fi
+#   memo sync git
+memo_sync() {
+  local arg="${1-}"
 
-  if ! git -C "$NOTES_DIR" pull origin main --rebase --autostash; then
-    printf "Error: Conflict detected during pull.\n"
-    return 1
-  fi
+  case "$arg" in
+  git)
+    _git_sync
+    ;;
+  "")
+    cat <<EOF
+Usage: memo sync git
 
-  if git -C "$NOTES_DIR" ls-files -u | grep -q '.*'; then
-    printf "Error: Conflict detected during pull. Please resolve manually.\n"
-    return 1
-  fi
+Available options:
+  git    Sync notes using git
+EOF
+    ;;
+  *)
+    cat <<EOF
+Unknown option: $1
 
-  git -C "$NOTES_DIR" add .
-  if ! git -C "$NOTES_DIR" diff-index --quiet HEAD; then
-    git -C "$NOTES_DIR" commit -m "$DEFAULT_GIT_COMMIT"
-    git -C "$NOTES_DIR" push origin main
-    printf "Sync complete: Changes pushed.\n"
-  else
-    printf "Sync complete: No new commits needed.\n"
-  fi
+Usage: memo sync git
+EOF
+    return 1
+    ;;
+  esac
 }
 
 # Uninstalls memo
@@ -1063,7 +1093,9 @@ Commands:
 
   files                             Browse all files in fzf (decrypts preview)
   integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
-  git-sync                          Creates local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.
+  sync [git]                        Creates local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.
+                                      - Accepts 'git'
+
   upgrade                           Upgrades memo in-place
   uninstall                         Uninstalls memo
 
@@ -1153,8 +1185,9 @@ _parse_args() {
       memo_files
       return
       ;;
-    git-sync)
-      memo_git_sync
+    sync)
+      shift
+      memo_sync "$@"
       return
       ;;
     upgrade)

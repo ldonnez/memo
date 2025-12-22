@@ -36,7 +36,7 @@ teardown() {
   touch "$NOTES_DIR/note.md.gpg"
 
   # 2. Run the function
-  run memo_git_sync
+  run _git_sync
   assert_success
   assert_output --partial "Sync complete: Changes pushed."
 
@@ -46,7 +46,7 @@ teardown() {
 }
 
 @test "Handles no changes" {
-  run memo_git_sync
+  run _git_sync
   assert_success
   assert_output --partial "Sync complete: No new commits needed."
 }
@@ -54,7 +54,7 @@ teardown() {
 @test "Fails if not a git repo" {
   rm -rf "$NOTES_DIR/.git"
 
-  run memo_git_sync
+  run _git_sync
   assert_failure
   assert_output "Not a git repository."
 }
@@ -76,7 +76,7 @@ teardown() {
   # Local change
   printf "local change" >"$NOTES_DIR/conflict.gpg"
 
-  run memo_git_sync
+  run _git_sync
   assert_failure
   assert_output --partial "Error: Conflict detected during pull. Please resolve manually."
 }
