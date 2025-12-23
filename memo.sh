@@ -426,7 +426,7 @@ _find_note_file() {
 
 _prepend_header() {
   local file="$1"
-  local header="${DEFAULT_CAPTURE_HEADER:-}"
+  local header="${CAPTURE_HEADER:-}"
 
   [[ -z "$header" ]] && return
 
@@ -1159,7 +1159,7 @@ _set_default_values() {
   : "${CAPTURE_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store,.gitignore"}"
   : "${DEFAULT_GIT_COMMIT:=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')}"
-  : "${DEFAULT_CAPTURE_HEADER:=## $(date '+%Y-%m-%d %H:%M')}"
+  : "${CAPTURE_HEADER:=## $(date '+%Y-%m-%d %H:%M')}"
 }
 
 # Initializes $NOTES_DIR

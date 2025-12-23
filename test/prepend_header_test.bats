@@ -13,7 +13,7 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/*
 }
 
-@test "prepends $DEFAULT_CAPTURE_HEADER to file when file has at least 3 lines" {
+@test "prepends $CAPTURE_HEADER to file when file has at least 3 lines" {
   local file
   file="$NOTES_DIR/test.md"
 
@@ -25,12 +25,12 @@ teardown() {
   run cat "$file"
   assert_output "
 
-$DEFAULT_CAPTURE_HEADER"
+$CAPTURE_HEADER"
 }
 
-@test "does not prepend $DEFAULT_CAPTURE_HEADER to file when it's empty" {
+@test "does not prepend $CAPTURE_HEADER to file when it's empty" {
   (
-    local DEFAULT_CAPTURE_HEADER
+    local CAPTURE_HEADER
     local file
     file="$NOTES_DIR/test.md"
 
@@ -42,7 +42,7 @@ $DEFAULT_CAPTURE_HEADER"
   )
 }
 
-@test "does not prepend $DEFAULT_CAPTURE_HEADER to file when file has not at least 3 lines" {
+@test "does not prepend $CAPTURE_HEADER to file when file has not at least 3 lines" {
   local file
   file="$NOTES_DIR/test.md"
 
