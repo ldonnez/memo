@@ -322,7 +322,7 @@ _gpg_decrypt() {
     }
   else
     # Redirect output to the specified file.
-    gpg --quiet --yes --decrypt "$input_path" >"$output_path" || {
+    gpg --quiet --yes --output "$output_path" --decrypt "$input_path" || {
       printf "Failed to decrypt %s\n" "$input_path" >&2
       return 1
     }
