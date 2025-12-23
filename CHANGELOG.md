@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/ldonnez/memo/compare/v0.4.0...v0.5.0) (2025-12-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* memo git-sync -> memo sync git
+
+### Features
+
+* prepend default header when using memo without arguments ([368f52c](https://github.com/ldonnez/memo/commit/368f52ceb7638a6109f6baef769cbdfc40f00e4c))
+
+
+### Code Refactoring
+
+* memo git-sync -&gt; memo sync git ([e5a7e48](https://github.com/ldonnez/memo/commit/e5a7e4801801f0577c40a3e3511c01aec3cfaddc))
+
 ## [0.4.0](https://github.com/ldonnez/memo/compare/v0.3.0...v0.4.0) (2025-12-21)
 
 
