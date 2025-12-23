@@ -301,7 +301,7 @@ _gpg_encrypt() {
     return 1
   fi
 
-  gpg --quiet --yes --armor --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
+  gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
 }
 
 # Decrypts given input file (path) to given output file (path)
