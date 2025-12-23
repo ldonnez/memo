@@ -104,7 +104,7 @@ SUPPORTED_EXTENSIONS="md,org,txt"
 DEFAULT_EXTENSION="md"
 
 # The default file to open when running memo without any arguments.
-DEFAULT_FILE="inbox.md"
+CAPTURE_FILE="inbox.md"
 
 # A comma-separated list of files or patterns to ignore during various operations.
 DEFAULT_IGNORE=".ignore,.git/*,.DS_store"

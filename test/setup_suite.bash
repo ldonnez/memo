@@ -10,7 +10,7 @@ setup_suite() {
   export GPG_RECIPIENTS="mock@example.com"
   export SUPPORTED_EXTENSIONS="md,org,txt"
   export DEFAULT_EXTENSION="md"
-  export DEFAULT_FILE="inbox.$DEFAULT_EXTENSION"
+  export CAPTURE_FILE="inbox.$DEFAULT_EXTENSION"
   export DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
   export DEFAULT_GIT_COMMIT
   DEFAULT_GIT_COMMIT="$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')"

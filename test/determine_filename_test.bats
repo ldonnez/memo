@@ -8,9 +8,9 @@ setup() {
   source "memo.sh"
 }
 
-@test "returns $DEFAULT_FILE when empty args" {
+@test "returns $CAPTURE_FILE when empty args" {
   run _determine_filename ""
-  assert_output "$DEFAULT_FILE"
+  assert_output "$CAPTURE_FILE"
 }
 
 @test "returns YYYY-MM-DD of today's date when today is given" {

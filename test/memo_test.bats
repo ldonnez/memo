@@ -13,10 +13,10 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/*
 }
 
-@test "successfully creates a new memo with $DEFAULT_FILE as filename when it does not exist" {
+@test "successfully creates a new memo with $CAPTURE_FILE as filename when it does not exist" {
 
   local to_be_created_file
-  to_be_created_file="$NOTES_DIR/$DEFAULT_FILE.gpg"
+  to_be_created_file="$NOTES_DIR/$CAPTURE_FILE.gpg"
 
   run memo
   assert_success

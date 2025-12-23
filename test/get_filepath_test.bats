@@ -13,10 +13,10 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/*
 }
 
-@test "returns $DEFAULT_FILE path" {
+@test "returns $CAPTURE_FILE path" {
   run _get_filepath ""
   assert_success
-  assert_output "$NOTES_DIR/$DEFAULT_FILE"
+  assert_output "$NOTES_DIR/$CAPTURE_FILE"
 }
 
 @test "returns <current_date>.md path" {
@@ -47,11 +47,11 @@ teardown() {
   assert_output "$NOTES_DIR/test_pwd/pwd.md"
 }
 
-@test "returns $NOTE_DIR/$DEFAULT_FILE path when inside $NOTES_DIR" {
+@test "returns $NOTE_DIR/$CAPTURE_FILE path when inside $NOTES_DIR" {
   cd "$NOTES_DIR"
   run _get_filepath ""
   assert_success
-  assert_output "$NOTES_DIR/$DEFAULT_FILE"
+  assert_output "$NOTES_DIR/$CAPTURE_FILE"
 }
 
 @test "fails with unsupported extension" {
