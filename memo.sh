@@ -161,7 +161,8 @@ _determine_filename() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    printf "%s" "$CAPTURE_FILE"
+    # Strip .gpg extension if present
+    printf "%s" "${CAPTURE_FILE%.gpg}"
     return 0
   fi
 

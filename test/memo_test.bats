@@ -29,6 +29,24 @@ teardown() {
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 
+@test "successfully creates a new memo with $CAPTURE_FILE.gpg as filename when it does not exist" {
+  (
+    local CAPTURE_FILE="$CAPTURE_FILE.gpg"
+    local to_be_created_file
+    to_be_created_file="$NOTES_DIR/$CAPTURE_FILE"
+
+    run memo
+    assert_success
+    assert_output ""
+
+    run _file_exists "$to_be_created_file"
+    assert_success
+
+    run cat "$to_be_created_file"
+    assert_output --partial "-----BEGIN PGP MESSAGE-----"
+  )
+}
+
 @test "successfully edits existing file" {
   local file
   file="$NOTES_DIR/test.md"
