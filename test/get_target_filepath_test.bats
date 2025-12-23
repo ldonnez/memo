@@ -15,7 +15,7 @@ teardown() {
 
 @test "returns default file as filename if empty arg" {
   local to_be_created_file
-  to_be_created_file=$NOTES_DIR/$DEFAULT_FILE
+  to_be_created_file=$NOTES_DIR/$CAPTURE_FILE
 
   run _get_target_filepath ""
   assert_success

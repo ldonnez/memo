@@ -161,7 +161,7 @@ _determine_filename() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    printf "%s" "$DEFAULT_FILE"
+    printf "%s" "$CAPTURE_FILE"
     return 0
   fi
 
@@ -1156,7 +1156,7 @@ _set_default_values() {
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
-  : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
+  : "${CAPTURE_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store,.gitignore"}"
   : "${DEFAULT_GIT_COMMIT:=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')}"
   : "${DEFAULT_CAPTURE_HEADER:=## $(date '+%Y-%m-%d %H:%M')}"
