@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/ldonnez/memo/compare/v0.6.0...v0.6.1) (2025-12-23)
+
+
+### Bug Fixes
+
+* remove unnecessary newline ([082ca58](https://github.com/ldonnez/memo/commit/082ca58c3f2fa15abf4505f5a5f2a85a416fcf1e))
+
 ## [0.6.0](https://github.com/ldonnez/memo/compare/v0.5.0...v0.6.0) (2025-12-23)
 
 
