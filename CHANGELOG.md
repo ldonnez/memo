@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/ldonnez/memo/compare/v0.6.2...v0.7.0) (2025-12-23)
+
+
+### Features
+
+* add --force option to memo upgrade ([14753d3](https://github.com/ldonnez/memo/commit/14753d3ac470a4cfafa5b0ada55b42c566dd2630))
+
 ## [0.6.2](https://github.com/ldonnez/memo/compare/v0.6.1...v0.6.2) (2025-12-23)
 
 
