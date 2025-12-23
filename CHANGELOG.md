@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/ldonnez/memo/compare/v0.6.1...v0.6.2) (2025-12-23)
+
+
+### Bug Fixes
+
+* allow files with gpg extension as CAPTURE_FILE ([6dfdef1](https://github.com/ldonnez/memo/commit/6dfdef1d7e6f0da57a85974e3f870834f4f40a81))
+
 ## [0.6.1](https://github.com/ldonnez/memo/compare/v0.6.0...v0.6.1) (2025-12-23)
 
 
