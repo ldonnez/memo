@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/ldonnez/memo/compare/v0.5.0...v0.6.0) (2025-12-23)
+
+
+### Bug Fixes
+
+* add --output via param instead of shell redirection ([db93bba](https://github.com/ldonnez/memo/commit/db93bba9e70006f284dcb25c774f9a1e2763aeef))
+* add extra lines to ensure md compatibility ([1393f6c](https://github.com/ldonnez/memo/commit/1393f6cbdf6ba056d04f284d436723acf11532f2))
+* turn off gpg compression ([8cc3fd4](https://github.com/ldonnez/memo/commit/8cc3fd487c9fa2b20de4b464cf78dfea4f305664))
+
+
+### Code Refactoring
+
+* rename DEFAULT_FILE -&gt; CAPTURE_FILE ([a742ea5](https://github.com/ldonnez/memo/commit/a742ea55be92c80b0b40900cbb1477f90aab9e7a))
+
 ## [0.5.0](https://github.com/ldonnez/memo/compare/v0.4.0...v0.5.0) (2025-12-23)
 
 
