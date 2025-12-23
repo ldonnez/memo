@@ -436,13 +436,18 @@ _prepend_header() {
   if [ "$os" = "Darwin" ]; then
     sed -i '' "3i\\
 $header\\
-
+\\
+\\
+\\
 " "$file"
     return
   fi
 
   sed -i "3i\\
 $header\\
+\\
+\\
+\\
 " "$file"
 }
 
@@ -976,7 +981,7 @@ memo() {
 
   if [[ -z "$input" ]]; then
     _prepend_header "$tmpfile"
-    "$EDITOR_CMD" +4 "$tmpfile"
+    "$EDITOR_CMD" +5 "$tmpfile"
   else
     "$EDITOR_CMD" "$tmpfile"
   fi
