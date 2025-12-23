@@ -51,6 +51,24 @@ Upgrade success!"
   )
 }
 
+@test "Upgrades memo when --force is given" {
+  # Run in subshell to avaoid collision with other tests
+  (
+    local VERSION="0.1.0"
+
+    # Mock latest version
+    # shellcheck disable=SC2329
+    _get_latest_version() { printf "v0.2.0"; }
+
+    run memo_upgrade "--force"
+    assert_success
+    assert_output "Upgrade available: v0.1.0 -> v0.2.0
+Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz
+Upgrade memo in $(_resolve_script_path)...
+Upgrade success!"
+  )
+}
+
 @test "Does not upgrade when not confirming" {
   # Run in subshell to avaoid collision with other tests
   (

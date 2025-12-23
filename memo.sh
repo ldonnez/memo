@@ -995,6 +995,12 @@ memo() {
 #   memo upgrade
 memo_upgrade() {
   local latest_version
+  local arg="${1-}"
+  local force=0
+
+  if [ "$arg" = "--force" ] || [ "$arg" = "-f" ]; then
+    force=1
+  fi
 
   if ! latest_version=$(_get_latest_version); then
     printf "Version not found."
@@ -1002,13 +1008,15 @@ memo_upgrade() {
   fi
 
   if _check_upgrade "$latest_version"; then
-    # Ask to confirm upgrade
-    read -r -p "Do you want to upgrade now? [Y/n] " reply
-    if [ -z "$reply" ] || [ "$reply" = "y" ] || [ "$reply" = "Y" ]; then
-      printf "Proceeding with upgrade...\n"
-    else
-      printf "Upgrade cancelled.\n"
-      return 0
+    if [ "$force" -eq 0 ]; then
+      # Ask to confirm upgrade
+      read -r -p "Do you want to upgrade now? [Y/n] " reply
+      if [ -z "$reply" ] || [ "$reply" = "y" ] || [ "$reply" = "Y" ]; then
+        printf "Proceeding with upgrade...\n"
+      else
+        printf "Upgrade cancelled.\n"
+        return 0
+      fi
     fi
 
     local url="https://github.com/$REPO/releases/download/$latest_version/memo.tar.gz"
@@ -1218,7 +1226,8 @@ _parse_args() {
       return
       ;;
     upgrade)
-      memo_upgrade
+      shift
+      memo_upgrade "$@"
       return
       ;;
     uninstall)
