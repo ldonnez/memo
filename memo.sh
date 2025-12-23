@@ -424,6 +424,28 @@ _find_note_file() {
   printf "%s" "$file"
 }
 
+_prepend_header() {
+  local file="$1"
+  local header="${DEFAULT_CAPTURE_HEADER:-}"
+
+  [[ -z "$header" ]] && return
+
+  local os
+  os=$(uname)
+
+  if [ "$os" = "Darwin" ]; then
+    sed -i '' "3i\\
+$header\\
+
+" "$file"
+    return
+  fi
+
+  sed -i "3i\\
+$header\\
+" "$file"
+}
+
 # Edits given file in temporary file.
 # Creates new file with filename as header if not exists. e.g example.md -> # example
 _make_or_edit_file() {
@@ -473,7 +495,7 @@ _create_file_header() {
 
   local header
   header=$(_strip_extensions "$(_strip_path "$filepath")")
-  printf "# %s\n\n" "$header" >"$output_file"
+  printf "# %s\n\n\n" "$header" >"$output_file"
 }
 
 # Loads $DEFAULT_IGNORE and $NOTES_DIR/.ignore file into space separated string.
@@ -952,7 +974,12 @@ memo() {
   local tmpfile
   tmpfile=$(_make_or_edit_file "$filepath")
 
-  "$EDITOR_CMD" "$tmpfile"
+  if [[ -z "$input" ]]; then
+    _prepend_header "$tmpfile"
+    "$EDITOR_CMD" +4 "$tmpfile"
+  else
+    "$EDITOR_CMD" "$tmpfile"
+  fi
 
   local output_file
   output_file=$(_get_output_gpg_filepath "$filepath")
@@ -1127,6 +1154,7 @@ _set_default_values() {
   : "${DEFAULT_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store,.gitignore"}"
   : "${DEFAULT_GIT_COMMIT:=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')}"
+  : "${DEFAULT_CAPTURE_HEADER:=## $(date '+%Y-%m-%d %H:%M')}"
 }
 
 # Initializes $NOTES_DIR

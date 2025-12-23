@@ -108,6 +108,9 @@ DEFAULT_FILE="inbox.md"
 
 # A comma-separated list of files or patterns to ignore during various operations.
 DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
+
+# The default prepended header then running memo without arguments
+DEFAULT_CAPTURE_HEADER="## $(date '+%Y-%m-%d %H:%M:%S')"
 ```
 
 # Usage
@@ -127,8 +130,8 @@ Opening and editing files is the default action:
 
 ## Commands
 
-| Command                          | Description                                                                                                                               |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Command                        | Description                                                                                                                               |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `encrypt INPUTFILE OUTPUTFILE` | Encrypt `INPUTFILE` into `OUTPUTFILE.gpg`.                                                                                                |
 | `decrypt FILE.gpg`             | Decrypt `FILE.gpg` and print plaintext to stdout.                                                                                         |
 | `encrypt-files [FILES...]`     | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names, or glob patterns (e.g. `dir/*`).                   |
