@@ -378,12 +378,6 @@ _get_target_filepath() {
   local input="${1-""}"
   local fullpath
 
-  if [[ -z "$input" ]]; then
-    # No argument provided, create a new file with current date (YYYY-MM-DD) as filename.
-    _get_filepath ""
-    return
-  fi
-
   if _file_exists "$input"; then
     if _is_in_notes_dir "$input" && _file_is_gpg "$input"; then
       fullpath=$(_get_absolute_path "$input")
