@@ -15,17 +15,15 @@ teardown() {
 
 @test "decrypts all files in notes dir ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
-  printf "Hello World\n" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
 
   rm -f "$file"
 
   mkdir -p "$NOTES_DIR/test_dir"
 
   local file2="$NOTES_DIR/test_dir/test2.md"
-  printf "Hello World\n" >"$file2"
-  _gpg_encrypt "$file2" "$file2.gpg"
+  _gpg_encrypt "$file2.gpg" <<<"Hello World\n"
 
   rm -f "$file2"
 
@@ -43,23 +41,20 @@ teardown() {
 
 @test "can decrypt multiple files" {
   local file="$NOTES_DIR/test.md"
-  printf "Hello World\n" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
 
   rm -f "$file"
 
   local file2="$NOTES_DIR/test2.md"
-  printf "Hello World 2\n" >"$file2"
 
-  _gpg_encrypt "$file2" "$file2.gpg"
+  _gpg_encrypt "$file2.gpg" <<<"Hello World 2\n"
 
   rm -f "$file2"
 
   local file3="$NOTES_DIR/test3.md"
-  printf "Hello World 3\n" >"$file3"
 
-  _gpg_encrypt "$file3" "$file3.gpg"
+  _gpg_encrypt "$file3.gpg" <<<"Hello World 3\n"
 
   rm -f "$file3"
 
@@ -77,18 +72,16 @@ Decrypted: $file3"
 
 @test "decrypts all files in test_dir/* ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
-  printf "Hello World\n" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
 
   rm -f "$file"
 
   mkdir -p "$NOTES_DIR/test_dir"
 
   local file2="$NOTES_DIR/test_dir/test2.md"
-  printf "Hello World 2\n" >"$file2"
 
-  _gpg_encrypt "$file2" "$file2.gpg"
+  _gpg_encrypt "$file2.gpg" <<<"Hello World 2\n"
 
   rm -f "$file2"
 
@@ -104,9 +97,8 @@ Decrypted: $file3"
 
 @test "decrypts single file in notes dir ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
-  printf "Hello World\n" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
 
   rm -f "$file"
 
@@ -123,9 +115,8 @@ Decrypted: $file3"
 
 @test "decrypts single file by only giving its name in notes dir ($NOTES_DIR)" {
   local file="$NOTES_DIR/test.md"
-  printf "Hello World\n" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
   rm -f "$file"
 
   run memo_decrypt_files "test.md.gpg"
@@ -142,9 +133,8 @@ Decrypted: $file3"
 @test "decrypts single file when giving relative path in notes dir ($NOTES_DIR)" {
   mkdir -p "$NOTES_DIR/test_2_dir"
   local file="$NOTES_DIR/test_2_dir/test.md"
-  printf "Hello World\n" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
 
   rm -f "$file"
 
@@ -161,11 +151,10 @@ Decrypted: $file3"
 
 @test "does not work on a file outside ($NOTES_DIR)" {
   local file="$HOME/test.md"
-  printf "Hello World\n" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
 
-  run memo_decrypt_files "$file"
+  run memo_decrypt_files "$file.gpg"
   assert_failure
   assert_output "File not in $NOTES_DIR"
 

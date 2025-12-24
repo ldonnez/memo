@@ -15,24 +15,22 @@ teardown() {
 
 @test "returns filepath with .gpg if file exists with .gpg" {
   local file
-  file="$NOTES_DIR/test.md"
-  printf "Hello World" >"$file"
+  file="$NOTES_DIR/test.md.gpg"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file" <<<"Hello World"
 
   run _get_gpg_filepath "$file"
   assert_success
-  assert_output "$file.gpg"
+  assert_output "$file"
 }
 
-@test "returns filepath with .gpg if file is .gpg" {
+@test "returns filepath with .gpg if given file is not .gpg" {
   local file
   file="$NOTES_DIR/test.md"
-  printf "Hello World" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World"
 
-  run _get_gpg_filepath "$file.gpg"
+  run _get_gpg_filepath "$file"
   assert_success
   assert_output "$file.gpg"
 }

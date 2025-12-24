@@ -24,29 +24,27 @@ teardown() {
 
 @test "returns full path if note is in notes dir ($NOTES_DIR)" {
   local file
-  file="$NOTES_DIR/test.md"
-  printf "Hello World" >"$file"
+  file="$NOTES_DIR/test.md.gpg"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file" <<<"Hello World"
 
-  run _get_target_filepath "$file.gpg"
+  run _get_target_filepath "$file"
   assert_success
 
-  assert_output "$file.gpg"
+  assert_output "$file"
 }
 
 @test "fails because existing file is not in notes dir" {
   local file
-  file="not-in-notes-dir.md"
-  printf "Hello World" >"$file"
+  file="not-in-notes-dir.md.gpg"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file" <<<"Hello World"
 
-  run _get_target_filepath "$file.gpg"
+  run _get_target_filepath "$file"
   assert_failure
   assert_output "Error: File is not a valid gpg memo in the notes directory."
 
-  rm -f "$file" "$file.gpg"
+  rm -f "$file"
 }
 
 @test "returns new file path in notes dir when file does not exist yet" {

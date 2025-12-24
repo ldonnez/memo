@@ -157,17 +157,13 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.gpg"
   printf "Hello World" >"$file1"
 
   local file2="$NOTES_DIR/test2.md"
-  printf "Hello World 2" >"$file2"
 
-  _gpg_encrypt "$file2" "$file2.gpg"
-  rm -f "$file2"
+  _gpg_encrypt "$file2.gpg" <<<"Hello World"
 
   mkdir -p "$NOTES_DIR/test_dir"
   local file3="$NOTES_DIR/test_dir/test2.md"
-  printf "Hello World 3" >"$file3"
 
-  _gpg_encrypt "$file3" "$file3.gpg"
-  rm -f "$file3"
+  _gpg_encrypt "$file3.gpg" <<<"Hello World 3"
 
   run memo_encrypt_files "all"
   assert_success

@@ -16,9 +16,8 @@ teardown() {
 @test "should correctly find and edit a .gpg file" {
   # Setup: Create a temporary directory and a test file
   local file="$NOTES_DIR/file.md"
-  printf "Hello world" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file" <<<"Hello world"
 
   # Mock rg
   # shellcheck disable=SC2329
