@@ -49,12 +49,11 @@ teardown() {
 
 @test "successfully edits existing file" {
   local file
-  file="$NOTES_DIR/test.md"
-  printf "Hello World" >"$file"
+  file="$NOTES_DIR/test.md.gpg"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file" <<<"Hello World"
 
-  run memo "$file.gpg"
+  run memo "$file"
   assert_success
   assert_output ""
 }
@@ -72,17 +71,16 @@ teardown() {
 
 @test "fails editting existing file since its not in the notes dir ($NOTES_DIR)" {
   local file
-  file="test.md"
-  printf "Hello World" >"$file"
+  file="test.md.gpg"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file" <<<"Hello World"
 
-  run memo "$file.gpg"
+  run memo "$file"
   assert_failure
   assert_output "Error: File is not a valid gpg memo in the notes directory."
 
   # Cleanup
-  rm -f "$file" "$file.gpg"
+  rm -f "$file"
 }
 
 @test "fails creating new file with unspported extension" {

@@ -14,20 +14,14 @@ teardown() {
 }
 
 @test "Passes all integrity checks" {
-  local file="$NOTES_DIR/test.md"
-  printf "Hello World\n" >"$file"
+  local file="$NOTES_DIR/test.md.gpg"
 
-  _gpg_encrypt "$file" "$file.gpg"
-
-  rm -f "$file"
+  _gpg_encrypt "$file.gpg" <<<"Hello World\n"
 
   mkdir -p "$NOTES_DIR/test_dir"
 
-  local file2="$NOTES_DIR/test_dir/test2.md"
-  printf "Hello World\n" >"$file2"
-  _gpg_encrypt "$file2" "$file2.gpg"
-
-  rm -f "$file2"
+  local file2="$NOTES_DIR/test_dir/test2.md.gpg"
+  _gpg_encrypt "$file2" <<<"Hello World\n"
 
   run memo_integrity_check
   assert_success
@@ -40,11 +34,9 @@ teardown() {
 
   mkdir -p "$NOTES_DIR/test_dir"
 
-  local file2="$NOTES_DIR/test_dir/test2.md"
+  local file2="$NOTES_DIR/test_dir/test2.md.gpg"
   printf "Hello World\n" >"$file2"
-  _gpg_encrypt "$file2" "$file2.gpg"
-
-  rm -f "$file2"
+  _gpg_encrypt "$file2" <<<"Hello World\n"
 
   run memo_integrity_check
   assert_failure
@@ -58,11 +50,8 @@ teardown() {
   local txtfile="$NOTES_DIR/ignored.txt"
   printf "Ignored" >"$txtfile"
 
-  local mdfile="$NOTES_DIR/test.md"
-  printf "Hello World" >"$mdfile"
-  _gpg_encrypt "$mdfile" "$mdfile.gpg"
-
-  rm -f "$mdfile"
+  local mdfile="$NOTES_DIR/test.md.gpg"
+  _gpg_encrypt "$mdfile" <<<"Hello World"
 
   run memo_integrity_check
   assert_success
@@ -74,11 +63,8 @@ Ignored (.ignore): ignored.txt"
   local wordfile="$NOTES_DIR/test.word"
   printf "Hello Word" >"$wordfile"
 
-  local mdfile="$NOTES_DIR/test.md"
-  printf "Hello World" >"$mdfile"
-  _gpg_encrypt "$mdfile" "$mdfile.gpg"
-
-  rm -f "$mdfile"
+  local mdfile="$NOTES_DIR/test.md.gpg"
+  _gpg_encrypt "$mdfile" <<<"Hello World"
 
   run memo_integrity_check
   assert_success

@@ -13,11 +13,10 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/*
 }
 
-@test "encrypts file to same path when no output_path (second arg) is given" {
+@test "encrypts file to same path when input comes from stdin" {
   local input_path="$NOTES_DIR/test.md"
-  printf "Hello World" >"$input_path"
 
-  run _gpg_encrypt "$input_path" "$input_path.gpg"
+  run _gpg_encrypt "$input_path.gpg" <<<"Hello World from stdin"
   assert_success
 
   run _file_exists "$input_path.gpg"
@@ -25,6 +24,9 @@ teardown() {
 
   run cat "$input_path.gpg"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
+
+  run _gpg_decrypt "$input_path.gpg"
+  assert_output --partial "Hello World from stdin"
 }
 
 @test "encrypts file to given output_path" {
@@ -33,7 +35,7 @@ teardown() {
 
   local output_path="$NOTES_DIR/test.md"
 
-  run _gpg_encrypt "$input_path" "$output_path.gpg"
+  run _gpg_encrypt "$input_path.gpg" "$output_path"
   assert_success
 
   run _file_exists "$output_path.gpg"
@@ -59,7 +61,7 @@ EOF
   local input_path="$NOTES_DIR/test_multi.md"
   printf "Hello Multiple" >"$input_path"
 
-  run _gpg_encrypt "$input_path" "$input_path.gpg"
+  run _gpg_encrypt "$input_path.gpg" "$input_path"
   assert_success
 
   run _file_exists "$input_path.gpg"
@@ -76,7 +78,7 @@ EOF
   local input_path="$NOTES_DIR/test_secure.md"
   printf "Sensitive" >"$input_path"
 
-  run _gpg_encrypt "$input_path" "$input_path.gpg"
+  run _gpg_encrypt "$input_path.gpg" "$input_path"
   assert_failure
 
   run _file_exists "$input_path.gpg"

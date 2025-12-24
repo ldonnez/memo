@@ -42,9 +42,8 @@ teardown() {
 @test "decrypts existing file in tmpfile" {
   local file
   file="$NOTES_DIR/test.md"
-  printf "Hello World" >"$file"
 
-  _gpg_encrypt "$file" "$file.gpg"
+  _gpg_encrypt "$file.gpg" <<<"Hello World"
 
   run _make_or_edit_file "$file.gpg"
   assert_success

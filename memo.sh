@@ -287,14 +287,10 @@ _build_gpg_recipients() {
 
 # Encrypts the content of given input file (path) to given output file (path)
 # This will NOT encrypt the file itself only the content. (gpg --armor)
+# When no second argument is given we interpet content from stdin
 _gpg_encrypt() {
-  # Sets output_path to input_path when output_path is not given
-  local input_path="$1" output_path="${2-$1}"
-
-  if ! _file_exists "$input_path"; then
-    printf "File not found: %s" "$input_path"
-    exit 1
-  fi
+  local output_path="$1"
+  local input="${2-}"
 
   local -a recipients=()
 
@@ -302,7 +298,16 @@ _gpg_encrypt() {
     return 1
   fi
 
-  gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$output_path" "$input_path"
+  # If input_path is empty, gpg reads from stdin.
+  if [[ -z "$input" ]]; then
+    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$output_path"
+  else
+    if ! _file_exists "$input"; then
+      printf "File not found: %s" "$input"
+      exit 1
+    fi
+    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$output_path" "$input"
+  fi
 }
 
 # Decrypts given input file (path) to given output file (path)
@@ -837,12 +842,10 @@ memo_encrypt_files() {
     local f
     for f in "${files_to_encrypt[@]}"; do
       local outfile="$f.gpg"
-      if ! _gpg_encrypt "$f" "$outfile.tmp"; then
+      if ! _gpg_encrypt "$outfile" "$f"; then
         printf "Failed to encrypt: %s\n" "$f"
-        rm -f "$outfile.tmp"
         return 1
       fi
-      mv "$outfile.tmp" "$outfile"
       rm -f "$f"
       printf "Encrypted: %s -> %s\n" "${f#"$NOTES_DIR"/}" "${outfile#"$NOTES_DIR"/}"
     done
@@ -856,14 +859,14 @@ memo_encrypt_files() {
 # Usage:
 #   memo_encrypt <input_file> <output_file>.gpg
 memo_encrypt() {
-  local input_file="$1"
-  local output_file="$2"
+  local output_file="$1"
+  local input_file="${2-}"
 
-  if ! _is_supported_extension "$input_file"; then
+  if ! _is_supported_extension "$output_file"; then
     return 1
   fi
 
-  _gpg_encrypt "$input_file" "$output_file"
+  _gpg_encrypt "$output_file" "$input_file"
 }
 
 # Decrypts given input file with a PGP MESSAGE to stdout.
@@ -982,7 +985,7 @@ memo() {
 
   local output_file
   output_file=$(_get_output_gpg_filepath "$filepath")
-  _gpg_encrypt "$tmpfile" "$output_file"
+  _gpg_encrypt "$output_file" "$tmpfile"
 
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
@@ -1114,7 +1117,7 @@ Description:
     - "memo FILE"      Opens or creates a file named FILE
 
 Commands:
-  encrypt INPUTFILE OUTPUTFILE      Encrypt INFILE into OUTFILE.gpg
+  encrypt OUTPUTFILE INPUTFILE      Encrypt INPUTFILE into OUTPUTFILE. When INPUTFILE is not given it expects data from stdin
   decrypt FILE.gpg                  Decrypt FILE.gpg and print plaintext to stdout
 
   encrypt-files [FILES...]          Encrypt files in-place inside notes dir
@@ -1139,7 +1142,7 @@ Commands:
 Examples:
   memo                                Open default file
   memo todo.md                        Open or create "todo.md" inside notes dir
-  memo encrypt notes.txt out.gpg    Encrypt notes.txt into out.gpg
+  memo encrypt out.gpg notes.txt    Encrypt notes.txt into out.gpg
   memo decrypt out.gpg              Decrypt out.gpg to stdout
   memo encrypt-files all            Encrypt all files in notes dir
   memo decrypt-files *.gpg          Decrypt matching .gpg files

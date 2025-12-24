@@ -15,11 +15,9 @@ teardown() {
 
 @test "decrypts file with gpg message to stdout" {
   local file="$NOTES_DIR/file.md.gpg"
-  printf "Hello World!" > "$file"
+  _gpg_encrypt "$file" <<<"Hello World!"
 
-  _gpg_encrypt "$file" "$file.gpg"
-
-  run memo_decrypt "$file.gpg"
+  run memo_decrypt "$file"
   assert_success
   assert_output "Hello World!"
 }
