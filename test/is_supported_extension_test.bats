@@ -28,6 +28,11 @@ setup() {
   assert_success
 }
 
+@test "success when arg empty" {
+  run _is_supported_extension ""
+  assert_success
+}
+
 @test "fail when file has no extension" {
   run _is_supported_extension "test"
   assert_failure

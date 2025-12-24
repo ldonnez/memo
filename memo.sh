@@ -109,6 +109,10 @@ _filename_is_date() {
 _is_supported_extension() {
   local filename="$1"
 
+  if [[ "$filename" == "-" || -z "$filename" ]]; then
+    return 0
+  fi
+
   # Remove .gpg extension if present
   local tmp_filename="${filename%.gpg}"
 
