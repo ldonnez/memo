@@ -154,8 +154,8 @@ memo
 memo todo.md
 
 # Encrypt and decrypt notes
-memo encrypt out.gpg notes.txt
-memo decrypt out.gpg
+memo encrypt out.md.gpg <<<"Hello World"
+memo decrypt out.md.gpg
 
 # Encrypt/decrypt multiple files
 memo encrypt-files all

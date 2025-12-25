@@ -852,27 +852,26 @@ memo_encrypt_files() {
   fi
 }
 
-# Encrypts the text in given input file to given output file.
+# Encrypts the text to given input file from stdin.
 #
-# It will print error when trying to encrypt an unsupported file extension.
+# It will print error when trying to encrypt to an unsupported file extension.
 #
 # Usage:
-#   memo_encrypt <input_file> <output_file>.gpg
+#   memo_encrypt <input_file> | "stdin"
 memo_encrypt() {
   local output_file="$1"
-  local input_file="${2-}"
 
   if ! _is_supported_extension "$output_file"; then
     return 1
   fi
 
-  _gpg_encrypt "$output_file" "$input_file"
+  _gpg_encrypt "$output_file"
 }
 
 # Decrypts given input file with a PGP MESSAGE to stdout.
 #
 # Usage:
-#   memo_decrypt <input_file>.gpg <output_file>
+#   memo_decrypt <input_file>.gpg
 memo_decrypt() {
   local input_file="$1"
 
@@ -1117,8 +1116,9 @@ Description:
     - "memo FILE"      Opens or creates a file named FILE
 
 Commands:
-  encrypt OUTPUTFILE INPUTFILE      Encrypt INPUTFILE into OUTPUTFILE. When INPUTFILE is not given it expects data from stdin
-  decrypt FILE.gpg                  Decrypt FILE.gpg and print plaintext to stdout
+  encrypt INPUTFILE                 Encrypts the text from stdin to given inputfile
+
+  decrypt FILE.gpg                  Decrypts FILE.gpg and print to stdout
 
   encrypt-files [FILES...]          Encrypt files in-place inside notes dir
                                       - Accepts 'all' or explicit files
