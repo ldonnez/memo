@@ -100,6 +100,12 @@ _filename_is_date() {
   fi
 }
 
+# Ensures filepath always returns as .gpg
+_as_gpg() {
+  local filepath="$1"
+  printf '%s\n' "${filepath%.gpg}.gpg"
+}
+
 ###############################################################################
 # Common (private)
 ###############################################################################
@@ -300,13 +306,13 @@ _gpg_encrypt() {
 
   # If input_path is empty, gpg reads from stdin.
   if [[ -z "$input" ]]; then
-    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$output_path"
+    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")"
   else
     if ! _file_exists "$input"; then
       printf "File not found: %s" "$input"
       exit 1
     fi
-    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$output_path" "$input"
+    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")" "$input"
   fi
 }
 
@@ -459,37 +465,15 @@ _make_or_edit_file() {
   tmpfile=$(_make_tempfile "${filepath##*/}")
 
   local gpg_file
-  if gpg_file=$(_get_gpg_filepath "$filepath"); then
+  gpg_file="$(_as_gpg "$filepath")"
+
+  if _file_exists "$gpg_file"; then
     _gpg_decrypt "$gpg_file" "$tmpfile"
   else
     _create_file_header "$filepath" "$tmpfile"
   fi
 
   printf "%s\n" "$tmpfile"
-}
-
-# Determines correct GPG file path
-_get_gpg_filepath() {
-  local filepath="$1"
-
-  if _file_exists "$filepath.gpg"; then
-    printf "%s.gpg\n" "$filepath"
-  elif _file_is_gpg "$filepath"; then
-    printf "%s\n" "$filepath"
-  else
-    return 1
-  fi
-}
-
-# Determines the output GPG file path used before encryption
-_get_output_gpg_filepath() {
-  local filepath="$1"
-
-  if _file_is_gpg "$filepath"; then
-    printf "%s\n" "$filepath"
-  else
-    printf "%s.gpg\n" "$filepath"
-  fi
 }
 
 # Creates a file header used when new file is created
@@ -982,9 +966,7 @@ memo() {
     "$EDITOR_CMD" "$tmpfile"
   fi
 
-  local output_file
-  output_file=$(_get_output_gpg_filepath "$filepath")
-  _gpg_encrypt "$output_file" "$tmpfile"
+  _gpg_encrypt "$filepath" "$tmpfile"
 
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
