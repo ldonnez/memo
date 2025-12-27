@@ -1230,7 +1230,7 @@ Commands:
 
   files                             Browse all files in fzf (decrypts preview)
   integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
-  sync [git]                        Creates local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.
+  sync [git]                        Creates a local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.
                                       - Accepts 'git'
   init [git]                        Initializes git configuration for encrypted notes in a git repository.
                                       - Accepts 'git'
