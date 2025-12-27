@@ -1238,7 +1238,7 @@ _parse_args() {
   fi
 
   # unknown option
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|git-sync|upgrade|uninstall]\n"
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|sync|upgrade|uninstall]\n"
   exit 1
 }
 
