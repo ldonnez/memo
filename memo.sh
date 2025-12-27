@@ -381,6 +381,14 @@ _is_in_notes_dir() {
   fi
 }
 
+# Checks if $NOTES_DIR is a git repository
+_is_git_repository() {
+  if ! git -C "$NOTES_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    printf '%s\n' "Not inside a git repository"
+    exit 1
+  fi
+}
+
 # Determines destination path of given input.
 # Given empty will get classified as daily memo e.g YYYY-MM-DD
 # When file or path is inside notes directory ($NOTES_DIR) it will return the fullpath path of the input file. This also works when working dir is inside the notes dir. For example `cd $NOTES_DIR/example/example.md.gpg` -> `get_target_filepath "example.md.gpg"` returns the full path of example.md.gpg.
@@ -551,10 +559,7 @@ _check_upgrade() {
 # Uses $DEFAULT_COMMIT as commit mesasage
 _git_sync() {
   # Ensure it's a git repo
-  if ! _dir_exists "$NOTES_DIR/.git"; then
-    printf "Not a git repository.\n"
-    return 1
-  fi
+  _is_git_repository
 
   if ! git -C "$NOTES_DIR" pull origin main --rebase --autostash; then
     printf "Error: Conflict detected during pull.\n"

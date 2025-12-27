@@ -56,7 +56,7 @@ teardown() {
 
   run _git_sync
   assert_failure
-  assert_output "Not a git repository."
+  assert_output "Not inside a git repository"
 }
 
 @test "Errors when conflict" {
