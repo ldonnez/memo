@@ -99,4 +99,24 @@ EOF
 
   run _file_exists "$output_path.gpg"
   assert_failure
+
+@test "encrypts file with only found recipients" {
+  # run in subshell to avoid collision with other tests.
+  (
+    # shellcheck disable=SC2030,SC2031
+    local GPG_RECIPIENTS="i-do-not-exist@example.com,mock@example.com"
+
+    local output_path="$NOTES_DIR/test_multi.md"
+    printf "Hello Multiple" >"$output_path"
+
+    run _gpg_encrypt "$output_path.gpg" "$output_path"
+    assert_output "GPG recipient(s) not found: i-do-not-exist@example.com"
+    assert_success
+
+    run _file_exists "$output_path.gpg"
+    assert_success
+
+    run cat "$output_path.gpg"
+    assert_output --partial "-----BEGIN PGP MESSAGE-----"
+  )
 }

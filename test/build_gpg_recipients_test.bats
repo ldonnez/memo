@@ -58,3 +58,12 @@ EOF
   assert_equal $rc 0
   assert_equal "${recipients[*]}" "--default-recipient-self"
 }
+
+@test "continues with found gpg keys when one of the gpg keys is not found" {
+  local gpg_recipients="i-do-not-exist@example.com,mock@example.com,"
+  local -a recipients=()
+
+  _build_gpg_recipients "$gpg_recipients" recipients
+
+  assert_equal "${recipients[*]}" "-r mock@example.com"
+}

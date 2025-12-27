@@ -158,7 +158,7 @@ _gpg_recipients_exists() {
 
   if ((${#missing_keys[@]} > 0)); then
     printf "GPG recipient(s) not found: %s\n" "${missing_keys[*]}" >&2
-    exit 1
+    return 1
   fi
 }
 
@@ -283,8 +283,7 @@ _build_gpg_recipients() {
     [[ -z "$id" ]] && continue
 
     if ! _gpg_recipients_exists "$id"; then
-      printf "GPG recipient(s) not found: %s\n" "$id" >&2
-      return 1
+      continue
     fi
 
     eval "$output_array+=(\"-r\" \"$id\")"
@@ -300,7 +299,9 @@ _gpg_encrypt() {
 
   local -a recipients=()
 
-  if ! _build_gpg_recipients "$GPG_RECIPIENTS" recipients; then
+  _build_gpg_recipients "$GPG_RECIPIENTS" recipients
+
+  if [[ ${#recipients[@]} -eq 0 ]]; then
     return 1
   fi
 
@@ -690,7 +691,9 @@ memo_encrypt_files() {
   local -a ignore_patterns=()
   local -a recipients=()
 
-  if ! _build_gpg_recipients "$GPG_RECIPIENTS" recipients; then
+  _build_gpg_recipients "$GPG_RECIPIENTS" recipients
+
+  if [[ ${#recipients[@]} -eq 0 ]]; then
     return 1
   fi
 
