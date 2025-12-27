@@ -1145,7 +1145,7 @@ _set_default_values() {
   : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
   : "${CAPTURE_FILE:=inbox.$DEFAULT_EXTENSION}"
-  : "${DEFAULT_IGNORE:=".ignore,.git/*,.DS_store,.gitignore,.gitattributes"}"
+  : "${DEFAULT_IGNORE:=".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"}"
   : "${DEFAULT_GIT_COMMIT:=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')}"
   : "${CAPTURE_HEADER:=## $(date '+%Y-%m-%d %H:%M')}"
 }
