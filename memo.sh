@@ -548,9 +548,7 @@ _check_upgrade() {
 }
 
 # Syncs notes when $NOTES_DIR is a git repository
-#
-# Usage:
-#   memo git-sync
+# Uses $DEFAULT_COMMIT as commit mesasage
 _git_sync() {
   # Ensure it's a git repo
   if ! _dir_exists "$NOTES_DIR/.git"; then
