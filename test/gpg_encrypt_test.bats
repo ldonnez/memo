@@ -62,7 +62,9 @@ teardown() {
 }
 
 @test "encrypts file with multiple recipients" {
-  gpg --batch --gen-key <<EOF
+  # run in subshell to avoid collision with other tests.
+  (
+    gpg --batch --gen-key <<EOF
 %no-protection
 Key-Type: RSA
 Key-Length: 1024
@@ -71,34 +73,39 @@ Name-Email: test2@example.com
 Expire-Date: 0
 %commit
 EOF
-  # shellcheck disable=SC2030,SC2031
-  export GPG_RECIPIENTS="mock@example.com,test2@example.com"
+    # shellcheck disable=SC2030,SC2031
+    local GPG_RECIPIENTS="mock@example.com,test2@example.com"
 
-  local output_path="$NOTES_DIR/test_multi.md"
-  printf "Hello Multiple" >"$output_path"
+    local output_path="$NOTES_DIR/test_multi.md"
+    printf "Hello Multiple" >"$output_path"
 
-  run _gpg_encrypt "$output_path.gpg" "$output_path"
-  assert_success
+    run _gpg_encrypt "$output_path.gpg" "$output_path"
+    assert_success
 
-  run _file_exists "$output_path.gpg"
-  assert_success
+    run _file_exists "$output_path.gpg"
+    assert_success
 
-  run cat "$output_path.gpg"
-  assert_output --partial "-----BEGIN PGP MESSAGE-----"
+    run cat "$output_path.gpg"
+    assert_output --partial "-----BEGIN PGP MESSAGE-----"
+  )
 }
 
 @test "does not leave unencrypted file when encryption fails" {
-  # shellcheck disable=SC2030,SC2031
-  export GPG_RECIPIENTS="missing@example.com"
+  # run in subshell to avoid collision with other tests.
+  (
+    # shellcheck disable=SC2030,SC2031
+    export GPG_RECIPIENTS="missing@example.com"
 
-  local output_path="$NOTES_DIR/test_secure.md"
-  printf "Sensitive" >"$output_path"
+    local output_path="$NOTES_DIR/test_secure.md"
+    printf "Sensitive" >"$output_path"
 
-  run _gpg_encrypt "$output_path.gpg" "$output_path"
-  assert_failure
+    run _gpg_encrypt "$output_path.gpg" "$output_path"
+    assert_failure
 
-  run _file_exists "$output_path.gpg"
-  assert_failure
+    run _file_exists "$output_path.gpg"
+    assert_failure
+  )
+}
 
 @test "encrypts file with only found recipients" {
   # run in subshell to avoid collision with other tests.
