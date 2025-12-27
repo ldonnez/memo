@@ -581,6 +581,88 @@ _git_sync() {
   fi
 }
 
+# Initializes git configuration for encrypted notes in a git repository
+#
+# Updates/creates .gitattributes to include: *.gpg diff=${diff_name}. This will make it possible that a custom diff command will be used for .gpg files.
+# It updates local git config to include a custom command (memo decrypt) to be used when generating git diffs.
+# Adds a wildcard to .gitignore to prevent accidental staging of non .gpg files. (.gitignore, .gitattributes and .githooks/ are exempt)
+_git_init() {
+  # Ensure it's a git repo
+  _is_git_repository
+
+  printf '%s\n' "This will initialize Git configuration for encrypted memo notes:"
+  printf '%s\n' "  - update .gitattributes"
+  printf '%s\n' "  - update local git config to ensure git diffs are readable"
+  printf '%s\n' "  - add a protective .gitignore (accident prevention)"
+  printf '%s\n' "Proceed? [y/N]: "
+
+  read -r reply
+  case "$reply" in
+  y | Y | yes | YES) ;;
+  *)
+    printf '%s\n' "Aborted."
+    return 0
+    ;;
+  esac
+
+  local attr_file="$NOTES_DIR/.gitattributes"
+  local ignore_file="$NOTES_DIR/.gitignore"
+  local diff_name="gpg"
+  local textconv_cmd="memo decrypt"
+
+  #
+  # --- .gitattributes ---
+  #
+  touch "$attr_file"
+
+  # shellcheck disable=SC2066
+  for rule in "*.gpg diff=${diff_name}"; do
+    if ! grep -qxF "$rule" "$attr_file"; then
+      printf '%s\n' "$rule" >>"$attr_file"
+      printf '%s\n' "Added '$rule' to $attr_file"
+    fi
+  done
+
+  #
+  # --- git config ---
+  #
+  local current_textconv
+  current_textconv="$(git -C "$NOTES_DIR" config --get diff.${diff_name}.textconv || true)"
+
+  if [ "$current_textconv" != "$textconv_cmd" ]; then
+    git config diff.${diff_name}.textconv "$textconv_cmd"
+    printf '%s\n' "Configured diff.${diff_name}.textconv"
+  fi
+
+  #
+  # --- .gitignore (accident prevention only) ---
+  #
+  touch "$ignore_file"
+
+  # Ignore everything by default
+  if ! grep -qxF "*" "$ignore_file"; then
+    printf '%s\n' "*" >>"$ignore_file"
+    printf '%s\n' "Added '*' to $ignore_file"
+  fi
+
+  # Allow encrypted notes
+  # shellcheck disable=SC2066
+  for allow in "!*.gpg"; do
+    if ! grep -qxF "$allow" "$ignore_file"; then
+      printf '%s\n' "$allow" >>"$ignore_file"
+      printf '%s\n' "Added '$allow' to $ignore_file"
+    fi
+  done
+
+  # Allow repo metadata
+  for allow in "!.gitignore" "!.gitattributes" "!.githooks/"; do
+    if ! grep -qxF "$allow" "$ignore_file"; then
+      printf '%s\n' "$allow" >>"$ignore_file"
+      printf '%s\n' "Added '$allow' to $ignore_file"
+    fi
+  done
+}
+
 ###############################################################################
 # Core API
 ###############################################################################
@@ -1060,6 +1142,36 @@ EOF
   esac
 }
 
+# Initializes git configuration for encrypted notes in a git repository
+#
+# Usage:
+#   memo init git
+memo_init() {
+  local arg="${1-}"
+
+  case "$arg" in
+  git)
+    _git_init
+    ;;
+  "")
+    cat <<EOF
+Usage: memo init git
+
+Available options:
+  init  ensures railguards for using memo in a git repository
+EOF
+    ;;
+  *)
+    cat <<EOF
+Unknown option: $1
+
+Usage: memo sync git
+EOF
+    return 1
+    ;;
+  esac
+}
+
 # Uninstalls memo
 #
 # Will delete memo by resolving the path where the script is located, even if it is a symlink.
@@ -1119,6 +1231,8 @@ Commands:
   files                             Browse all files in fzf (decrypts preview)
   integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
   sync [git]                        Creates local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.
+                                      - Accepts 'git'
+  init [git]                        Initializes git configuration for encrypted notes in a git repository.
                                       - Accepts 'git'
 
   upgrade                           Upgrades memo in-place
@@ -1216,6 +1330,11 @@ _parse_args() {
       memo_sync "$@"
       return
       ;;
+    init)
+      shift
+      memo_init "$@"
+      return
+      ;;
     upgrade)
       shift
       memo_upgrade "$@"
@@ -1243,7 +1362,7 @@ _parse_args() {
   fi
 
   # unknown option
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|sync|upgrade|uninstall]\n"
+  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|sync|init|upgrade|uninstall]\n"
   exit 1
 }
 
