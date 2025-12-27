@@ -47,7 +47,7 @@ teardown() {
   )
 }
 
-@test "successfully edits existing file" {
+@test "successfully edits existing file and do not trigger encryption" {
   local file
   file="$NOTES_DIR/test.md.gpg"
 
@@ -55,7 +55,33 @@ teardown() {
 
   run memo "$file"
   assert_success
-  assert_output ""
+  assert_output "No changes detected; skipping re-encryption."
+}
+
+@test "edits existing file and triggers encryption" {
+  # Run in subshell to avoid collision with other tests
+  (
+    local file="$NOTES_DIR/test.md.gpg"
+
+    _gpg_encrypt "$file" <<<"Hello World"
+
+    # shellcheck disable=SC2329
+    fake_editor() {
+      printf "Added line" >>"$1"
+    }
+
+    # Override editor to append a line automatically
+    local EDITOR_CMD=fake_editor
+
+    run memo "$file"
+
+    assert_success
+    assert_output ""
+
+    run _gpg_decrypt "$file"
+    assert_output "Hello World
+Added line"
+  )
 }
 
 @test "successfully creates new file in notes dir ($NOTES_DIR)" {

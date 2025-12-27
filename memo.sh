@@ -106,6 +106,17 @@ _as_gpg() {
   printf '%s\n' "${filepath%.gpg}.gpg"
 }
 
+_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$@" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$@" | awk '{print $1}'
+  else
+    printf '%s\n' "Error: no SHA-256 tool available" >&2
+    return 1
+  fi
+}
+
 ###############################################################################
 # Common (private)
 ###############################################################################
@@ -463,26 +474,6 @@ $header\\
 \\
 \\
 " "$file"
-}
-
-# Edits given file in temporary file.
-# Creates new file with filename as header if not exists. e.g example.md -> # example
-_make_or_edit_file() {
-  local filepath="$1"
-
-  local tmpfile
-  tmpfile=$(_make_tempfile "${filepath##*/}")
-
-  local gpg_file
-  gpg_file="$(_as_gpg "$filepath")"
-
-  if _file_exists "$gpg_file"; then
-    _gpg_decrypt "$gpg_file" "$tmpfile"
-  else
-    _create_file_header "$filepath" "$tmpfile"
-  fi
-
-  printf "%s\n" "$tmpfile"
 }
 
 # Creates a file header used when new file is created
@@ -1040,13 +1031,28 @@ memo_integrity_check() {
 #   memo <file>
 memo() {
   local input="${1-""}"
-
   local filepath
   filepath=$(_get_target_filepath "$input") || return 1
 
-  local tmpfile
-  tmpfile=$(_make_or_edit_file "$filepath")
+  local gpg_file
+  gpg_file="$(_as_gpg "$filepath")"
 
+  local tmpfile
+  tmpfile=$(_make_tempfile "${filepath##*/}")
+
+  local orig_hash="-"
+
+  if _file_exists "$gpg_file"; then
+    orig_hash=$(
+      _gpg_decrypt "$gpg_file" |
+        tee "$tmpfile" |
+        _sha256
+    )
+  else
+    _create_file_header "$filepath" "$tmpfile"
+  fi
+
+  # Edit the temp file
   if [[ -z "$input" ]]; then
     _prepend_header "$tmpfile"
     "$EDITOR_CMD" +5 "$tmpfile"
@@ -1054,8 +1060,23 @@ memo() {
     "$EDITOR_CMD" "$tmpfile"
   fi
 
+  if [[ -n "$orig_hash" ]]; then
+    local tmp_hash
+    tmp_hash=$(_sha256 "$tmpfile")
+
+    if [[ "$orig_hash" == "$tmp_hash" ]]; then
+      printf '%s\n' "No changes detected; skipping re-encryption."
+
+      # Cleanup
+      shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
+      return 0
+    fi
+  fi
+
+  # Encrypt only if changed
   _gpg_encrypt "$filepath" "$tmpfile"
 
+  # Cleanup
   shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
 
