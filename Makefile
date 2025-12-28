@@ -5,7 +5,7 @@ VOLUME_MOUNT := -v $(shell pwd):/opt
 MEMO_INSTALL_DIR := ~/.local/bin
 
 # Ensures it does not interferes with local files/directories named test or build etc...
-.PHONY: test build install install-dev clean uninstall
+.PHONY: test build install install-dev uninstall
 
 dev:
 	chmod +x $(CURDIR)/memo.sh

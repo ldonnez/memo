@@ -191,12 +191,6 @@ Useful for rapid development (no need to reinstall after changes). (Ensure ~/.lo
 make dev
 ```
 
-## Clean
-
-```bash
-make clean
-```
-
 ## Uninstall
 
 Deletes the installed binary and script:
