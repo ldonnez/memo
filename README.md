@@ -108,9 +108,6 @@ CAPTURE_FILE="inbox.md"
 
 # A comma-separated list of files or patterns to ignore during various operations.
 DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
-
-# The prepended header then running memo without arguments
-CAPTURE_HEADER="## $(date '+%Y-%m-%d %H:%M:%S')"
 ```
 
 # Usage
