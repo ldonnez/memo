@@ -14,8 +14,6 @@ setup_suite() {
   export DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
   export DEFAULT_GIT_COMMIT
   DEFAULT_GIT_COMMIT="$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')"
-  export CAPTURE_HEADER
-  CAPTURE_HEADER="## $(date '+%Y-%m-%d %H:%M')"
 
   mkdir -p "$XDG_CONFIG_HOME/memo"
   mkdir -p "$NOTES_DIR"

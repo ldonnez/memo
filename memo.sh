@@ -450,32 +450,6 @@ _find_note_file() {
   printf "%s" "$file"
 }
 
-_prepend_header() {
-  local file="$1"
-  local header="${CAPTURE_HEADER:-}"
-
-  [[ -z "$header" ]] && return
-
-  local os
-  os=$(uname)
-
-  if [ "$os" = "Darwin" ]; then
-    sed -i '' "3i\\
-$header\\
-\\
-\\
-\\
-" "$file"
-    return
-  fi
-
-  sed -i "3i\\
-$header\\
-\\
-\\
-" "$file"
-}
-
 # Creates a file header used when new file is created
 _create_file_header() {
   local filepath="$1"
@@ -1053,12 +1027,7 @@ memo() {
   fi
 
   # Edit the temp file
-  if [[ -z "$input" ]]; then
-    _prepend_header "$tmpfile"
-    "$EDITOR_CMD" +5 "$tmpfile"
-  else
-    "$EDITOR_CMD" "$tmpfile"
-  fi
+  "$EDITOR_CMD" "$tmpfile"
 
   if [[ -n "$orig_hash" ]]; then
     local tmp_hash
@@ -1287,7 +1256,6 @@ _set_default_values() {
   : "${CAPTURE_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"}"
   : "${DEFAULT_GIT_COMMIT:=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')}"
-  : "${CAPTURE_HEADER:=## $(date '+%Y-%m-%d %H:%M')}"
 }
 
 # Initializes $NOTES_DIR
