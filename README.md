@@ -9,7 +9,7 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 <a href="http://github.com/ldonnez/memo/releases"><img src="https://img.shields.io/github/v/tag/ldonnez/memo" alt="Version"></a>
 <a href="https://github.com/ldonnez/memo?tab=MIT-1-ov-file#readme"><img src="https://img.shields.io/github/license/ldonnez/memo" alt="License"></a>
 
-# Table of Contents
+## Table of Contents
 
 - [Features](#features)
 - [Requirements](#requirements)
@@ -34,7 +34,7 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 - [Roadmap](#roadmap)
 - [License](#License)
 
-# Features
+## Features
 
 - **Always encrypted** — only `.gpg` files are stored on disk
 - **Transparent editing** — decrypt to a temp file (or inline in $EDITOR), auto-encrypt on save
@@ -42,7 +42,7 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 - **Ignore rules** — `.ignore` file with defaults (`.git/*`, `.DS_Store`, etc.)
 - **Cross-platform** — Linux & macOS
 
-# Requirements
+## Requirements
 
 - GPG
 - gpg-agent
@@ -50,15 +50,15 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 - ripgrep
 - Neovim (optional) $EDITOR is used as default editor for opening notes.
 
-# Installation
+## Installation
 
-## Install with a single command:
+### Install with a single command:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/ldonnez/memo/main/install.sh)
 ```
 
-## Install with Git:
+### Install with Git:
 
 Clone the repo and run the install script:
 
@@ -74,14 +74,14 @@ This will:
 
 **Ensure ~/.local/bin is in your $PATH**!
 
-# Configuration
+## Configuration
 
 Memo is designed to work with sensible defaults, but you can customize its behavior by creating a config file.
 
 Memo adheres to the XDG Base Directory Specification. Your configuration file should be located at: `$XDG_CONFIG_HOME/memo/config` (usually `$HOME/memo/config`).
 You can override any of the default settings by adding them to this file.
 
-## Example config
+### Example config
 
 Here is an example of the configuration file with all the default settings. You can copy this into your config file and modify the values as needed.
 
@@ -110,14 +110,14 @@ CAPTURE_FILE="inbox.md"
 DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
 ```
 
-# Usage
+## Usage
 
 ```bash
 memo [FILE] [LINE]
 memo [COMMAND] [ARGS...]
 ```
 
-## Default behavior
+### Default behavior
 
 Opening and editing files is the default action:
 
@@ -125,7 +125,7 @@ Opening and editing files is the default action:
 
 `memo` FILE → Opens or creates a file named FILE.
 
-## Commands
+### Commands
 
 | Command                    | Description                                                                                                                               |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -142,7 +142,7 @@ Opening and editing files is the default action:
 | `version`                  | Print current version.                                                                                                                    |
 | `help`                     | Show help message.                                                                                                                        |
 
-## Examples
+### Examples
 
 ```bash
 
@@ -161,24 +161,24 @@ memo encrypt-files all
 memo decrypt-files *.gpg
 ```
 
-# Development Guide
+## Development Guide
 
 Explains how to work with the **Makefile** and development workflow for memo.
 
-## Prerequisites
+### Prerequisites
 
 Make sure the following are installed before building or testing:
 
 - [Bats](https://github.com/bats-core/bats-core) (optional if you use Docker)
 - [Docker](https://www.docker.com/)
 
-## File Structure
+### File Structure
 
 memo.sh → Main Bash wrapper script.
 
 test/ → Bats test files.
 
-## Dev Install
+### Dev Install
 
 Useful for rapid development (no need to reinstall after changes). (Ensure ~/.local/bin is in your $PATH.)
 
@@ -188,7 +188,7 @@ Useful for rapid development (no need to reinstall after changes). (Ensure ~/.lo
 make dev
 ```
 
-## Uninstall
+### Uninstall
 
 Deletes the installed binary and script:
 
@@ -199,7 +199,7 @@ Deletes the installed binary and script:
 make uninstall
 ```
 
-## Build docker image
+### Build docker image
 
 The project supports Docker for isolated builds and tests.
 
@@ -207,7 +207,7 @@ The project supports Docker for isolated builds and tests.
 make docker/build-image
 ```
 
-## Run Dev Shell
+### Run Dev Shell
 
 Drops into a Bash shell inside the container.
 
@@ -219,7 +219,7 @@ Handy for running isolated bats tests manually.
 make docker/shell
 ```
 
-## Run tests
+### Run tests
 
 Runs Bats tests inside Docker.
 
@@ -227,11 +227,11 @@ Runs Bats tests inside Docker.
 make test
 ```
 
-# Roadmap
+## Roadmap
 
 - [ ] Neovim Integration
 
-# [License](LICENSE)
+## [License](LICENSE)
 
 MIT License
 
