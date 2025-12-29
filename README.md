@@ -161,6 +161,10 @@ memo encrypt-files all
 memo decrypt-files *.gpg
 ```
 
+## Integrations
+
+- [Neovim](https://github.com/ldonnez/memo.nvim)
+
 ## Development Guide
 
 Explains how to work with the **Makefile** and development workflow for memo.
@@ -226,10 +230,6 @@ Runs Bats tests inside Docker.
 ```bash
 make test
 ```
-
-## Roadmap
-
-- [ ] Neovim Integration
 
 ## [License](LICENSE)
 
