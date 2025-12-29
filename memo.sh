@@ -1202,7 +1202,7 @@ Usage: memo [FILE] [LINE]
 
 Description:
   Opening and editing files is the default action:
-    - "memo"           Opens default memo or creates it if missing
+    - "memo"           Opens capture file or creates it if missing
     - "memo FILE"      Opens or creates a file named FILE
 
 Commands:

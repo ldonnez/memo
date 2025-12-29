@@ -37,18 +37,16 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 ## Features
 
 - **Always encrypted** — only `.gpg` files are stored on disk
-- **Transparent editing** — decrypt to a temp file (or inline in $EDITOR), auto-encrypt on save
-- **Safe deletion** — delete notes interactively (or with `--force`)
+- **Transparent editing** — decrypt to a temp file (or inline in $EDITOR), auto-encrypt on save. Will not re-encrypt when no changes made.
 - **Ignore rules** — `.ignore` file with defaults (`.git/*`, `.DS_Store`, etc.)
 - **Cross-platform** — Linux & macOS
 
 ## Requirements
 
-- GPG
-- gpg-agent
-- fzf
-- ripgrep
-- Neovim (optional) $EDITOR is used as default editor for opening notes.
+- GPG with a key: you must have at least one active GPG key pair. Check with: `gpg --list-secret-keys --keyid-format LONG`. (if you don't have a key yet run `gpg --full-generate-key`)
+- fzf (optional - only necessary for `memo files`)
+- ripgrep (optional - only necessary for `memo files`)
+- Neovim (optional) $EDITOR is used as default editor for opening files.
 
 ## Installation
 
@@ -60,7 +58,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ldonnez/memo/main/install.sh
 
 ### Install with Git:
 
-Clone the repo and run the install script:
+Clone repo and run the install script:
 
 ```bash
 git clone https://github.com/ldonnez/memo.git
@@ -70,9 +68,10 @@ bash install.sh
 This will:
 
 - Download the latest release from Github.
-- Install the memo script into `$HOME/.local/bin`
+- Install memo into `$HOME/.local/bin`
 
-**Ensure ~/.local/bin is in your $PATH**!
+> [!IMPORTANT]
+> Ensure ~/.local/bin is in your $PATH!
 
 ## Configuration
 
@@ -107,7 +106,10 @@ DEFAULT_EXTENSION="md"
 CAPTURE_FILE="inbox.md"
 
 # A comma-separated list of files or patterns to ignore during various operations.
-DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
+DEFAULT_IGNORE=".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"
+
+# Git commit to be used when running memo sync git
+DEFAULT_GIT_COMMIT=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')
 ```
 
 ## Usage
@@ -121,32 +123,32 @@ memo [COMMAND] [ARGS...]
 
 Opening and editing files is the default action:
 
-`memo` → Opens the default file (creates it if missing).
+`memo` → Opens the capture file (creates it if missing).
 
 `memo` FILE → Opens or creates a file named FILE.
 
 ### Commands
 
-| Command                    | Description                                                                                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `encrypt INPUTFILE`        | Encrypts text from stdin to given `INPUTFILE`.                                                                                            |
-| `decrypt FILE.gpg`         | Decrypt `FILE.gpg` and print to stdout.                                                                                                   |
-| `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names, or glob patterns (e.g. `dir/*`).                   |
-| `decrypt-files [FILES...]` | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names, or glob patterns (e.g. `dir/*.gpg`). |
-| `files`                    | Browse all files in `fzf` (decrypts preview automatically).                                                                               |
-| `integrity-check`          | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                              |
-| `sync [git]`               | Creates a local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.                                                        |
-| `init [git]`               | Initializes git configuration for encrypted notes in a git repository.                                                                    |
-| `upgrade`                  | Upgrade `memo` in-place.                                                                                                                  |
-| `uninstall`                | Uninstall `memo`.                                                                                                                         |
-| `version`                  | Print current version.                                                                                                                    |
-| `help`                     | Show help message.                                                                                                                        |
+| Command                    | Description                                                                                                                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `encrypt INPUTFILE`        | Encrypts text from stdin to given `INPUTFILE`.                                                                                                                                                                            |
+| `decrypt FILE.gpg`         | Decrypt `FILE.gpg` and print to stdout.                                                                                                                                                                                   |
+| `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`).                                                                                                    |
+| `decrypt-files [FILES...]` | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names or glob patterns (e.g. `dir/*.gpg`).                                                                                  |
+| `files`                    | Browse all files in `fzf` (decrypts preview automatically).                                                                                                                                                               |
+| `integrity-check`          | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                                                                                                              |
+| `sync [git]`               | Stages changes, creates a local git commit using $DEFAULT_GIT_COMMIT, and pushes them to the remote repository.                                                                                                           |
+| `init [git]`               | Initializes git configuration for encrypted notes in a git repository. Run this when storing your files in a git repository to ensure clean (decrypted) git diffs, and to prevent accidentally committing non .gpg files. |
+| `upgrade`                  | Upgrade `memo` in-place.                                                                                                                                                                                                  |
+| `uninstall`                | Uninstall `memo`.                                                                                                                                                                                                         |
+| `version`                  | Print current version.                                                                                                                                                                                                    |
+| `help`                     | Show help message.                                                                                                                                                                                                        |
 
 ### Examples
 
 ```bash
 
-# Open default file
+# Open capture file
 memo
 
 # Open or create "todo.md" inside notes dir
