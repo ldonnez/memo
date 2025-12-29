@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.0.0](https://github.com/ldonnez/memo/compare/v0.7.0...v1.0.0) (2025-12-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove capture header functionality
+
+### Features
+
+* add .gitattributes to DEFAULT_IGNORE ([5d72a8e](https://github.com/ldonnez/memo/commit/5d72a8eac4fe7e6735ab7ba4f5ca3ca4a89d4382))
+* add .githooks to DEFAULT_IGNORE ([4efebdc](https://github.com/ldonnez/memo/commit/4efebdc02cb28022f29fda51aed68b1a60c944a8))
+* add memo init command ([48f333b](https://github.com/ldonnez/memo/commit/48f333b1c4bdc42fdf80b506d19f111b082377bd))
+* allow memo encrypt to encrypt from stdin ([5e0a909](https://github.com/ldonnez/memo/commit/5e0a9096449f4e79d3a3e8fe0bdbd4f4c12b7619))
+* only re-encrypt when changes are made using memo command ([d8a83a7](https://github.com/ldonnez/memo/commit/d8a83a75d6bcc74975af409ee5f0ff057008bb13))
+
+
+### Bug Fixes
+
+* always encrypt files with .gpg extension as output ([d167215](https://github.com/ldonnez/memo/commit/d1672156a52ee4ec6b5cac35f5a50404abe25030))
+* continue when gpg recipients are not found ([067e581](https://github.com/ldonnez/memo/commit/067e581321c68f3fb62fca0c1bdb39217456a46e))
+* git-sync -&gt; sync ([3974b1f](https://github.com/ldonnez/memo/commit/3974b1f9541cb579751586047c9a3a98c286322c))
+
+
+### Code Refactoring
+
+* remove capture header functionality ([94d7e5f](https://github.com/ldonnez/memo/commit/94d7e5f263e979e22998e062477c3370fe31b624))
+
 ## [0.7.0](https://github.com/ldonnez/memo/compare/v0.6.2...v0.7.0) (2025-12-23)
 
 
