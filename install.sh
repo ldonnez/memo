@@ -44,7 +44,6 @@ main() {
   return 0
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  # Script is being executed directly, NOT sourced
+if [[ "${BASH_SOURCE[0]:-}" == "${0:-}" ]] || [[ "${BASH_SOURCE[0]:-}" == "" ]]; then
   main "$@"
 fi
