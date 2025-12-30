@@ -53,7 +53,7 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 ### Install with a single command:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ldonnez/memo/main/install.sh)
+curl -fsSL https://raw.githubusercontent.com/ldonnez/memo/main/install.sh | bash
 ```
 
 ### Install with Git:
