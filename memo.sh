@@ -719,7 +719,6 @@ memo_decrypt_files() {
       rm -f "$f"
       printf "Decrypted: %s\n" "$out"
     else
-      rm -f "$tmp"
       printf "Failed to decrypt: %s\n" "$f"
     fi
   done
