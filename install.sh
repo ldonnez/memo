@@ -6,13 +6,10 @@ VERSION="${VERSION:-latest}"
 MEMO_INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 _get_version() {
-  # Resolve latest version if not specified
   if [ "$VERSION" = "latest" ]; then
-    curl -s https://api.github.com/repos/$REPO/releases/latest |
-      grep tag_name | cut -d '"' -f4
+    curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
   else
-    curl -s https://api.github.com/repos/$REPO/releases/"$VERSION" |
-      grep tag_name | cut -d '"' -f4
+    printf "%s" "$VERSION"
   fi
 }
 

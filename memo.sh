@@ -495,7 +495,7 @@ _get_ignored_files() {
 
 # Returns latest release version of memo by using the Github API.
 _get_latest_version() {
-  curl -s https://api.github.com/repos/$REPO/releases/latest | grep tag_name | cut -d '"' -f4
+  curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 }
 
 # Determines if current installed version is older then given version. Returns exit code 1 when no upgrade is necessary, otherwise will return 0.
