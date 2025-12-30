@@ -21,19 +21,22 @@ main() {
     return 1
   fi
 
+  local tmp_dir="/tmp/memo"
+  local tmp_tar="/tmp/memo.tar.gz"
+
+  # Ensure cleanup on normal exit or error.
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmp_dir' '$tmp_tar'" EXIT
+
   local url="https://github.com/$REPO/releases/download/$version/memo.tar.gz"
-
   printf "Downloading %s\n" "$url"
-  curl -sSL "$url" -o /tmp/memo.tar.gz
+  curl -sSL "$url" -o $tmp_tar
 
-  mkdir -p /tmp/memo && tar -xzf /tmp/memo.tar.gz -C /tmp/memo
+  mkdir -p "$tmp_dir" && tar -xzf $tmp_tar -C $tmp_dir
 
   printf "Installing memo to %s...\n" "$MEMO_INSTALL_DIR"
   mkdir -p "$MEMO_INSTALL_DIR"
-  install -m 0700 /tmp/memo/memo.sh "$MEMO_INSTALL_DIR"/memo
-
-  rm -rf /tmp/memo
-  rm -rf /tmp/memo.tar.gz
+  install -m 0755 /tmp/memo/memo.sh "$MEMO_INSTALL_DIR"/memo
 
   printf "Installed memo to %s\n" "$MEMO_INSTALL_DIR"
   printf "Make sure %s is in your PATH.\n" "$MEMO_INSTALL_DIR"

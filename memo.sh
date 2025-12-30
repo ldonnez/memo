@@ -1013,6 +1013,10 @@ memo() {
   local tmpfile
   tmpfile=$(_make_tempfile "${filepath##*/}")
 
+  # Ensure cleanup on normal exit or error.
+  # shellcheck disable=SC2064
+  trap "shred -u '$tmpfile' 2>/dev/null || rm -f '$tmpfile'" EXIT
+
   local orig_hash="-"
 
   if _file_exists "$gpg_file"; then
@@ -1034,18 +1038,12 @@ memo() {
 
     if [[ "$orig_hash" == "$tmp_hash" ]]; then
       printf '%s\n' "No changes detected; skipping re-encryption."
-
-      # Cleanup
-      shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
       return 0
     fi
   fi
 
   # Encrypt only if changed
   _gpg_encrypt "$filepath" "$tmpfile"
-
-  # Cleanup
-  shred -u "$tmpfile" 2>/dev/null || rm -f "$tmpfile"
 }
 
 # Upgrades memo in-place when a new version is found.
@@ -1081,20 +1079,21 @@ memo_upgrade() {
     fi
 
     local url="https://github.com/$REPO/releases/download/$latest_version/memo.tar.gz"
+    local tmp_dir="/tmp/memo"
+    local tmp_tar="/tmp/memo.tar.gz"
 
     local script_path
     script_path=$(_resolve_script_path)
 
+    trap 'rm -rf "$tmp_dir" "$tmp_tar"' EXIT
+
     printf "Downloading %s\n" "$url"
     curl -sSL "$url" -o /tmp/memo.tar.gz
 
-    mkdir -p /tmp/memo && tar -xzf /tmp/memo.tar.gz -C /tmp/memo
+    mkdir -p $tmp_dir && tar -xzf $tmp_tar -C $tmp_dir
 
     printf "Upgrade memo in %s...\n" "$script_path"
-    install -m 0700 /tmp/memo/memo.sh "$script_path"/memo
-
-    rm -rf /tmp/memo
-    rm -rf /tmp/memo.tar.gz
+    install -m 0755 /tmp/memo/memo.sh "$script_path"/memo
 
     printf "Upgrade success!\n"
     return 0
