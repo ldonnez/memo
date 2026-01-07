@@ -42,7 +42,8 @@ Proceed? [y/N]:
 Added '*.gpg diff=gpg' to $NOTES_DIR/.gitattributes
 Configured diff.gpg.textconv
 Added '*' to $NOTES_DIR/.gitignore
-Added '!*.gpg' to $NOTES_DIR/.gitignore
+Added '!*/' to $NOTES_DIR/.gitignore
+Added '!**/*.gpg' to $NOTES_DIR/.gitignore
 Added '!.gitignore' to $NOTES_DIR/.gitignore
 Added '!.gitattributes' to $NOTES_DIR/.gitignore
 Added '!.githooks/' to $NOTES_DIR/.gitignore"
@@ -59,7 +60,10 @@ Added '!.githooks/' to $NOTES_DIR/.gitignore"
   run grep -qxF "*" "$NOTES_DIR/.gitignore"
   assert_success
 
-  run grep -qxF "!*.gpg" "$NOTES_DIR/.gitignore"
+  run grep -qxF "!*/" "$NOTES_DIR/.gitignore"
+  assert_success
+
+  run grep -qxF "!**/*.gpg" "$NOTES_DIR/.gitignore"
   assert_success
 
   run grep -qxF "!.gitattributes" "$NOTES_DIR/.gitignore"

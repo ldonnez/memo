@@ -610,9 +610,14 @@ _git_init() {
     printf '%s\n' "Added '*' to $ignore_file"
   fi
 
-  # Allow encrypted notes
+  # Do not ignore directories (so git can see them)
+  if ! grep -qxF "!*/" "$ignore_file"; then
+    printf '%s\n' "!*/" >>"$ignore_file"
+    printf '%s\n' "Added '!*/' to $ignore_file"
+  fi
+
   # shellcheck disable=SC2066
-  for allow in "!*.gpg"; do
+  for allow in "!**/*.gpg"; do
     if ! grep -qxF "$allow" "$ignore_file"; then
       printf '%s\n' "$allow" >>"$ignore_file"
       printf '%s\n' "Added '$allow' to $ignore_file"
