@@ -4,6 +4,13 @@ setup() {
   bats_load_library bats-support
   bats_load_library bats-assert
 
+  # Ensure clean state
+  if [[ "$(uname)" == "Linux" ]]; then
+    rm -rf /dev/shm/memo.*
+  else
+    rm -rf /tmp/memo.*
+  fi
+
   # shellcheck source=memo.sh
   source "memo.sh"
 }
@@ -27,6 +34,14 @@ teardown() {
 
   run cat "$to_be_created_file"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
+
+  if [[ "$(uname)" == "Linux" ]]; then
+    run ls /dev/shm/memo.*
+    assert_output "ls: cannot access '/dev/shm/memo.*': No such file or directory"
+  else
+    run ls /tmp/memo.*
+    assert_output "ls: /tmp/memo.*: No such file or directory"
+  fi
 }
 
 @test "successfully creates a new memo with $CAPTURE_FILE.gpg as filename when it does not exist" {
