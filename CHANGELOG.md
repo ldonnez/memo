@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/ldonnez/memo/compare/v0.8.0...v0.8.1) (2026-01-11)
+
+
+### Bug Fixes
+
+* **init:** ensure .gpg files in subdirectories can be committed ([50bae3b](https://github.com/ldonnez/memo/commit/50bae3ba599b00e5fc34232421931192e98beb58))
+
 ## [0.8.0](https://github.com/ldonnez/memo/compare/v0.7.0...v0.8.0) (2025-12-30)
 
 
