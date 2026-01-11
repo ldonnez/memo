@@ -29,6 +29,8 @@ setup() {
     assert_equal "$SUPPORTED_EXTENSIONS" "md,org,txt"
     assert_equal "$CAPTURE_FILE" "inbox.md"
     assert_equal "$DEFAULT_IGNORE" ".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"
-    assert_equal "$DEFAULT_GIT_COMMIT" "$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')"
+
+    run echo "$DEFAULT_GIT_COMMIT"
+    assert_output --regexp "^$(hostname): sync [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$"
   )
 }
