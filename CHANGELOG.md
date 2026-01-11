@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.2](https://github.com/ldonnez/memo/compare/v0.8.1...v0.8.2) (2026-01-11)
+
+
+### Bug Fixes
+
+* correct cleanup of tmp files when upgrading ([54f6a6b](https://github.com/ldonnez/memo/commit/54f6a6b609e8e84cba0377c38cf41539bca1044c))
+* ensure cleanup of tmpdir ([372d3f2](https://github.com/ldonnez/memo/commit/372d3f2a3febc2add6728d3408a8d56476af22db))
+
 ## [0.8.1](https://github.com/ldonnez/memo/compare/v0.8.0...v0.8.1) (2026-01-11)
 
 
