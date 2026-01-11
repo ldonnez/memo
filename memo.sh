@@ -356,19 +356,19 @@ _gpg_decrypt() {
 # Creates a tempfile used for temporary storing decrypted content.
 # When on Linux it will create the tempfile on memory (/dev/shm), otherwise (e.g MacOS) /tmp is used.
 _make_tempfile() {
-  local encrypted_file="$1"
-  local relname="${encrypted_file##*/}" # remove path /path/to/2025-01-01.md.gpg -> 2025-01-01.md.gpg
-  local base="${relname%.gpg}"          # remove .gpg extension 2025-01-01.md.gpg -> 2025-01-01.md
+  local base="${1##*/}"
+  base="${base%.gpg}"
 
-  local tmpdir
-  if _dir_exists /dev/shm; then
-    tmpdir="/dev/shm"
-  else
-    tmpdir=$(mktemp -d 2>/dev/null || printf "/tmp")
+  local root="/tmp"
+  # Use ramdisk if exists
+  if _dir_exists "/dev/shm"; then
+    root="/dev/shm"
   fi
 
-  local tmpfile="$tmpdir/memo-${base}"
-  printf "%s" "$tmpfile"
+  local tmpdir
+  tmpdir=$(mktemp -d "$root/memo.XXXXXX") || return 1
+
+  echo "$tmpdir/$base"
 }
 
 # Checks if given path is inside $NOTES_DIR. Also works if the file is in subdir of $NOTES_DIR
@@ -1016,11 +1016,11 @@ memo() {
   gpg_file="$(_as_gpg "$filepath")"
 
   local tmpfile
-  tmpfile=$(_make_tempfile "${filepath##*/}")
+  tmpfile=$(_make_tempfile "$filepath") || return 1
 
   # Ensure cleanup on normal exit or error.
   # shellcheck disable=SC2064
-  trap "shred -u '$tmpfile' 2>/dev/null || rm -f '$tmpfile'" EXIT
+  trap "shred -u '$tmpfile' 2>/dev/null; rm -rf '${tmpfile%/*}'" EXIT
 
   local orig_hash="-"
 

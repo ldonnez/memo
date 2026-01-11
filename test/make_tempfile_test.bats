@@ -29,9 +29,9 @@ teardown() {
   run _make_tempfile "$NOTES_DIR/test.md.gpg"
   assert_success
   if [[ "$(uname)" == "Linux" ]]; then
-    assert_output "/dev/shm/memo-test.md"
+    assert_output --regexp "^/dev/shm/memo\.[A-Za-z0-9]{6}/test\.md$"
   else
-    assert_output --regexp "^.*/tmp\.[A-Za-z0-9]+\/memo-test\.md$"
+    assert_output --regexp ".*/memo\.[A-Za-z0-9]{6}/test\.md$"
   fi
 }
 
@@ -40,5 +40,5 @@ teardown() {
 
   run _make_tempfile "2025-01-01.md.gpg"
 
-  assert_output --regexp "^.*/tmp\.[A-Za-z0-9]+\/memo-2025-01-01\.md$"
+  assert_output --regexp ".*/memo\.[A-Za-z0-9]{6}/2025-01-01\.md$"
 }
