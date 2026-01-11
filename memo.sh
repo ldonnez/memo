@@ -1090,7 +1090,9 @@ memo_upgrade() {
     local script_path
     script_path=$(_resolve_script_path)
 
-    trap 'rm -rf "$tmp_dir" "$tmp_tar"' EXIT
+    # Ensure cleanup on normal exit or error.
+    # shellcheck disable=SC2064
+    trap "rm -rf '$tmp_dir' '$tmp_tar'" EXIT
 
     printf "Downloading %s\n" "$url"
     curl -sSL "$url" -o /tmp/memo.tar.gz
