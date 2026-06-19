@@ -19,7 +19,7 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Setup node
@@ -50,7 +50,7 @@ jobs:
     container: koalaman/shellcheck-alpine
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: shellcheck
         run: shellcheck *.sh test/*.bats test/*.bash
 
@@ -63,7 +63,7 @@ jobs:
         os: [ubuntu-latest, ubuntu-22.04, macos-latest, macos-15-intel]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Bats and bats libs
         id: setup-bats
