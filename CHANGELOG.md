@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/ldonnez/memo/compare/v0.8.2...v0.8.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* don't limit encrypting by supported extensions ([1d537fc](https://github.com/ldonnez/memo/commit/1d537fcfcd58e9e39fd8201de15728fee488580c))
+
 ## [0.8.2](https://github.com/ldonnez/memo/compare/v0.8.1...v0.8.2) (2026-01-11)
 
 
