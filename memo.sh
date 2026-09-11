@@ -902,10 +902,6 @@ memo_encrypt_files() {
 memo_encrypt() {
   local output_file="$1"
 
-  if ! _is_supported_extension "$output_file"; then
-    return 1
-  fi
-
   _gpg_encrypt "$output_file"
 }
 

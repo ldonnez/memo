@@ -24,11 +24,3 @@ teardown() {
   run cat "$output_gpg"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
-
-@test "returns 'Extension not supported' when input file uses an extension that is not supported" {
-  local file="test.word"
-
-  run memo_encrypt "$file.gpg" "$file"
-  assert_failure
-  assert_output "Extension: word not supported"
-}
