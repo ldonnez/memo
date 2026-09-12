@@ -121,35 +121,6 @@ _sha256() {
 # Common (private)
 ###############################################################################
 
-# Check if the filename ends with .txt OR .md OR .org.
-# Will remove .gpg extension if present before checking, for example test.md.gpg -> test.md
-_is_supported_extension() {
-  local filename="$1"
-
-  # Remove .gpg extension if present
-  local tmp_filename="${filename%.gpg}"
-
-  local extension
-  extension="$(_get_extension "$tmp_filename")"
-
-  local -a supported_extensions
-  IFS=',' read -r -a supported_extensions <<<"$SUPPORTED_EXTENSIONS"
-
-  # Loop through the array of supported extensions
-  if ((${#supported_extensions[@]} > 0)); then
-    for ext in "${supported_extensions[@]}"; do
-      ext=$(_trim "$ext")
-
-      if [[ "$extension" == "$ext" ]]; then
-        return 0
-      fi
-    done
-  fi
-
-  printf "Extension: %s not supported\n" "$extension" >&2
-  return 1
-}
-
 # Validates if all the given gpg_recipients exist in GPG keyring.
 _gpg_recipients_exists() {
   local recipients="$1"
@@ -211,11 +182,8 @@ _determine_filename() {
     return 0
   fi
 
-  if _is_supported_extension "$input"; then
-    printf "%s" "$input"
-    return 0
-  fi
-  return 1
+  printf "%s" "$input"
+  return 0
 }
 
 # Returns filepath based on input file name.
@@ -476,8 +444,6 @@ _get_ignored_files() {
   if [ -n "${DEFAULT_IGNORE:-}" ]; then
     IFS=',' read -ra defaults <<<"$DEFAULT_IGNORE"
     for pattern in "${defaults[@]}"; do
-      ext=$(_trim "$pattern")
-
       printf "%s\n" "$pattern"
     done
   fi
@@ -733,7 +699,6 @@ memo_decrypt_files() {
 #
 # Each file is encrypted in-place with `.gpg` extension using a temp file while preserving the original file name.
 # Errors are reported and skipped files are logged with its source.
-# Unsupported extensions are logged and skipped
 # When giving `--dry-run` flag, it simulates the operation without making changes.
 # The function supports glob patterns like <dir>/* and multiple files <file1> <file2>
 #
@@ -861,11 +826,6 @@ memo_encrypt_files() {
     fi
     [[ $skip -eq 1 ]] && continue
 
-    if ! _is_supported_extension "$file"; then
-      skip=1
-    fi
-    [[ $skip -eq 1 ]] && continue
-
     files_to_encrypt+=("$file")
   done
 
@@ -895,8 +855,6 @@ memo_encrypt_files() {
 
 # Encrypts the text to given input file from stdin.
 #
-# It will print error when trying to encrypt to an unsupported file extension.
-#
 # Usage:
 #   memo_encrypt <input_file> | "stdin"
 memo_encrypt() {
@@ -918,7 +876,7 @@ memo_decrypt() {
 # Checks if files in notes dir are correctly encrypted with gpg.
 #
 # Usefull to prevent leaking non encrypted data, for example, when publishing notes to a git repository.
-# .ignore file is taken into account. Every pattern in .ignore will not be checked, as wel as unsupported file extensions.
+# .ignore file is taken into account. Every pattern in .ignore will not be checked.
 #
 # Usage:
 #   memo_integrity_check
@@ -959,11 +917,6 @@ memo_integrity_check() {
     fi
     [[ $skip -eq 1 ]] && continue
 
-    if ! _file_is_gpg "$file" && ! _is_supported_extension "$file"; then
-      skip=1
-    fi
-    [[ $skip -eq 1 ]] && continue
-
     files_to_check+=("$file")
   done
 
@@ -997,8 +950,6 @@ memo_integrity_check() {
 # Opens or creates a file for editing.
 #
 # A temporary plaintext file is created that is encrypted back into a `.gpg` file after editing.
-# It will return error when trying to create a file with an unsupported extension.
-#
 # The temporary files will get deleted after encryption.
 #
 # Usage:
@@ -1252,7 +1203,6 @@ _set_default_values() {
   : "${GPG_RECIPIENTS:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
-  : "${SUPPORTED_EXTENSIONS:="md,org,txt"}"
   : "${DEFAULT_EXTENSION:="md"}"
   : "${CAPTURE_FILE:=inbox.$DEFAULT_EXTENSION}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"}"

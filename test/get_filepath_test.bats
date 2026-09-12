@@ -54,8 +54,9 @@ teardown() {
   assert_output "$NOTES_DIR/$CAPTURE_FILE"
 }
 
-@test "fails with unsupported extension" {
+@test "returns $NOTES_DIR/test/test.word path" {
   run _get_filepath "test/test.word"
-  assert_failure
-  assert_output "Extension: word not supported"
+  assert_success
+  assert_output "$NOTES_DIR/test/test.word"
+  [ -d "$NOTES_DIR/test" ]
 }

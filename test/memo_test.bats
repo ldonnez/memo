@@ -124,10 +124,13 @@ Added line"
   rm -f "$file"
 }
 
-@test "fails creating new file with unspported extension" {
+@test "successfully creates new file with any extension in notes dir ($NOTES_DIR)" {
   local file="new-file-test.word"
 
   run memo "$file"
-  assert_failure
-  assert_output "Extension: word not supported"
+  assert_success
+  assert_output ""
+
+  run cat "$NOTES_DIR/$file.gpg"
+  assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }

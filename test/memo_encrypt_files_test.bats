@@ -49,7 +49,7 @@ Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
   assert_success
 }
 
-@test "encrypts all the files unless they have an extension that is not supported" {
+@test "encrypts all the files regardless of extension" {
   local file1="$NOTES_DIR/test.md"
   printf "Hello World" >"$file1"
 
@@ -68,11 +68,11 @@ Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
 
   run memo_encrypt_files "all"
   assert_success
-  assert_output "Extension: word not supported
-Extension: word not supported
-Encrypted: test.md -> test.md.gpg
+  assert_output "Encrypted: test.md -> test.md.gpg
 Encrypted: test2.md -> test2.md.gpg
-Encrypted: test_dir/test4.md -> test_dir/test4.md.gpg"
+Encrypted: test3.word -> test3.word.gpg
+Encrypted: test_dir/test4.md -> test_dir/test4.md.gpg
+Encrypted: test_dir/test5.word -> test_dir/test5.word.gpg"
 
   run _file_exists "$file1"
   assert_failure
@@ -87,6 +87,9 @@ Encrypted: test_dir/test4.md -> test_dir/test4.md.gpg"
   assert_success
 
   run _file_exists "$file3"
+  assert_failure
+
+  run _file_exists "$file3.gpg"
   assert_success
 
   run _file_exists "$file4"
@@ -96,6 +99,9 @@ Encrypted: test_dir/test4.md -> test_dir/test4.md.gpg"
   assert_success
 
   run _file_exists "$file5"
+  assert_failure
+
+  run _file_exists "$file5.gpg"
   assert_success
 }
 
@@ -179,7 +185,7 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.gpg"
   assert_success
 }
 
-@test "Does not encrypt unsupported extensions" {
+@test "encrypts files with any extension" {
   local file1="$NOTES_DIR/test.md"
   printf "Hello World" >"$file1"
 
@@ -196,20 +202,26 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.gpg"
   cd "$NOTES_DIR"
   run memo_encrypt_files "test_dir/test2.md" "test_dir/test3.word" "test2.word"
   assert_success
-  assert_output "Extension: word not supported
-Extension: word not supported
-Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
+  assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg
+Encrypted: test_dir/test3.word -> test_dir/test3.word.gpg
+Encrypted: test2.word -> test2.word.gpg"
 
   run _file_exists "$file1"
   assert_success
 
   run _file_exists "$file2"
+  assert_failure
+
+  run _file_exists "$file2.gpg"
   assert_success
 
   run _file_exists "$file3"
   assert_failure
 
   run _file_exists "$file4"
+  assert_failure
+
+  run _file_exists "$file4.gpg"
   assert_success
 }
 
@@ -356,12 +368,17 @@ Would encrypt to: test_dir/test2.md.gpg"
   assert_output "File not in $NOTES_DIR"
 }
 
-@test "Does not work on a file with an unsupported extension" {
+@test "works on a file with a non-default extension" {
   local file="$NOTES_DIR/test.word"
   printf "Hello World" >"$file"
 
   run memo_encrypt_files "$file"
   assert_success
-  assert_output "Extension: word not supported
-Nothing to encrypt."
+  assert_output "Encrypted: test.word -> test.word.gpg"
+
+  run _file_exists "$file"
+  assert_failure
+
+  run _file_exists "$file.gpg"
+  assert_success
 }

@@ -55,10 +55,10 @@ teardown() {
   assert_output "$NOTES_DIR/$file"
 }
 
-@test "fails when new files extension is not supported" {
+@test "returns new file path in notes dir when file has a non-default extension" {
   local file="new-file.word"
 
   run _get_target_filepath "$file"
-  assert_failure
-  assert_output "Extension: word not supported"
+  assert_success
+  assert_output "$NOTES_DIR/$file"
 }

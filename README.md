@@ -95,10 +95,6 @@ NOTES_DIR=$HOME/notes
 # The default text editor for opening notes. If this variable is empty, memo will use the $EDITOR environment variable.
 EDITOR_CMD=$EDITOR
 
-# A comma-separated list of file extensions that memo supports.
-# This list is used for operations like batch encryption.
-SUPPORTED_EXTENSIONS="md,org,txt"
-
 # The default file extension for new notes created with memo.
 DEFAULT_EXTENSION="md"
 
