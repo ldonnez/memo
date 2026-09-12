@@ -15,7 +15,6 @@ setup() {
     local NOTES_DIR
     local EDITOR_CMD
     local DEFAULT_EXTENSION
-    local SUPPORTED_EXTENSIONS
     local CAPTURE_FILE
     local DEFAULT_IGNORE
     local DEFAULT_GIT_COMMIT
@@ -26,7 +25,6 @@ setup() {
     # Use readlink -f to follow symlinks here since macOS symlinks temp from /var/... to /private/var/
     assert_equal "$EDITOR_CMD" "nano"
     assert_equal "$DEFAULT_EXTENSION" "md"
-    assert_equal "$SUPPORTED_EXTENSIONS" "md,org,txt"
     assert_equal "$CAPTURE_FILE" "inbox.md"
     assert_equal "$DEFAULT_IGNORE" ".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"
 

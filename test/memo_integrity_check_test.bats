@@ -59,7 +59,7 @@ teardown() {
 Ignored (.ignore): ignored.txt"
 }
 
-@test "Does not check files with unsupported extension" {
+@test "does not pass integrity check when a plaintext file has a non-default extension" {
   local wordfile="$NOTES_DIR/test.word"
   printf "Hello Word" >"$wordfile"
 
@@ -67,6 +67,6 @@ Ignored (.ignore): ignored.txt"
   _gpg_encrypt "$mdfile" <<<"Hello World"
 
   run memo_integrity_check
-  assert_success
-  assert_output --partial "Extension: word not supported"
+  assert_failure
+  assert_output --partial "Some files failed the integrity check. Please investigate."
 }

@@ -8,7 +8,6 @@ setup_suite() {
   export NOTES_DIR="$TEST_HOME/notes"
   export EDITOR_CMD="true" # avoid launching an actual editor
   export GPG_RECIPIENTS="mock@example.com"
-  export SUPPORTED_EXTENSIONS="md,org,txt"
   export DEFAULT_EXTENSION="md"
   export CAPTURE_FILE="inbox.$DEFAULT_EXTENSION"
   export DEFAULT_IGNORE=".ignore,.git/*,.DS_store"

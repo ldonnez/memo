@@ -43,8 +43,7 @@ setup() {
   assert_output "test.md"
 }
 
-@test "fails when filename with unsupported extension is given" {
+@test "returns test.word when test.word is given" {
   run _determine_filename "test.word"
-  assert_failure
-  assert_output "Extension: word not supported"
+  assert_output "test.word"
 }
