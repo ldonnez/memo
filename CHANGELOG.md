@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/ldonnez/memo/compare/v0.9.0...v0.9.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* ensure GPG knows that no TTY is available ([40b6e02](https://github.com/ldonnez/memo/commit/40b6e02f306433b99732e3f317643288d007ad33))
+
 ## [0.9.0](https://github.com/ldonnez/memo/compare/v0.8.3...v0.9.0) (2026-09-13)
 
 
