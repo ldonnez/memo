@@ -286,13 +286,13 @@ _gpg_encrypt() {
 
   # If input_path is empty, gpg reads from stdin.
   if [[ -z "$input" ]]; then
-    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")"
+    gpg --batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")"
   else
     if ! _file_exists "$input"; then
       printf "File not found: %s" "$input"
       exit 1
     fi
-    gpg --quiet --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")" "$input"
+    gpg --batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")" "$input"
   fi
 }
 
