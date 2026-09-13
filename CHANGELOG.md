@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/ldonnez/memo/compare/v0.8.3...v0.9.0) (2026-09-13)
+
+
+### Code Refactoring
+
+* remove supported extensions check ([dcbe8ca](https://github.com/ldonnez/memo/commit/dcbe8cabfcf3d057f4230017eb4f296ccdf20518))
+
 ## [0.8.3](https://github.com/ldonnez/memo/compare/v0.8.2...v0.8.3) (2026-09-11)
 
 
