@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/ldonnez/memo/compare/v0.9.1...v0.10.0) (2026-09-17)
+
+
+### Features
+
+* add bash/zsh completions ([11a26c1](https://github.com/ldonnez/memo/commit/11a26c1086addb9e550395f225f212e639004ae4))
+
+
+### Bug Fixes
+
+* shellcheck issue ([3589dcd](https://github.com/ldonnez/memo/commit/3589dcdb135291ba021a70b10e271081c2372554))
+
 ## [0.9.1](https://github.com/ldonnez/memo/compare/v0.9.0...v0.9.1) (2026-09-13)
 
 
