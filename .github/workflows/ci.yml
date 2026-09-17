@@ -52,7 +52,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
       - name: shellcheck
-        run: shellcheck *.sh test/*.bats test/*.bash
+        run: shellcheck *.sh test/*.bats test/*.bash completions/memo.bash
 
   bats:
     needs: shellcheck

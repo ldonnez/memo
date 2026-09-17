@@ -38,10 +38,12 @@ teardown() {
 
   run main
   assert_success
-  assert_output "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz
-Installing memo to $TEST_HOME/.local/bin...
-Installed memo to $TEST_HOME/.local/bin
-Make sure $TEST_HOME/.local/bin is in your PATH."
+  assert_line --index 0 --partial "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
+  assert_line --index 1 "Installing memo to $TEST_HOME/.local/bin..."
+  assert_line --index 2 --partial "Completions installed to"
+  assert_line --index 3 --partial "Completions installed to"
+  assert_line --index 4 "Installed memo to $TEST_HOME/.local/bin"
+  assert_line --index 5 "Make sure $TEST_HOME/.local/bin is in your PATH."
 }
 
 @test "Does not install memo curl could not resolve host" {

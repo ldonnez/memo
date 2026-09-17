@@ -1,0 +1,90 @@
+#compdef memo
+# zsh completion for memo. Install as the file "_memo" on $fpath (e.g.
+# /usr/local/share/zsh/site-functions is already on it); then restart the
+# shell or run `compinit`. No bashcompinit/bash sourcing needed.
+
+# Resolves NOTES_DIR from the memo config file (see memo.sh), defaulting to
+# $HOME/notes.
+_memo_notes_dir() {
+  local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
+  local notes_dir="$HOME/notes"
+
+  if [[ -r "$config_file" ]]; then
+    local d
+    d="$({
+      source "$config_file"
+      : "${NOTES_DIR:=$HOME/notes}"
+      print -r -- "$NOTES_DIR"
+    } 2>/dev/null)"
+    [[ -n "$d" ]] && notes_dir="$d"
+  fi
+
+  print -r -- "$notes_dir"
+}
+
+# Completes the argument that follows a memo subcommand.
+_memo_args() {
+  local cmd="$1"
+  local notes_dir
+  notes_dir="$(_memo_notes_dir)"
+
+  case "$cmd" in
+  decrypt | decrypt-files)
+    [[ -d "$notes_dir" ]] && _files -W "$notes_dir" -g '*.gpg'
+    ;;
+  encrypt-files)
+    [[ -d "$notes_dir" ]] && _files -W "$notes_dir" -g '^*.gpg'
+    ;;
+  sync | init)
+    _values 'argument' git
+    ;;
+  upgrade)
+    _values 'argument' -f --force
+    ;;
+  help)
+    _values 'argument' help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade version today yesterday tomorrow
+    ;;
+  encrypt)
+    _files
+    ;;
+  inject)
+    _values 'argument' -a --append
+    ;;
+  esac
+}
+
+# memo CLI commands, initializer for the completion below.
+# The first positional after `memo` is the command name; anything further is an
+# argument to that command.
+_memo() {
+  local curcontext="$curcontext" state line
+  local -a commands
+  commands=(
+    'help:Show help message'
+    'encrypt:Encrypt text from stdin to a file'
+    'decrypt:Decrypt a .gpg file to stdout'
+    'encrypt-files:Encrypt files in-place'
+    'decrypt-files:Decrypt .gpg files in-place'
+    'files:Browse files with fzf'
+    'integrity-check:Verify files are properly encrypted'
+    'sync:Sync notes with git'
+    'init:Configure git for encrypted notes'
+    'upgrade:Upgrade memo in-place'
+    'uninstall:Uninstall memo'
+    'version:Print the current version'
+    'today:Open the note for today'
+    'yesterday:Open the note for yesterday'
+    'tomorrow:Open the note for tomorrow'
+  )
+
+  if (( CURRENT == 2 )); then
+    # The word right after `memo` is a command name; _ describe was validated to
+    # list here.
+    _describe 'command' commands
+  elif (( CURRENT > 2 )); then
+    # Anything else is an argument to the subcommand named by words[2].
+    _memo_args "${words[2]}"
+  fi
+}
+
+_memo "$@"

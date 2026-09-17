@@ -35,7 +35,7 @@ jobs:
           VERSION=${{ steps.release.outputs.tag_name }}
           TARBALL_NAME="memo.tar.gz"
 
-          tar -czf $TARBALL_NAME -C . memo.sh
+          tar -czf $TARBALL_NAME -C . memo.sh completions
 
           gh release upload "$VERSION" $TARBALL_NAME \
             --repo ${{ github.repository }}
