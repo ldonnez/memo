@@ -43,11 +43,13 @@ teardown() {
 
     run memo_upgrade <<<""
     assert_success
-    assert_output "Upgrade available: v0.1.0 -> v0.2.0
-Proceeding with upgrade...
-Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz
-Upgrade memo in $(_resolve_script_path)...
-Upgrade success!"
+    assert_line --index 0 "Upgrade available: v0.1.0 -> v0.2.0"
+    assert_line --index 1 "Proceeding with upgrade..."
+    assert_line --index 2 "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
+    assert_line --index 3 "Upgrade memo in $(_resolve_script_path)..."
+    assert_line --index 4 --partial "Completions installed to"
+    assert_line --index 5 --partial "Completions installed to"
+    assert_line --index 6 "Upgrade success!"
   )
 }
 
@@ -62,10 +64,12 @@ Upgrade success!"
 
     run memo_upgrade "--force"
     assert_success
-    assert_output "Upgrade available: v0.1.0 -> v0.2.0
-Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz
-Upgrade memo in $(_resolve_script_path)...
-Upgrade success!"
+    assert_line --index 0 "Upgrade available: v0.1.0 -> v0.2.0"
+    assert_line --index 1 "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
+    assert_line --index 2 "Upgrade memo in $(_resolve_script_path)..."
+    assert_line --index 3 --partial "Completions installed to"
+    assert_line --index 4 --partial "Completions installed to"
+    assert_line --index 5 "Upgrade success!"
   )
 }
 

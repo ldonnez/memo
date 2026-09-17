@@ -38,6 +38,19 @@ main() {
   mkdir -p "$MEMO_INSTALL_DIR"
   install -m 0755 /tmp/memo/memo.sh "$MEMO_INSTALL_DIR"/memo
 
+  # Completions go to the system dirs when writable, else per-user dirs.
+  local zsh_dir="/usr/local/share/zsh/site-functions"
+  local bash_dir="/usr/local/share/bash-completion/completions"
+  [ -w /usr/local/share/zsh ] || zsh_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+  [ -w /usr/local/share/bash-completion ] || bash_dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+
+  mkdir -p "$zsh_dir" "$bash_dir"
+  install -m 0644 /tmp/memo/completions/_memo "$zsh_dir"/_memo
+  install -m 0644 /tmp/memo/completions/memo.bash "$bash_dir"/memo
+
+  printf "Completions installed to %s\n" "$zsh_dir"
+  printf "Completions installed to %s\n" "$bash_dir"
+
   printf "Installed memo to %s\n" "$MEMO_INSTALL_DIR"
   printf "Make sure %s is in your PATH.\n" "$MEMO_INSTALL_DIR"
 
