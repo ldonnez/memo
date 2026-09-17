@@ -497,7 +497,7 @@ _git_sync() {
     return 1
   fi
 
-  if git -C "$NOTES_DIR" ls-files -u | grep -q '.*'; then
+  if grep -q '.*' < <(git -C "$NOTES_DIR" ls-files -u); then
     printf "Error: Conflict detected during pull. Please resolve manually.\n"
     return 1
   fi
