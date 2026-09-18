@@ -5,9 +5,29 @@ REPO="ldonnez/memo"
 VERSION="${VERSION:-latest}"
 MEMO_INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
+# Prints latest release version of memo. Prints an explicit error and exits
+# non-zero when the version cannot be determined.
+_get_latest_version() {
+  local response=""
+  local tag_name=""
+
+  response=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>&1) || {
+    printf "Error: could not fetch the latest version from GitHub (curl exit code %s).\n" "$?" >&2
+    return 1
+  }
+
+  tag_name=$(printf '%s\n' "$response" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') || true
+  if [ -z "$tag_name" ]; then
+    printf "Error: could not parse the latest version from GitHub's response.\n" >&2
+    return 1
+  fi
+
+  printf "%s\n" "$tag_name"
+}
+
 _get_version() {
   if [ "$VERSION" = "latest" ]; then
-    curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+    _get_latest_version
   else
     printf "%s" "$VERSION"
   fi
@@ -17,7 +37,6 @@ main() {
   local version
 
   if ! version=$(_get_version); then
-    printf "Version not found."
     return 1
   fi
 

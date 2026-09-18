@@ -460,8 +460,23 @@ _get_ignored_files() {
 }
 
 # Returns latest release version of memo by using the Github API.
+# Prints an explicit error and exits 1 when the version cannot be determined.
 _get_latest_version() {
-  curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+  local response=""
+  local tag_name=""
+
+  response=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>&1) || {
+    printf "Error: could not fetch the latest version from GitHub (curl exit code %s).\n" "$?" >&2
+    return 1
+  }
+
+  tag_name=$(printf '%s\n' "$response" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/') || true
+  if [ -z "$tag_name" ]; then
+    printf "Error: could not parse the latest version from GitHub's response.\n" >&2
+    return 1
+  fi
+
+  printf "%s\n" "$tag_name"
 }
 
 # Determines if current installed version is older then given version. Returns exit code 1 when no upgrade is necessary, otherwise will return 0.
@@ -1047,7 +1062,6 @@ memo_upgrade() {
   fi
 
   if ! latest_version=$(_get_latest_version); then
-    printf "Version not found."
     return 1
   fi
 

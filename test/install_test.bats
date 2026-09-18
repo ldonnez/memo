@@ -83,6 +83,22 @@ teardown() {
 
     run main
     assert_failure
-    assert_output "Version not found."
+    assert_output "Error: could not fetch the latest version from GitHub (curl exit code 6)."
+  )
+}
+
+@test "Fails when the latest version cannot be parsed from the GitHub response" {
+  # Run in separate subshell to avoid collision with other tests
+  (
+    # Mock curl with a response that has no tag_name
+    # shellcheck disable=SC2329
+    curl() {
+      printf '%s\n' '{"message": "Mocked response without tag_name"}'
+      return 0
+    }
+
+    run main
+    assert_failure
+    assert_output "Error: could not parse the latest version from GitHub's response."
   )
 }
