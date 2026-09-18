@@ -29,26 +29,37 @@ _memo_args() {
   notes_dir="$(_memo_notes_dir)"
 
   case "$cmd" in
-  decrypt | decrypt-files)
+  decrypt)
     [[ -d "$notes_dir" ]] && _files -W "$notes_dir" -g '*.gpg'
     ;;
+  decrypt-files)
+    if [[ -d "$notes_dir" ]]; then
+      _values 'argument' all
+      _files -W "$notes_dir" -g '*.gpg'
+    fi
+    ;;
   encrypt-files)
-    [[ -d "$notes_dir" ]] && _files -W "$notes_dir" -g '^*.gpg'
+    if [[ -d "$notes_dir" ]]; then
+      _values 'argument' all
+      _files -W "$notes_dir" -g '^*.gpg'
+      _values 'option' \
+        '--dry-run[Simulate encryption without making changes]' \
+        '--exclude[Exclude a file pattern]:pattern:'
+    fi
     ;;
   sync | init)
-    _values 'argument' git
+    (( CURRENT == 3 )) && _values 'argument' git
     ;;
   upgrade)
-    _values 'argument' -f --force
+    _values 'option' \
+      '-f[Force upgrade]' \
+      '--force[Force upgrade]'
     ;;
   help)
-    _values 'argument' help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade version today yesterday tomorrow
+    _values 'argument' help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade uninstall version today yesterday tomorrow
     ;;
   encrypt)
     _files
-    ;;
-  inject)
-    _values 'argument' -a --append
     ;;
   esac
 }
