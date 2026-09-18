@@ -15,8 +15,8 @@ setup() {
   # git checkout (completions are installed by name from $1/completions/).
   local fake_src="$BATS_TEST_TMPDIR/fake-src"
   mkdir -p "$fake_src/completions"
-  printf '#compdef memo\n' > "$fake_src/completions/_memo"
-  printf '# bash\n' > "$fake_src/completions/memo.bash"
+  printf '#compdef memo\n' >"$fake_src/completions/_memo"
+  printf '# bash\n' >"$fake_src/completions/memo.bash"
   SRC_DIR="$fake_src"
   export SRC_DIR
 

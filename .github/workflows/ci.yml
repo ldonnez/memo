@@ -54,8 +54,23 @@ jobs:
       - name: shellcheck
         run: shellcheck *.sh test/*.bats test/*.bash completions/memo.bash
 
+  shfmt:
+    needs: commitlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Install shfmt
+        run: go install mvdan.cc/sh/v3/cmd/shfmt@latest
+      - name: Check formatting
+        run: shfmt -d -i 2 *.sh test/*.bats test/*.bash completions/memo.bash
+
   bats:
-    needs: shellcheck
+    needs: [shellcheck, shfmt]
     name: bats test
     runs-on: ${{ matrix.os }}
     strategy:

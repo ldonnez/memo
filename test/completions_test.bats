@@ -11,7 +11,7 @@ setup() {
   # instead of reading the developer's real $HOME/notes.
   export XDG_CONFIG_HOME="$BATS_TEST_TMPDIR/config"
   mkdir -p "$XDG_CONFIG_HOME/memo"
-  printf 'NOTES_DIR="%s"\n' "$BATS_TEST_TMPDIR/notes" > "$XDG_CONFIG_HOME/memo/config"
+  printf 'NOTES_DIR="%s"\n' "$BATS_TEST_TMPDIR/notes" >"$XDG_CONFIG_HOME/memo/config"
   export NOTES_DIR="$BATS_TEST_TMPDIR/notes"
   mkdir -p "$NOTES_DIR"
 }
