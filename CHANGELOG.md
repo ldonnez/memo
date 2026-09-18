@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/ldonnez/memo/compare/v0.10.1...v0.10.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* ensure instructions when default completion directory is not writable ([cc7b2f3](https://github.com/ldonnez/memo/commit/cc7b2f3af6b8e534394fe84aedf0ff0734a355af))
+
 ## [0.10.1](https://github.com/ldonnez/memo/compare/v0.10.0...v0.10.1) (2026-09-18)
 
 
