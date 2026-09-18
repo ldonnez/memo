@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.3](https://github.com/ldonnez/memo/compare/v0.10.2...v0.10.3) (2026-09-18)
+
+
+### Bug Fixes
+
+* ensure error when retrieving latest version fails ([72cdbfd](https://github.com/ldonnez/memo/commit/72cdbfd64278bc4575b4a97b0d74dcbe55b4c4ac))
+
 ## [0.10.2](https://github.com/ldonnez/memo/compare/v0.10.1...v0.10.2) (2026-09-18)
 
 
