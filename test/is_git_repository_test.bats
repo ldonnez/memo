@@ -33,7 +33,7 @@ teardown() {
 @test "Fails if not a git repo" {
   rm -rf "$NOTES_DIR/.git"
 
-  run _is_git_repository 
+  run _is_git_repository
   assert_failure
   assert_output "Not inside a git repository"
 }

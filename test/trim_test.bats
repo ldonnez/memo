@@ -13,7 +13,6 @@ setup() {
   assert_output "aaaaa"
 }
 
-
 @test "removes trailing whitespace" {
   run _trim "aaaaa "
   assert_output "aaaaa"
