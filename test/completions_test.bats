@@ -39,7 +39,7 @@ setup() {
   refute_output --partial "encrypt"
 }
 
-@test "bash: decrypt-files suggests only .gpg files" {
+@test "bash: decrypt-files suggests all plus only .gpg files" {
   touch "$NOTES_DIR/alpha.txt"
   touch "$NOTES_DIR/secret.gpg"
   touch "$NOTES_DIR/deep.gpg"
@@ -52,12 +52,30 @@ setup() {
     printf "%s\n" "${COMPREPLY[@]}"
   '
   assert_success
+  assert_output --partial "all"
   assert_output --partial "secret.gpg"
   assert_output --partial "deep.gpg"
   refute_output --partial "alpha.txt"
 }
 
-@test "bash: encrypt-files excludes .gpg files" {
+@test "bash: decrypt does not suggest all" {
+  touch "$NOTES_DIR/alpha.txt"
+  touch "$NOTES_DIR/secret.gpg"
+
+  run bash -c '
+    source "completions/memo.bash"
+    COMP_WORDS=(memo decrypt "")
+    COMP_CWORD=2
+    _memo
+    printf "%s\n" "${COMPREPLY[@]}"
+  '
+  assert_success
+  assert_output --partial "secret.gpg"
+  refute_output --partial "all"
+  refute_output --partial "alpha.txt"
+}
+
+@test "bash: encrypt-files suggests all, options, and non-.gpg files" {
   touch "$NOTES_DIR/alpha.txt"
   touch "$NOTES_DIR/secret.gpg"
 
@@ -69,8 +87,40 @@ setup() {
     printf "%s\n" "${COMPREPLY[@]}"
   '
   assert_success
+  assert_output --partial "all"
+  assert_output --partial "--dry-run"
+  assert_output --partial "--exclude"
   assert_output --partial "alpha.txt"
   refute_output --partial "secret.gpg"
+}
+
+@test "bash: encrypt-files filters options and files by prefix" {
+  touch "$NOTES_DIR/alpha.txt"
+
+  run bash -c '
+    source "completions/memo.bash"
+    COMP_WORDS=(memo encrypt-files --ex)
+    COMP_CWORD=2
+    _memo
+    printf "%s\n" "${COMPREPLY[@]}"
+  '
+  assert_success
+  assert_output --partial "--exclude"
+  refute_output --partial "--dry-run"
+  refute_output --partial "alpha.txt"
+}
+
+@test "bash: upgrade completes -f and --force" {
+  run bash -c '
+    source "completions/memo.bash"
+    COMP_WORDS=(memo upgrade "")
+    COMP_CWORD=2
+    _memo
+    printf "%s\n" "${COMPREPLY[@]}"
+  '
+  assert_success
+  assert_output --partial "-f"
+  assert_output --partial "--force"
 }
 
 @test "bash: _memo_get_notes_dir honors NOTES_DIR from config" {
@@ -80,6 +130,33 @@ setup() {
   '
   assert_success
   assert_output "$NOTES_DIR"
+}
+
+@test "bash: sync/init offer git only once, not after it is present" {
+  run bash -c '
+    source "completions/memo.bash"
+    COMP_WORDS=(memo sync "")
+    COMP_CWORD=2
+    _memo
+    printf "%s\n" "${COMPREPLY[@]}"
+  '
+  assert_success
+  assert_output --partial "git"
+
+  run bash -c '
+    source "completions/memo.bash"
+    COMP_WORDS=(memo sync git "")
+    COMP_CWORD=3
+    _memo
+    printf "%s\n" "${COMPREPLY[@]}"
+  '
+  assert_success
+  refute_output --partial "git"
+}
+
+@test "zsh: sync/init offer git only on the first argument slot" {
+  run cat "completions/_memo"
+  assert_output --partial "(( CURRENT == 3 )) && _values 'argument' git"
 }
 
 @test "zsh: completion file is syntactically valid" {
@@ -109,4 +186,29 @@ setup() {
 @test "zsh: encrypt-files excludes .gpg files" {
   run cat "completions/_memo"
   assert_output --partial "-g '^*.gpg'"
+}
+
+@test "zsh: decrypt-files completes all" {
+  run cat "completions/_memo"
+  assert_output --partial "_values 'argument' all"
+  assert_output --partial "-g '*.gpg'"
+}
+
+@test "zsh: encrypt-files completes all and options" {
+  run cat "completions/_memo"
+  assert_output --partial "_values 'argument' all"
+  assert_output --partial "--dry-run[Simulate encryption without making changes]"
+  assert_output --partial "--exclude[Exclude a file pattern]"
+}
+
+@test "zsh: upgrade completes options with _values" {
+  run cat "completions/_memo"
+  assert_output --partial "_values 'option'"
+  assert_output --partial "-f[Force upgrade]"
+  assert_output --partial "--force[Force upgrade]"
+}
+
+@test "zsh: help completion lists uninstall" {
+  run cat "completions/_memo"
+  assert_output --partial "help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade uninstall"
 }

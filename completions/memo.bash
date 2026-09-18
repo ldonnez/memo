@@ -47,20 +47,33 @@ _memo() {
       candidates+=("$c")
     done < <(compgen -f -- "$cur")
     ;;
-  decrypt | decrypt-files)
+  decrypt)
     while IFS= read -r c; do
       candidates+=("$c")
     done < <(cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.gpg' -- "$cur")
     ;;
+  decrypt-files)
+    while IFS= read -r c; do
+      candidates+=("$c")
+    done < <({
+      compgen -W "all" -- "$cur"
+      cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.gpg' -- "$cur"
+    })
+    ;;
   encrypt-files)
     while IFS= read -r c; do
       candidates+=("$c")
-    done < <(cd "$notes_dir" 2>/dev/null && compgen -f -X '*.gpg' -- "$cur")
+    done < <({
+      compgen -W "all --dry-run --exclude" -- "$cur"
+      cd "$notes_dir" 2>/dev/null && compgen -f -X '*.gpg' -- "$cur"
+    })
     ;;
   sync | init)
-    while IFS= read -r c; do
-      candidates+=("$c")
-    done < <(compgen -W "git" -- "$cur")
+    if ((COMP_CWORD == 2)); then
+      while IFS= read -r c; do
+        candidates+=("$c")
+      done < <(compgen -W "git" -- "$cur")
+    fi
     ;;
   upgrade)
     while IFS= read -r c; do
