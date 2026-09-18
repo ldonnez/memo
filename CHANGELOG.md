@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/ldonnez/memo/compare/v0.10.0...v0.10.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* add missing options in completions ([2014702](https://github.com/ldonnez/memo/commit/2014702ef52888fc7537d5aabf12f3cc9d0b7340))
+
 ## [0.10.0](https://github.com/ldonnez/memo/compare/v0.9.1...v0.10.0) (2026-09-17)
 
 
