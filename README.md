@@ -16,6 +16,7 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 - [Installation](#installation)
   - [Install with a single command](#install-with-a-single-command)
   - [Install with Git](#install-with-git)
+  - [Shell completion](#shell-completion)
 - [Configuration](#configuration)
   - [Example config](#example-config)
 - [Usage](#usage)
@@ -72,6 +73,36 @@ This will:
 
 > [!IMPORTANT]
 > Ensure ~/.local/bin is in your $PATH!
+
+### Shell completion
+
+memo ships completion files for **bash** (`completions/memo.bash`) and **zsh** (`completions/_memo`).
+
+The install script places them in system directories when writable:
+
+- `/usr/local/share/zsh/site-functions` (zsh)
+- `/usr/local/share/bash-completion/completions` (bash)
+
+No extra setup is needed there: `/usr/local/share/zsh/site-functions` is part of zsh's default `fpath`, and bash-completion looks up its completions directory automatically.
+
+When those directories are **not** writable (e.g. `/usr/local` is root-owned on Ubuntu), the completions are installed per-user instead:
+
+- `${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions` (zsh)
+- `${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions` (bash)
+
+**bash**: if [bash-completion](https://github.com/scop/bash-completion) is installed, the per-user directory is picked up automatically — no configuration needed.
+
+**zsh**: the per-user directory is _not_ part of zsh's default `fpath`, so you must add it to your `~/.zshrc` **before** `compinit`:
+
+```zsh
+fpath=(
+  ~/.local/share/zsh/site-functions/
+  $fpath
+)
+autoload -Uz compinit && compinit
+```
+
+Then start a new shell (or re-run `compinit`) to load the completion.
 
 ## Configuration
 

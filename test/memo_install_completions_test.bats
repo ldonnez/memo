@@ -35,9 +35,32 @@ setup() {
 @test "install_completions installs zsh and bash completion files" {
   run _memo_install_completions "$SRC_DIR"
   assert_success
-  assert_output "Completions installed to $ZSH_DIR
-Completions installed to $BASH_DIR"
+  assert_line --partial "Completions installed to $ZSH_DIR"
+  assert_line --partial "Completions installed to $BASH_DIR"
   [ -f "$ZSH_DIR/_memo" ]
+  [ -f "$BASH_DIR/memo" ]
+}
+
+@test "install_completions warns when the system zsh dir is not writable" {
+  [ -w /usr/local/share/zsh ] && skip "system zsh dir is writable; fallback not in use"
+
+  run _memo_install_completions "$SRC_DIR"
+  assert_success
+  assert_output --partial "WARNING: /usr/local/share/zsh is not writable."
+  assert_output --partial "Zsh completion installed to $ZSH_DIR"
+  assert_output --partial "fpath=( $ZSH_DIR \$fpath )"
+  assert_output --partial "Completions installed to $ZSH_DIR"
+  [ -f "$ZSH_DIR/_memo" ]
+}
+
+@test "install_completions warns when the system bash dir is not writable" {
+  [ -w /usr/local/share/bash-completion ] && skip "system bash dir is writable; fallback not in use"
+
+  run _memo_install_completions "$SRC_DIR"
+  assert_success
+  assert_output --partial "WARNING: /usr/local/share/bash-completion is not writable."
+  assert_output --partial "Bash completion installed to $BASH_DIR"
+  assert_output --partial "Completions installed to $BASH_DIR"
   [ -f "$BASH_DIR/memo" ]
 }
 

@@ -24,6 +24,14 @@ setup() {
   tar() {
     return 0
   }
+
+  # Resolve the target dirs exactly like _memo_install_completions does, so
+  # assertions hold on both writable /usr/local hosts and rootless docker.
+  ZSH_DIR="/usr/local/share/zsh/site-functions"
+  BASH_DIR="/usr/local/share/bash-completion/completions"
+  [ -w /usr/local/share/zsh ] || ZSH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+  [ -w /usr/local/share/bash-completion ] || BASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+  export ZSH_DIR BASH_DIR
 }
 
 teardown() {
@@ -47,9 +55,9 @@ teardown() {
     assert_line --index 1 "Proceeding with upgrade..."
     assert_line --index 2 "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
     assert_line --index 3 "Upgrade memo in $(_resolve_script_path)..."
-    assert_line --index 4 --partial "Completions installed to"
-    assert_line --index 5 --partial "Completions installed to"
-    assert_line --index 6 "Upgrade success!"
+    assert_line --partial "Completions installed to $ZSH_DIR"
+    assert_line --partial "Completions installed to $BASH_DIR"
+    [[ "${lines[${#lines[@]} - 1]}" == "Upgrade success!" ]]
   )
 }
 
@@ -67,9 +75,9 @@ teardown() {
     assert_line --index 0 "Upgrade available: v0.1.0 -> v0.2.0"
     assert_line --index 1 "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
     assert_line --index 2 "Upgrade memo in $(_resolve_script_path)..."
-    assert_line --index 3 --partial "Completions installed to"
-    assert_line --index 4 --partial "Completions installed to"
-    assert_line --index 5 "Upgrade success!"
+    assert_line --partial "Completions installed to $ZSH_DIR"
+    assert_line --partial "Completions installed to $BASH_DIR"
+    [[ "${lines[${#lines[@]} - 1]}" == "Upgrade success!" ]]
   )
 }
 
