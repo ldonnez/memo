@@ -134,3 +134,56 @@ Added line"
   run cat "$NOTES_DIR/$file.gpg"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
+
+@test "keeps a passphrase note passphrase encrypted when it is edited" {
+  # Run in subshell to avoid collision with other tests
+  (
+    # shellcheck disable=SC2030,SC2031
+    local MEMO_PASSPHRASE_FILE="$TEST_HOME/pass.txt"
+    printf "secret passphrase" >"$MEMO_PASSPHRASE_FILE"
+
+    local file="$NOTES_DIR/sym_edit.md.gpg"
+
+    _gpg_encrypt "$file" "" "true" <<<"Hello World"
+
+    # shellcheck disable=SC2329
+    fake_editor() {
+      printf "Added line" >>"$1"
+    }
+
+    # Override editor to append a line automatically
+    local EDITOR_CMD=fake_editor
+
+    run memo "$file"
+    assert_success
+    assert_output ""
+
+    # The note must still be a passphrase note, not a recipient-key note.
+    run _file_is_symmetric "$file"
+    assert_success
+
+    run _gpg_decrypt "$file"
+    assert_output "Hello World
+Added line"
+  )
+}
+
+@test "does not re-encrypt a passphrase note that was not changed" {
+  # Run in subshell to avoid collision with other tests
+  (
+    # shellcheck disable=SC2030,SC2031
+    local MEMO_PASSPHRASE_FILE="$TEST_HOME/pass.txt"
+    printf "secret passphrase" >"$MEMO_PASSPHRASE_FILE"
+
+    local file="$NOTES_DIR/sym_untouched.md.gpg"
+
+    _gpg_encrypt "$file" "" "true" <<<"Hello World"
+
+    run memo "$file"
+    assert_success
+    assert_output "No changes detected; skipping re-encryption."
+
+    run _file_is_symmetric "$file"
+    assert_success
+  )
+}

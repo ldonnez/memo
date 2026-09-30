@@ -382,3 +382,27 @@ Would encrypt to: test_dir/test2.md.gpg"
   run _file_exists "$file.gpg"
   assert_success
 }
+
+@test "encrypts files with a passphrase when --symmetric is given" {
+  (
+    # shellcheck disable=SC2030,SC2031
+    local MEMO_PASSPHRASE_FILE="$TEST_HOME/pass.txt"
+    printf "secret passphrase" >"$MEMO_PASSPHRASE_FILE"
+
+    local file="$NOTES_DIR/sym_batch.md"
+    printf "Batch content" >"$file"
+
+    run memo_encrypt_files --symmetric --passphrase-file "$MEMO_PASSPHRASE_FILE" "$file"
+    assert_success
+    assert_output --partial "Encrypted: sym_batch.md -> sym_batch.md.gpg"
+
+    run _file_exists "$file.gpg"
+    assert_success
+
+    run _file_is_symmetric "$file.gpg"
+    assert_success
+
+    run memo_decrypt --passphrase-file "$MEMO_PASSPHRASE_FILE" "$file.gpg"
+    assert_output "Batch content"
+  )
+}

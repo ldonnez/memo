@@ -45,18 +45,24 @@ _memo() {
   encrypt)
     while IFS= read -r c; do
       candidates+=("$c")
-    done < <(compgen -f -- "$cur")
+    done < <({
+      compgen -W "--symmetric --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
+      compgen -f -- "$cur"
+    })
     ;;
   decrypt)
     while IFS= read -r c; do
       candidates+=("$c")
-    done < <(cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.gpg' -- "$cur")
+    done < <({
+      compgen -W "--passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
+      cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.gpg' -- "$cur"
+    })
     ;;
   decrypt-files)
     while IFS= read -r c; do
       candidates+=("$c")
     done < <({
-      compgen -W "all" -- "$cur"
+      compgen -W "all --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
       cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.gpg' -- "$cur"
     })
     ;;
@@ -64,7 +70,7 @@ _memo() {
     while IFS= read -r c; do
       candidates+=("$c")
     done < <({
-      compgen -W "all --dry-run --exclude" -- "$cur"
+      compgen -W "all --dry-run --exclude --symmetric --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
       cd "$notes_dir" 2>/dev/null && compgen -f -X '*.gpg' -- "$cur"
     })
     ;;

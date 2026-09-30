@@ -272,32 +272,160 @@ _build_gpg_recipients() {
 # Encrypts the content of given input file (path) to given output file (path)
 # This will NOT encrypt the file itself only the content. (gpg --armor)
 # When no second argument is given we interpet content from stdin
+# When the third argument is 'true' the content is encrypted with a passphrase
+# instead of a recipient key (gpg --symmetric)
 _gpg_encrypt() {
   local output_path="$1"
   local input="${2-}"
+  local symmetric="${3:-false}"
 
-  local -a recipients=()
+  local -a opts=()
 
-  _build_gpg_recipients "$GPG_RECIPIENTS" recipients
+  if [[ "$symmetric" == "true" ]]; then
+    # pinentry has to be able to ask for the passphrase, so --batch and --no-tty
+    # are left out here. _gpg_run adds the options for a configured passphrase.
+    opts=(--yes --armor -z 0 --compress-algo none --symmetric --cipher-algo AES256)
+  else
+    local -a recipients=()
 
-  if [[ ${#recipients[@]} -eq 0 ]]; then
-    return 1
+    _build_gpg_recipients "$GPG_RECIPIENTS" recipients
+
+    if [[ ${#recipients[@]} -eq 0 ]]; then
+      return 1
+    fi
+
+    opts=(--batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}")
   fi
 
   # If input_path is empty, gpg reads from stdin.
   if [[ -z "$input" ]]; then
-    gpg --batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")"
+    _gpg_run "${opts[@]}" -o "$(_as_gpg "$output_path")"
   else
     if ! _file_exists "$input"; then
       printf "File not found: %s" "$input"
       exit 1
     fi
-    gpg --batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}" -o "$(_as_gpg "$output_path")" "$input"
+    _gpg_run "${opts[@]}" -o "$(_as_gpg "$output_path")" "$input"
   fi
+}
+
+# Dumps the packets of given input file (path) to stdout
+#
+# Only ever used to look at a note without reading its content, so it must not
+# start a prompt: gpg asks gpg-agent to unlock the session key of a passphrase
+# note while dumping its packets, and --batch and --no-tty do not stop that,
+# because the prompt comes from the agent. Without --pinentry-mode loopback
+# gpg-agent starts pinentry, which blocks until somebody types the passphrase.
+# Loopback keeps the request inside gpg, which then gives up right away and only
+# reports that on stderr, so the packet dump on stdout stays usable.
+_gpg_list_packets() {
+  local input_path="$1"
+
+  gpg --list-packets --batch --no-tty --pinentry-mode loopback "$input_path"
+}
+
+# Whether a file is encrypted with a passphrase rather than a recipient key
+_file_is_symmetric() {
+  local input_path="$1"
+
+  [[ -s "$input_path" ]] || return 1
+
+  # gpg exits non-zero when it cannot unlock the session key, which is expected
+  # here, so the exit status is deliberately ignored. Its stderr is dropped as
+  # well: looking at a note must not print anything.
+  local packets
+  packets="$(_gpg_list_packets "$input_path" 2>&1)" || true
+
+  [[ "$packets" == *"symkey enc packet"* ]]
+}
+
+# Whether a file holds a gpg message memo can read: a recipient-key note or a
+# passphrase note
+_file_is_gpg_message() {
+  local input_path="$1"
+
+  if _file_is_symmetric "$input_path"; then
+    return 0
+  fi
+
+  _gpg_list_packets "$input_path" >/dev/null
+}
+
+# Resolves the passphrase into _MEMO_PASSPHRASE, reading MEMO_PASSPHRASE_FILE,
+# MEMO_PASSPHRASE_FD or MEMO_PASSPHRASE_ENV in that order of precedence. Only the
+# first line is read, which is what gpg itself takes from a passphrase file.
+# Leaves _MEMO_PASSPHRASE empty when no source is set, which leaves the asking to
+# pinentry. Called by _gpg_run, so a passphrase is only resolved when gpg runs.
+_load_passphrase() {
+  _MEMO_PASSPHRASE=""
+
+  if [[ -n "${MEMO_PASSPHRASE_FILE:-}" ]]; then
+    if ! _file_exists "$MEMO_PASSPHRASE_FILE"; then
+      printf "Passphrase file not found: %s\n" "$MEMO_PASSPHRASE_FILE"
+      return 1
+    fi
+    IFS= read -r _MEMO_PASSPHRASE <"$MEMO_PASSPHRASE_FILE" || true
+  elif [[ -n "${MEMO_PASSPHRASE_FD:-}" ]]; then
+    # A descriptor can only be read once, so the value is kept for the gpg calls
+    # that follow, like encrypting a whole directory in one go.
+    if [[ -z "${_MEMO_PASSPHRASE_FROM_FD+x}" ]]; then
+      IFS= read -r _MEMO_PASSPHRASE <&"$MEMO_PASSPHRASE_FD" || true
+      _MEMO_PASSPHRASE_FROM_FD="$_MEMO_PASSPHRASE"
+    else
+      _MEMO_PASSPHRASE="$_MEMO_PASSPHRASE_FROM_FD"
+    fi
+  elif [[ -n "${MEMO_PASSPHRASE_ENV:-}" ]]; then
+    if [[ -z "${!MEMO_PASSPHRASE_ENV:-}" ]]; then
+      printf "Passphrase environment variable not set: %s\n" "$MEMO_PASSPHRASE_ENV"
+      return 1
+    fi
+    _MEMO_PASSPHRASE="${!MEMO_PASSPHRASE_ENV}"
+  fi
+
+  if [[ -z "$_MEMO_PASSPHRASE" ]] && _has_passphrase_source; then
+    printf "Passphrase is empty\n"
+    return 1
+  fi
+}
+
+# Whether a passphrase source is configured at all
+_has_passphrase_source() {
+  [[ -n "${MEMO_PASSPHRASE_FILE:-}" || -n "${MEMO_PASSPHRASE_FD:-}" || -n "${MEMO_PASSPHRASE_ENV:-}" ]]
+}
+
+# Consumes a --passphrase-fd, --passphrase-file or --passphrase-env option by
+# putting its value into the matching MEMO_PASSPHRASE_* variable
+_set_passphrase_option() {
+  case "$1" in
+  --passphrase-file) MEMO_PASSPHRASE_FILE="$2" ;;
+  --passphrase-fd) MEMO_PASSPHRASE_FD="$2" ;;
+  --passphrase-env) MEMO_PASSPHRASE_ENV="$2" ;;
+  esac
+}
+
+# Runs gpg with the given options.
+#
+# A resolved passphrase goes to gpg on file descriptor 3 through a here-string:
+# stdin stays free for the note content, and the passphrase stays out of the
+# process list and off disk. Without one, gpg asks pinentry as usual.
+_gpg_run() {
+  local -a opts=("$@")
+
+  _load_passphrase || return 1
+
+  if [[ -z "$_MEMO_PASSPHRASE" ]]; then
+    gpg "${opts[@]}"
+    return
+  fi
+
+  # The options go first: gpg stops reading options at the first file name.
+  gpg --pinentry-mode loopback --passphrase-fd 3 "${opts[@]}" 3<<<"$_MEMO_PASSPHRASE"
 }
 
 # Decrypts given input file (path) to given output file (path)
 # When output_path is not given (default) it will decrypt content to stdout. This is important when decrypting to external buffers like in Neovim.
+# When a passphrase source is set (see _load_passphrase) the decrypt runs
+# non-interactively, without asking pinentry.
 _gpg_decrypt() {
   local input_path="$1" output_path="${2-""}"
 
@@ -306,15 +434,17 @@ _gpg_decrypt() {
     exit 1
   fi
 
+  local -a opts=(--quiet --yes)
+
   # Send output to stdout.
   if [[ -z "$output_path" ]]; then
-    gpg --quiet --yes --decrypt "$input_path" || {
+    _gpg_run "${opts[@]}" --decrypt "$input_path" || {
       printf "Failed to decrypt %s\n" "$input_path" >&2
       return 1
     }
   else
     # Redirect output to the specified file.
-    gpg --quiet --yes --output "$output_path" --decrypt "$input_path" || {
+    _gpg_run "${opts[@]}" --output "$output_path" --decrypt "$input_path" || {
       printf "Failed to decrypt %s\n" "$input_path" >&2
       return 1
     }
@@ -631,8 +761,29 @@ memo_files() {
     exit 1
   fi
 
+  # A passphrase note only previews when the passphrase reaches gpg, which is
+  # what _load_passphrase covers.
+  _load_passphrase || return 1
+
+  local -a preview=(gpg --quiet)
+  local preview_prefix=""
+
+  if [[ -n "$_MEMO_PASSPHRASE" ]]; then
+    # fzf runs the preview in a shell of its own, where descriptor 3 cannot be
+    # set up from here. gpg reads the note from the file given as argument, so
+    # stdin is free for the passphrase. Exported so the preview shell reads it
+    # by name.
+    export MEMO_PREVIEW_PASSPHRASE="$_MEMO_PASSPHRASE"
+    preview_prefix="printf '%s' \"\$MEMO_PREVIEW_PASSPHRASE\" | "
+    preview+=(--pinentry-mode loopback --passphrase-fd 0)
+  fi
+  preview+=(--decrypt)
+
+  local preview_cmd
+  printf -v preview_cmd '%q ' "${preview[@]}"
+
   local result
-  result=$(rg --files --glob "*.gpg" "$NOTES_DIR" | fzf --preview "gpg --quiet --decrypt {} 2>/dev/null | head -100")
+  result=$(rg --files --glob "*.gpg" "$NOTES_DIR" | fzf --preview "$preview_prefix$preview_cmd{} 2>/dev/null | head -100")
 
   [[ -z "$result" ]] && return
 
@@ -648,14 +799,30 @@ memo_files() {
 # Usage:
 #   memo_decrypt_files <file1.gpg | glob | all> [file2.gpg ...]
 memo_decrypt_files() {
-  if [[ $# -eq 0 ]]; then
-    printf "Usage: memo decrypt-files <filename.gpg | glob | all> ...\n"
+  local -a targets=()
+
+  # A symmetric note can only be decrypted when the passphrase reaches gpg.
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --passphrase-fd | --passphrase-file | --passphrase-env)
+      _set_passphrase_option "$1" "$2"
+      shift
+      ;;
+    *)
+      targets+=("$1")
+      ;;
+    esac
+    shift
+  done
+
+  if [[ ${#targets[@]} -eq 0 ]]; then
+    printf "Usage: memo decrypt-files [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <filename.gpg | glob | all> ...\n"
     return 1
   fi
 
   local files=()
 
-  for target in "$@"; do
+  for target in "${targets[@]}"; do
     if [[ "$target" == "all" ]]; then
       while IFS= read -r f; do
         files+=("$f")
@@ -721,15 +888,9 @@ memo_decrypt_files() {
 #   memo_encrypt_files <file1|glob|all> [file2 ...] [--exclude pattern] [--dry-run]
 memo_encrypt_files() {
   local dry=0
+  local symmetric="false"
   local -a exclude_patterns=()
   local -a ignore_patterns=()
-  local -a recipients=()
-
-  _build_gpg_recipients "$GPG_RECIPIENTS" recipients
-
-  if [[ ${#recipients[@]} -eq 0 ]]; then
-    return 1
-  fi
 
   # capture .ignore into ignore_patterns[]
   while IFS= read -r pat; do
@@ -741,6 +902,11 @@ memo_encrypt_files() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
     --dry-run) dry=1 ;;
+    --symmetric) symmetric="true" ;;
+    --passphrase-fd | --passphrase-file | --passphrase-env)
+      _set_passphrase_option "$1" "$2"
+      shift
+      ;;
     --exclude)
       exclude_patterns+=("$2")
       shift
@@ -752,8 +918,18 @@ memo_encrypt_files() {
     shift
   done
 
+  if [[ "$symmetric" != "true" ]]; then
+    local -a recipients=()
+
+    _build_gpg_recipients "$GPG_RECIPIENTS" recipients
+
+    if [[ ${#recipients[@]} -eq 0 ]]; then
+      return 1
+    fi
+  fi
+
   if [[ ${#args[@]} -eq 0 ]]; then
-    printf "Usage: memo encrypt-files <filename | glob | all> [more files …] [--dry-run] [--exclude pattern]\n"
+    printf "Usage: memo encrypt-files <filename | glob | all> [more files …] [--dry-run] [--exclude pattern] [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR]\n"
     return 1
   fi
 
@@ -858,7 +1034,7 @@ memo_encrypt_files() {
     local f
     for f in "${files_to_encrypt[@]}"; do
       local outfile="$f.gpg"
-      if ! _gpg_encrypt "$outfile" "$f"; then
+      if ! _gpg_encrypt "$outfile" "$f" "$symmetric"; then
         printf "Failed to encrypt: %s\n" "$f"
         return 1
       fi
@@ -871,19 +1047,57 @@ memo_encrypt_files() {
 # Encrypts the text to given input file from stdin.
 #
 # Usage:
-#   memo_encrypt <input_file> | "stdin"
+#   memo_encrypt [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file> | "stdin"
 memo_encrypt() {
-  local output_file="$1"
+  local output_file=""
+  local symmetric="false"
 
-  _gpg_encrypt "$output_file"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --symmetric) symmetric="true" ;;
+    --passphrase-fd | --passphrase-file | --passphrase-env)
+      _set_passphrase_option "$1" "$2"
+      shift
+      ;;
+    *)
+      output_file="$1"
+      ;;
+    esac
+    shift
+  done
+
+  if [[ -z "$output_file" ]]; then
+    printf "Usage: memo encrypt [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>\n"
+    return 1
+  fi
+
+  _gpg_encrypt "$output_file" "" "$symmetric"
 }
 
 # Decrypts given input file with a PGP MESSAGE to stdout.
 #
 # Usage:
-#   memo_decrypt <input_file>.gpg
+#   memo_decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>.gpg
 memo_decrypt() {
-  local input_file="$1"
+  local input_file=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --passphrase-fd | --passphrase-file | --passphrase-env)
+      _set_passphrase_option "$1" "$2"
+      shift
+      ;;
+    *)
+      input_file="$1"
+      ;;
+    esac
+    shift
+  done
+
+  if [[ -z "$input_file" ]]; then
+    printf "Usage: memo decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>.gpg\n"
+    return 1
+  fi
 
   _gpg_decrypt "$input_file"
 }
@@ -945,7 +1159,7 @@ memo_integrity_check() {
   for f in "${files_to_check[@]}"; do
     printf "Checking %s\n" "$f..."
 
-    if gpg --list-packets "$f" >/dev/null; then
+    if _file_is_gpg_message "$f"; then
       printf "Valid GPG-encrypted file.\n"
     else
       printf "NOT a valid GPG-encrypted file.\n"
@@ -985,8 +1199,15 @@ memo() {
   trap "shred -u '$tmpfile' 2>/dev/null; rm -rf '${tmpfile%/*}'" EXIT
 
   local orig_hash="-"
+  local symmetric="false"
 
   if _file_exists "$gpg_file"; then
+    # A note encrypted with a passphrase has to stay a passphrase note when it
+    # is saved, so remember how it was encrypted before opening it.
+    if _file_is_symmetric "$gpg_file"; then
+      symmetric="true"
+    fi
+
     orig_hash=$(
       _gpg_decrypt "$gpg_file" |
         tee "$tmpfile" |
@@ -1010,7 +1231,7 @@ memo() {
   fi
 
   # Encrypt only if changed
-  _gpg_encrypt "$filepath" "$tmpfile"
+  _gpg_encrypt "$filepath" "$tmpfile" "$symmetric"
 }
 
 # Installs the bundled tab-completions to the system dirs when writable, else
@@ -1207,16 +1428,28 @@ Description:
 
 Commands:
   encrypt INPUTFILE                 Encrypts the text from stdin to given inputfile
+                                      - --symmetric encrypts with a passphrase
+                                        instead of a recipient key
+                                      - --passphrase-fd N, --passphrase-file PATH,
+                                        --passphrase-env VAR supply the
+                                        passphrase without prompting
 
   decrypt FILE.gpg                  Decrypts FILE.gpg and print to stdout
+                                      - --passphrase-fd N, --passphrase-file PATH,
+                                        --passphrase-env VAR supply the
+                                        passphrase without prompting
 
   encrypt-files [FILES...]          Encrypt files in-place inside notes dir
                                       - Accepts 'all' or explicit files
                                       - Supports glob patterns (e.g. dir/*)
+                                      - --dry-run, --exclude pattern
+                                      - --symmetric, --passphrase-fd N,
+                                        --passphrase-file PATH
 
   decrypt-files [FILES...]          Decrypt .gpg files in-place inside notes dir
                                       - Accepts 'all' or explicit .gpg files
                                       - Supports glob patterns (e.g. dir/*.gpg)
+                                      - --passphrase-fd N, --passphrase-file PATH
 
   files                             Browse all files in fzf (decrypts preview)
   integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
@@ -1238,6 +1471,16 @@ Examples:
   memo decrypt out.gpg              Decrypt out.gpg to stdout
   memo encrypt-files all            Encrypt all files in notes dir
   memo decrypt-files *.gpg          Decrypt matching .gpg files
+  memo encrypt --symmetric out.gpg <in.txt            Encrypt stdin, passphrase asked by pinentry
+  memo encrypt --symmetric --passphrase-file pass.txt out.gpg <in.txt
+                                      Encrypt stdin with a passphrase from a file
+  MEMO_PASSPHRASE=... memo encrypt --symmetric --passphrase-env MEMO_PASSPHRASE out.gpg <in.txt
+                                      Encrypt stdin with a passphrase from the environment
+
+Notes:
+  A note encrypted with a passphrase is re-encrypted the same way when opened
+  with 'memo FILE', so it never turns into a recipient-key note.
+
 EOF
 }
 
@@ -1249,6 +1492,10 @@ EOF
 # Variables prefixed with _ should not be overriden in $XDG_CONFIG_HOME/.config/memo
 _set_default_values() {
   : "${GPG_RECIPIENTS:=}"
+  : "${MEMO_PASSPHRASE_FD:=}"
+  : "${MEMO_PASSPHRASE_ENV:=}"
+  : "${MEMO_PASSPHRASE_FILE:=}"
+  : "${_MEMO_PASSPHRASE:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
   : "${DEFAULT_EXTENSION:="md"}"
