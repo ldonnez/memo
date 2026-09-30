@@ -23,6 +23,18 @@ GPG_RECIPIENTS="$GPG_RECIPIENTS"
 EDITOR_CMD="true"
 EOF
 
+  # Make the test gpg-agent fail instead of ask: memo.sh supplies every
+  # passphrase it needs, so a prompt here means a code path would block a real
+  # terminal as well. /bin/false as pinentry makes gpg error out right away,
+  # turning such a regression into a failing test instead of a hanging suite.
+  mkdir -p "$HOME/.gnupg"
+  chmod 700 "$HOME/.gnupg"
+  cat >"$HOME/.gnupg/gpg-agent.conf" <<EOF
+allow-loopback-pinentry
+pinentry-program /bin/false
+EOF
+  chmod 600 "$HOME/.gnupg/gpg-agent.conf"
+
   gpg --batch --gen-key <<EOF
 %no-protection
 Key-Type: RSA

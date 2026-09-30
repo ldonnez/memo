@@ -70,3 +70,29 @@ Ignored (.ignore): ignored.txt"
   assert_failure
   assert_output --partial "Some files failed the integrity check. Please investigate."
 }
+
+@test "passes a passphrase note" {
+  (
+    # shellcheck disable=SC2030,SC2031
+    local MEMO_PASSPHRASE_FILE="$TEST_HOME/pass.txt"
+    printf "secret passphrase" >"$MEMO_PASSPHRASE_FILE"
+
+    local file="$NOTES_DIR/sym.md.gpg"
+    _gpg_encrypt "$file" "" "true" <<<"Hello Symmetric"
+
+    run memo_integrity_check
+    assert_success
+    assert_output --partial "Valid GPG-encrypted file."
+    refute_output --partial "NOT a valid GPG-encrypted file."
+  )
+}
+
+@test "passes a recipient-key note" {
+  local file="$NOTES_DIR/key.md.gpg"
+  _gpg_encrypt "$file" <<<"Hello World"
+
+  run memo_integrity_check
+  assert_success
+  assert_output --partial "Valid GPG-encrypted file."
+  refute_output --partial "NOT a valid GPG-encrypted file."
+}

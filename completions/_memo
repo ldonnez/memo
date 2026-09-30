@@ -31,12 +31,20 @@ _memo_args() {
   case "$cmd" in
   decrypt)
     [[ -d "$notes_dir" ]] && _files -W "$notes_dir" -g '*.gpg'
+    _values 'option' \
+      '--passphrase-fd[Read the passphrase from the given file descriptor]:fd:' \
+      '--passphrase-file[Read the passphrase from the given file]:file:_files' \
+      '--passphrase-env[Read the passphrase from the given environment variable]:variable:'
     ;;
   decrypt-files)
     if [[ -d "$notes_dir" ]]; then
       _values 'argument' all
       _files -W "$notes_dir" -g '*.gpg'
     fi
+    _values 'option' \
+      '--passphrase-fd[Read the passphrase from the given file descriptor]:fd:' \
+      '--passphrase-file[Read the passphrase from the given file]:file:_files' \
+      '--passphrase-env[Read the passphrase from the given environment variable]:variable:'
     ;;
   encrypt-files)
     if [[ -d "$notes_dir" ]]; then
@@ -44,6 +52,10 @@ _memo_args() {
       _files -W "$notes_dir" -g '^*.gpg'
       _values 'option' \
         '--dry-run[Simulate encryption without making changes]' \
+        '--symmetric[Encrypt with a passphrase instead of a recipient key]' \
+        '--passphrase-fd[Read the passphrase from the given file descriptor]:fd:' \
+        '--passphrase-file[Read the passphrase from the given file]:file:_files' \
+      '--passphrase-env[Read the passphrase from the given environment variable]:variable:' \
         '--exclude[Exclude a file pattern]:pattern:'
     fi
     ;;
@@ -60,6 +72,11 @@ _memo_args() {
     ;;
   encrypt)
     _files
+    _values 'option' \
+      '--symmetric[Encrypt with a passphrase instead of a recipient key]' \
+      '--passphrase-fd[Read the passphrase from the given file descriptor]:fd:' \
+      '--passphrase-file[Read the passphrase from the given file]:file:_files' \
+      '--passphrase-env[Read the passphrase from the given environment variable]:variable:'
     ;;
   esac
 }

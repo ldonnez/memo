@@ -137,6 +137,21 @@ DEFAULT_IGNORE=".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"
 
 # Git commit to be used when running memo sync git
 DEFAULT_GIT_COMMIT=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')
+
+# Optional file holding the passphrase used for symmetric (passphrase encrypted) notes.
+# When set, memo never asks for a passphrase interactively. Keep it readable by
+# you only (chmod 600).
+MEMO_PASSPHRASE_FILE=
+
+# Optional file descriptor to read the passphrase from, used when
+# MEMO_PASSPHRASE_FILE is not set. The descriptor has to be inherited by memo,
+# for example: memo encrypt --passphrase-fd 3 out.md.gpg 3<pass.txt
+MEMO_PASSPHRASE_FD=
+
+# Optional name of the environment variable holding the passphrase, used when
+# neither of the above is set. Keeps the passphrase out of argv and off disk,
+# which is what editors and scripts with no terminal need.
+MEMO_PASSPHRASE_ENV=
 ```
 
 ## Usage
@@ -154,14 +169,54 @@ Opening and editing files is the default action:
 
 `memo` FILE → Opens or creates a file named FILE.
 
+A note encrypted with a passphrase stays a passphrase note when opened with
+`memo FILE`, so it never turns into a recipient-key note.
+
+### Passphrase encrypted notes
+
+Pass `--symmetric` to encrypt with a passphrase instead of a recipient key:
+
+```bash
+# Encrypt stdin with a passphrase, asked for by pinentry
+memo encrypt --symymmetric out.md.gpg <<<"Hello World"
+
+# Encrypt stdin with a passphrase taken from a file, no prompt
+memo encrypt --symmetric --passphrase-file ~/.secrets/memo.pass out.md.gpg <<<"Hello World"
+
+# Encrypt stdin with a passphrase read from file descriptor 3
+memo encrypt --symmetric --passphrase-fd 3 out.md.gpg 3<~/.secrets/memo.pass <<<"Hello World"
+
+# Encrypt stdin with a passphrase taken from the environment
+MEMO_PASSPHRASE=hunter2 memo encrypt --symmetric --passphrase-env MEMO_PASSPHRASE out.md.gpg <<<"Hello World"
+
+# Encrypt files in-place with a passphrase
+memo encrypt-files --symmetric --passphrase-file ~/.secrets/memo.pass all
+```
+
+Reading a passphrase note works without any flag, since pinentry asks for it:
+
+```bash
+memo out.md.gpg
+memo decrypt out.md.gpg
+```
+
+Scripts and editors that cannot prompt pass the passphrase explicitly:
+
+```bash
+memo decrypt --passphrase-file ~/.secrets/memo.pass out.md.gpg
+memo decrypt-files --passphrase-file ~/.secrets/memo.pass all
+
+MEMO_PASSPHRASE=hunter2 memo decrypt --passphrase-env MEMO_PASSPHRASE out.md.gpg
+```
+
 ### Commands
 
 | Command                    | Description                                                                                                                                                                                                               |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `encrypt INPUTFILE`        | Encrypts text from stdin to given `INPUTFILE`.                                                                                                                                                                            |
-| `decrypt FILE.gpg`         | Decrypt `FILE.gpg` and print to stdout.                                                                                                                                                                                   |
-| `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`).                                                                                                    |
-| `decrypt-files [FILES...]` | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names or glob patterns (e.g. `dir/*.gpg`).                                                                                  |
+| `encrypt INPUTFILE`        | Encrypts text from stdin to given `INPUTFILE`. Accepts `--symmetric`, `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.                                                                                               |
+| `decrypt FILE.gpg`         | Decrypt `FILE.gpg` and print to stdout. Accepts `--passphrase-fd N` and `--passphrase-file PATH`.                                                                                                                         |
+| `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`), plus `--dry-run`, `--exclude`, `--symmetric`, `--passphrase-fd N` and `--passphrase-file PATH`. |
+| `decrypt-files [FILES...]` | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names or glob patterns (e.g. `dir/*.gpg`), plus `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.         |
 | `files`                    | Browse all files in `fzf` (decrypts preview automatically).                                                                                                                                                               |
 | `integrity-check`          | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                                                                                                              |
 | `sync [git]`               | Stages changes, creates a local git commit using $DEFAULT_GIT_COMMIT, and pushes them to the remote repository.                                                                                                           |
@@ -188,6 +243,9 @@ memo decrypt out.md.gpg
 # Encrypt/decrypt multiple files
 memo encrypt-files all
 memo decrypt-files *.gpg
+
+# Encrypt with a passphrase instead of a recipient key
+memo encrypt --symmetric --passphrase-file ~/.secrets/memo.pass out.md.gpg <<<"Hello World"
 ```
 
 ## Integrations
