@@ -53,3 +53,15 @@ EOF
   # make executables in src/ visible to PATH
   PATH="$DIR/..:$PATH"
 }
+
+teardown_suite() {
+  # A running gpg-agent is found through a socket inside the homedir, so the
+  # daemons have to go before the directory does. --kill all takes keyboxd with
+  # it, and the temp home goes with them.
+  gpgconf --kill all >/dev/null 2>&1 || true
+
+  if [ -n "${TEST_HOME:-}" ]; then
+    cd / || true
+    rm -rf "$TEST_HOME"
+  fi
+}
