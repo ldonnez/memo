@@ -29,17 +29,30 @@ teardown() {
   assert_output --partial "Hello World from stdin"
 }
 
-@test "add .gpg extension to output file when missing" {
+@test "add the note extension to output file when missing" {
   local output_path="$NOTES_DIR/test.md"
 
   run _gpg_encrypt "$output_path" <<<"Hello World from stdin"
   assert_success
 
-  run _file_exists "$output_path.gpg"
+  run _file_exists "$output_path.asc"
   assert_success
 
-  run cat "$output_path.gpg"
+  run cat "$output_path.asc"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
+
+  run _gpg_decrypt "$output_path.asc"
+  assert_output --partial "Hello World from stdin"
+}
+
+@test "adds the .gpg extension when EXTENSION is gpg" {
+  local output_path="$NOTES_DIR/test.md"
+
+  EXTENSION="gpg" run _gpg_encrypt "$output_path" <<<"Hello World from stdin"
+  assert_success
+
+  run _file_exists "$output_path.gpg"
+  assert_success
 
   run _gpg_decrypt "$output_path.gpg"
   assert_output --partial "Hello World from stdin"

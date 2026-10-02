@@ -13,7 +13,7 @@ teardown() {
   rm -rf "${NOTES_DIR:?}"/*
 }
 
-@test "returns success when is gpg" {
+@test "returns success for a .gpg note" {
   local file="$NOTES_DIR/test.md.gpg"
   touch "$file"
 
@@ -21,7 +21,15 @@ teardown() {
   assert_success
 }
 
-@test "returns failure when file is not gpg" {
+@test "returns success for an .asc note" {
+  local file="$NOTES_DIR/test.md.asc"
+  touch "$file"
+
+  run _file_is_gpg "$file"
+  assert_success
+}
+
+@test "returns failure when file is not a note" {
   run _file_is_gpg "$NOTES_DIR/not-gpg.md"
   assert_failure
 }

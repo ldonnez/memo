@@ -37,7 +37,7 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 
 ## Features
 
-- **Always encrypted** — only `.gpg` files are stored on disk
+- **Always encrypted** — only `.asc` notes (and legacy `.gpg` ones) are stored on disk
 - **Transparent editing** — decrypt to a temp file (or inline in $EDITOR), auto-encrypt on save. Will not re-encrypt when no changes made.
 - **Ignore rules** — `.ignore` file with defaults (`.git/*`, `.DS_Store`, etc.)
 - **Cross-platform** — Linux & macOS
@@ -126,8 +126,10 @@ NOTES_DIR=$HOME/notes
 # The default text editor for opening notes. If this variable is empty, memo will use the $EDITOR environment variable.
 EDITOR_CMD=$EDITOR
 
-# The default file extension for new notes created with memo.
-DEFAULT_EXTENSION="md"
+# The extension new notes are encrypted with. Notes with the .gpg extension are
+# read as well, so existing notes keep opening and stay where they are. Set this
+# to gpg to keep writing .gpg files.
+EXTENSION="asc"
 
 # The default file to open when running memo without any arguments.
 CAPTURE_FILE="inbox.md"
@@ -145,7 +147,7 @@ MEMO_PASSPHRASE_FILE=
 
 # Optional file descriptor to read the passphrase from, used when
 # MEMO_PASSPHRASE_FILE is not set. The descriptor has to be inherited by memo,
-# for example: memo encrypt --passphrase-fd 3 out.md.gpg 3<pass.txt
+# for example: memo encrypt --passphrase-fd 3 out.md.asc 3<pass.txt
 MEMO_PASSPHRASE_FD=
 
 # Optional name of the environment variable holding the passphrase, used when
@@ -178,16 +180,16 @@ Pass `--symmetric` to encrypt with a passphrase instead of a recipient key:
 
 ```bash
 # Encrypt stdin with a passphrase, asked for by pinentry
-memo encrypt --symymmetric out.md.gpg <<<"Hello World"
+memo encrypt --symymmetric out.md.asc <<<"Hello World"
 
 # Encrypt stdin with a passphrase taken from a file, no prompt
-memo encrypt --symmetric --passphrase-file ~/.secrets/memo.pass out.md.gpg <<<"Hello World"
+memo encrypt --symmetric --passphrase-file ~/.secrets/memo.pass out.md.asc <<<"Hello World"
 
 # Encrypt stdin with a passphrase read from file descriptor 3
-memo encrypt --symmetric --passphrase-fd 3 out.md.gpg 3<~/.secrets/memo.pass <<<"Hello World"
+memo encrypt --symmetric --passphrase-fd 3 out.md.asc 3<~/.secrets/memo.pass <<<"Hello World"
 
 # Encrypt stdin with a passphrase taken from the environment
-MEMO_PASSPHRASE=hunter2 memo encrypt --symmetric --passphrase-env MEMO_PASSPHRASE out.md.gpg <<<"Hello World"
+MEMO_PASSPHRASE=hunter2 memo encrypt --symmetric --passphrase-env MEMO_PASSPHRASE out.md.asc <<<"Hello World"
 
 # Encrypt files in-place with a passphrase
 memo encrypt-files --symmetric --passphrase-file ~/.secrets/memo.pass all
@@ -196,17 +198,17 @@ memo encrypt-files --symmetric --passphrase-file ~/.secrets/memo.pass all
 Reading a passphrase note works without any flag, since pinentry asks for it:
 
 ```bash
-memo out.md.gpg
-memo decrypt out.md.gpg
+memo out.md.asc
+memo decrypt out.md.asc
 ```
 
 Scripts and editors that cannot prompt pass the passphrase explicitly:
 
 ```bash
-memo decrypt --passphrase-file ~/.secrets/memo.pass out.md.gpg
+memo decrypt --passphrase-file ~/.secrets/memo.pass out.md.asc
 memo decrypt-files --passphrase-file ~/.secrets/memo.pass all
 
-MEMO_PASSPHRASE=hunter2 memo decrypt --passphrase-env MEMO_PASSPHRASE out.md.gpg
+MEMO_PASSPHRASE=hunter2 memo decrypt --passphrase-env MEMO_PASSPHRASE out.md.asc
 ```
 
 ### Commands
@@ -214,13 +216,13 @@ MEMO_PASSPHRASE=hunter2 memo decrypt --passphrase-env MEMO_PASSPHRASE out.md.gpg
 | Command                    | Description                                                                                                                                                                                                               |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `encrypt INPUTFILE`        | Encrypts text from stdin to given `INPUTFILE`. Accepts `--symmetric`, `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.                                                                                               |
-| `decrypt FILE.gpg`         | Decrypt `FILE.gpg` and print to stdout. Accepts `--passphrase-fd N` and `--passphrase-file PATH`.                                                                                                                         |
+| `decrypt FILE.asc`         | Decrypt `FILE.asc` and print to stdout. Accepts `--passphrase-fd N` and `--passphrase-file PATH`.                                                                                                                         |
 | `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`), plus `--dry-run`, `--exclude`, `--symmetric`, `--passphrase-fd N` and `--passphrase-file PATH`. |
-| `decrypt-files [FILES...]` | Decrypt `.gpg` files in-place inside the notes directory. Accepts `all`, explicit `.gpg` file names or glob patterns (e.g. `dir/*.gpg`), plus `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.         |
+| `decrypt-files [FILES...]` | Decrypt notes in-place inside the notes directory. Accepts `all`, explicit `.asc`/`.gpg` file names or glob patterns (e.g. `dir/*.asc`), plus `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.         |
 | `files`                    | Browse all files in `fzf` (decrypts preview automatically).                                                                                                                                                               |
 | `integrity-check`          | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                                                                                                              |
 | `sync [git]`               | Stages changes, creates a local git commit using $DEFAULT_GIT_COMMIT, and pushes them to the remote repository.                                                                                                           |
-| `init [git]`               | Initializes git configuration for encrypted notes in a git repository. Run this when storing your files in a git repository to ensure clean (decrypted) git diffs, and to prevent accidentally committing non .gpg files. |
+| `init [git]`               | Initializes git configuration for encrypted notes in a git repository. Run this when storing your files in a git repository to ensure clean (decrypted) git diffs, and to prevent accidentally committing files that are not notes. |
 | `upgrade`                  | Upgrade `memo` in-place.                                                                                                                                                                                                  |
 | `uninstall`                | Uninstall `memo`.                                                                                                                                                                                                         |
 | `version`                  | Print current version.                                                                                                                                                                                                    |
@@ -237,15 +239,15 @@ memo
 memo todo.md
 
 # Encrypt and decrypt notes
-memo encrypt out.md.gpg <<<"Hello World"
-memo decrypt out.md.gpg
+memo encrypt out.md.asc <<<"Hello World"
+memo decrypt out.md.asc
 
 # Encrypt/decrypt multiple files
 memo encrypt-files all
-memo decrypt-files *.gpg
+memo decrypt-files *.asc
 
 # Encrypt with a passphrase instead of a recipient key
-memo encrypt --symmetric --passphrase-file ~/.secrets/memo.pass out.md.gpg <<<"Hello World"
+memo encrypt --symmetric --passphrase-file ~/.secrets/memo.pass out.md.asc <<<"Hello World"
 ```
 
 ## Integrations

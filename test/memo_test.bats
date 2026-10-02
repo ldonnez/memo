@@ -23,7 +23,7 @@ teardown() {
 @test "successfully creates a new memo with $CAPTURE_FILE as filename when it does not exist" {
 
   local to_be_created_file
-  to_be_created_file="$NOTES_DIR/$CAPTURE_FILE.gpg"
+  to_be_created_file="$NOTES_DIR/$CAPTURE_FILE.asc"
 
   run memo
   assert_success
@@ -44,9 +44,9 @@ teardown() {
   fi
 }
 
-@test "successfully creates a new memo with $CAPTURE_FILE.gpg as filename when it does not exist" {
+@test "successfully creates a new memo with $CAPTURE_FILE.asc as filename when it does not exist" {
   (
-    local CAPTURE_FILE="$CAPTURE_FILE.gpg"
+    local CAPTURE_FILE="$CAPTURE_FILE.asc"
     local to_be_created_file
     to_be_created_file="$NOTES_DIR/$CAPTURE_FILE"
 
@@ -62,9 +62,39 @@ teardown() {
   )
 }
 
+@test "opens a legacy .gpg note and saves it back as .gpg" {
+  (
+    local file="$NOTES_DIR/legacy.md.gpg"
+
+    _gpg_encrypt "$file" <<<"Hello World"
+
+    # shellcheck disable=SC2329
+    fake_editor() {
+      printf "Added line" >>"$1"
+    }
+
+    local EDITOR_CMD=fake_editor
+
+    # Must specify the .gpg extension to open the .gpg note
+    run memo "legacy.md.gpg"
+    assert_success
+    assert_output ""
+
+    run _file_exists "$NOTES_DIR/legacy.md.asc"
+    assert_failure
+
+    run _file_exists "$file"
+    assert_success
+
+    run _gpg_decrypt "$file"
+    assert_output "Hello World
+Added line"
+  )
+}
+
 @test "successfully edits existing file and do not trigger encryption" {
   local file
-  file="$NOTES_DIR/test.md.gpg"
+  file="$NOTES_DIR/test.md.asc"
 
   _gpg_encrypt "$file" <<<"Hello World"
 
@@ -76,7 +106,7 @@ teardown() {
 @test "edits existing file and triggers encryption" {
   # Run in subshell to avoid collision with other tests
   (
-    local file="$NOTES_DIR/test.md.gpg"
+    local file="$NOTES_DIR/test.md.asc"
 
     _gpg_encrypt "$file" <<<"Hello World"
 
@@ -106,7 +136,7 @@ Added line"
   assert_success
   assert_output ""
 
-  run cat "$NOTES_DIR/$file.gpg"
+  run cat "$NOTES_DIR/$file.asc"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 
@@ -131,7 +161,7 @@ Added line"
   assert_success
   assert_output ""
 
-  run cat "$NOTES_DIR/$file.gpg"
+  run cat "$NOTES_DIR/$file.asc"
   assert_output --partial "-----BEGIN PGP MESSAGE-----"
 }
 

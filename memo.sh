@@ -18,9 +18,31 @@ _file_exists() {
   [[ -f "$filepath" ]]
 }
 
+# Supported note extensions memo reads. New notes are written with $EXTENSION.
+SUPPORTED_EXTENSIONS=("asc" "gpg")
+
+# Whether filepath is an encrypted note, so either extension is accepted
 _file_is_gpg() {
   local filepath="$1"
-  [[ "$filepath" == *".gpg" ]]
+  local ext
+
+  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
+    [[ "$filepath" == *".$ext" ]] && return 0
+  done
+
+  return 1
+}
+
+# Strips the note extension of given path (e.g example.md.gpg -> example.md)
+_strip_note_extension() {
+  local filepath="$1"
+  local ext
+
+  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
+    filepath="${filepath%."$ext"}"
+  done
+
+  printf "%s" "$filepath"
 }
 
 _get_extension() {
@@ -100,10 +122,17 @@ _filename_is_date() {
   fi
 }
 
-# Ensures filepath always returns as .gpg
+# Ensures filepath has a note extension: one that is already there is kept, so
+# notes written as .gpg keep their name, otherwise $EXTENSION is appended.
 _as_gpg() {
   local filepath="$1"
-  printf '%s\n' "${filepath%.gpg}.gpg"
+
+  if _file_is_gpg "$filepath"; then
+    printf "%s" "$filepath"
+    return 0
+  fi
+
+  printf "%s.%s" "$filepath" "$EXTENSION"
 }
 
 _sha256() {
@@ -149,28 +178,28 @@ _determine_filename() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    # Strip .gpg extension if present
-    printf "%s" "${CAPTURE_FILE%.gpg}"
+    # Strip the note extension if present
+    _strip_note_extension "$CAPTURE_FILE"
     return 0
   fi
 
   if [[ "$input" == "today" ]]; then
-    printf "%s.%s" "$(date +%F)" "$DEFAULT_EXTENSION"
+    printf "%s" "$(date +%F)"
     return 0
   fi
 
   if [[ "$input" == "yesterday" ]]; then
-    printf "%s.%s" "$(date -d "yesterday" +%F 2>/dev/null || date -v-1d +%F)" "$DEFAULT_EXTENSION"
+    printf "%s" "$(date -d "yesterday" +%F 2>/dev/null || date -v-1d +%F)"
     return 0
   fi
 
   if [[ "$input" == "tomorrow" ]]; then
-    printf "%s.%s" "$(date -d "tomorrow" +%F 2>/dev/null || date -v+1d +%F)" "$DEFAULT_EXTENSION"
+    printf "%s" "$(date -d "tomorrow" +%F 2>/dev/null || date -v+1d +%F)"
     return 0
   fi
 
   if [[ "$input" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    printf "%s.%s" "$input" "$DEFAULT_EXTENSION"
+    printf "%s" "$input"
     return 0
   fi
 
@@ -178,7 +207,7 @@ _determine_filename() {
   extension=$(_get_extension "$input")
 
   if [[ "$extension" == "" ]]; then
-    printf "%s.%s" "$input" "$DEFAULT_EXTENSION"
+    printf "%s" "$input"
     return 0
   fi
 
@@ -454,8 +483,8 @@ _gpg_decrypt() {
 # Creates a tempfile used for temporary storing decrypted content.
 # When on Linux it will create the tempfile on memory (/dev/shm), otherwise (e.g MacOS) /tmp is used.
 _make_tempfile() {
-  local base="${1##*/}"
-  base="${base%.gpg}"
+  local base
+  base=$(_strip_note_extension "${1##*/}")
 
   local root="/tmp"
   # Use ramdisk if exists
@@ -659,9 +688,9 @@ _git_sync() {
 
 # Initializes git configuration for encrypted notes in a git repository
 #
-# Updates/creates .gitattributes to include: *.gpg diff=${diff_name}. This will make it possible that a custom diff command will be used for .gpg files.
+# Updates/creates .gitattributes to include: *.asc and *.gpg diff=${diff_name}. This will make it possible that a custom diff command will be used for note files.
 # It updates local git config to include a custom command (memo decrypt) to be used when generating git diffs.
-# Adds a wildcard to .gitignore to prevent accidental staging of non .gpg files. (.gitignore, .gitattributes and .githooks/ are exempt)
+# Adds a wildcard to .gitignore to prevent accidental staging of files that are not notes. (.gitignore, .gitattributes and .githooks/ are exempt)
 _git_init() {
   # Ensure it's a git repo
   _is_git_repository
@@ -692,7 +721,7 @@ _git_init() {
   touch "$attr_file"
 
   # shellcheck disable=SC2066
-  for rule in "*.gpg diff=${diff_name}"; do
+  for rule in "*.asc diff=${diff_name}" "*.gpg diff=${diff_name}"; do
     if ! grep -qxF "$rule" "$attr_file"; then
       printf '%s\n' "$rule" >>"$attr_file"
       printf '%s\n' "Added '$rule' to $attr_file"
@@ -728,7 +757,7 @@ _git_init() {
   fi
 
   # shellcheck disable=SC2066
-  for allow in "!**/*.gpg"; do
+  for allow in "!**/*.asc" "!**/*.gpg"; do
     if ! grep -qxF "$allow" "$ignore_file"; then
       printf '%s\n' "$allow" >>"$ignore_file"
       printf '%s\n' "Added '$allow' to $ignore_file"
@@ -751,7 +780,7 @@ _git_init() {
 # Interactively select a file inside notes dir using fzf.
 #
 # Ensures that the required commands (`gpg`, `rg`, `fzf`) are present before running.
-# Uses `ripgrep` to list all note files (`*.gpg`) under NOTES_DIR.
+# Uses `ripgrep` to list all note files (`.asc` and `.gpg`) under NOTES_DIR.
 #
 # Usage:
 #   memo_files
@@ -783,7 +812,7 @@ memo_files() {
   printf -v preview_cmd '%q ' "${preview[@]}"
 
   local result
-  result=$(rg --files --glob "*.gpg" "$NOTES_DIR" | fzf --preview "$preview_prefix$preview_cmd{} 2>/dev/null | head -100")
+  result=$(rg --files --glob "*.asc" --glob "*.gpg" "$NOTES_DIR" | fzf --preview "$preview_prefix$preview_cmd{} 2>/dev/null | head -100")
 
   [[ -z "$result" ]] && return
 
@@ -792,12 +821,12 @@ memo_files() {
 
 # Decrypts a set of files that were encrypted with GPG.
 #
-# This function operates in-place: each `.gpg` file is decrypted and replaces the original encrypted file.
+# This function operates in-place: each encrypted note is decrypted and replaces the original encrypted file.
 # A temporary file is used during decryption to ensure that a failed operation never overwrites the original file.
 # Function supports glob patterns like <dir>/* and multiple files <file1> <file2>
 #
 # Usage:
-#   memo_decrypt_files <file1.gpg | glob | all> [file2.gpg ...]
+#   memo_decrypt_files <file1.asc | glob | all> [file2.asc ...]
 memo_decrypt_files() {
   local -a targets=()
 
@@ -816,18 +845,26 @@ memo_decrypt_files() {
   done
 
   if [[ ${#targets[@]} -eq 0 ]]; then
-    printf "Usage: memo decrypt-files [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <filename.gpg | glob | all> ...\n"
+    printf "Usage: memo decrypt-files [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <filename.asc | filename.gpg | glob | all> ...\n"
     return 1
   fi
 
   local files=()
+  local -a note_args=()
+  local ext
+
+  # Match a note with any supported extension
+  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
+    [[ ${#note_args[@]} -gt 0 ]] && note_args+=(-o)
+    note_args+=(-name "*.$ext")
+  done
 
   for target in "${targets[@]}"; do
     if [[ "$target" == "all" ]]; then
       while IFS= read -r f; do
         files+=("$f")
         # Ensure consistent sorting on Linux/Macos with LC_ALL=C sort
-      done < <(find "$NOTES_DIR" -type f -name "*.gpg" | LC_ALL=C sort)
+      done < <(find "$NOTES_DIR" -type f \( "${note_args[@]}" \) | LC_ALL=C sort)
       continue
     fi
 
@@ -852,7 +889,7 @@ memo_decrypt_files() {
       fi
     done
     [[ $matched -eq 0 ]] && {
-      printf "File not in %s or not a .gpg file: %s\n" "$NOTES_DIR" "$target"
+      printf "File not in %s or not an encrypted note: %s\n" "$NOTES_DIR" "$target"
       return 1
     }
   done
@@ -865,7 +902,7 @@ memo_decrypt_files() {
   local f tmp out
   for f in "${files[@]}"; do
     tmp=$(mktemp)
-    out="${f%.gpg}"
+    out="$(_strip_note_extension "$f")"
 
     if _gpg_decrypt "$f" "$tmp" 2>/dev/null; then
       mv "$tmp" "$out"
@@ -879,7 +916,7 @@ memo_decrypt_files() {
 
 # Encrypts a set of files using GPG, respecting user-defined rules like `.ignore` and `--exclude` patterns.
 #
-# Each file is encrypted in-place with `.gpg` extension using a temp file while preserving the original file name.
+# Each file is encrypted in-place with the note extension using a temp file while preserving the original file name.
 # Errors are reported and skipped files are logged with its source.
 # When giving `--dry-run` flag, it simulates the operation without making changes.
 # The function supports glob patterns like <dir>/* and multiple files <file1> <file2>
@@ -936,6 +973,13 @@ memo_encrypt_files() {
   shopt -s nullglob
   local files=()
   local target
+  local -a plaintext_args=()
+  local ext
+
+  # Exclude notes that are encrypted already, whatever extension they use
+  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
+    plaintext_args+=(! -name "*.$ext")
+  done
 
   # Collect candidate files
   for target in "${args[@]}"; do
@@ -947,7 +991,7 @@ memo_encrypt_files() {
         fi
 
         # Ensure consistent sorting on Linux/Macos with LC_ALL=C sort
-      done < <(find "$NOTES_DIR" -type f ! -name "*.gpg" | LC_ALL=C sort)
+      done < <(find "$NOTES_DIR" -type f "${plaintext_args[@]}" | LC_ALL=C sort)
       continue
     fi
 
@@ -1028,12 +1072,14 @@ memo_encrypt_files() {
   # Encrypt
   if [[ $dry -eq 1 ]]; then
     for f in "${files_to_encrypt[@]}"; do
-      printf "Would encrypt to: %s.gpg\n" "${f#"$NOTES_DIR"/}"
+      local rel="${f#"$NOTES_DIR"/}"
+      printf "Would encrypt to: %s\n" "$(_as_gpg "$rel")"
     done
   else
     local f
     for f in "${files_to_encrypt[@]}"; do
-      local outfile="$f.gpg"
+      local outfile
+      outfile="$(_as_gpg "$f")"
       if ! _gpg_encrypt "$outfile" "$f" "$symmetric"; then
         printf "Failed to encrypt: %s\n" "$f"
         return 1
@@ -1077,7 +1123,7 @@ memo_encrypt() {
 # Decrypts given input file with a PGP MESSAGE to stdout.
 #
 # Usage:
-#   memo_decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>.gpg
+#   memo_decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>.asc
 memo_decrypt() {
   local input_file=""
 
@@ -1095,7 +1141,7 @@ memo_decrypt() {
   done
 
   if [[ -z "$input_file" ]]; then
-    printf "Usage: memo decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>.gpg\n"
+    printf "Usage: memo decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>.asc\n"
     return 1
   fi
 
@@ -1178,7 +1224,7 @@ memo_integrity_check() {
 
 # Opens or creates a file for editing.
 #
-# A temporary plaintext file is created that is encrypted back into a `.gpg` file after editing.
+# A temporary plaintext file is created that is encrypted back into a note file after editing.
 # The temporary files will get deleted after encryption.
 #
 # Usage:
@@ -1230,8 +1276,8 @@ memo() {
     fi
   fi
 
-  # Encrypt only if changed
-  _gpg_encrypt "$filepath" "$tmpfile" "$symmetric"
+  # Encrypt only if changed, back to the note that was opened
+  _gpg_encrypt "$gpg_file" "$tmpfile" "$symmetric"
 }
 
 # Installs the bundled tab-completions to the system dirs when writable, else
@@ -1434,7 +1480,8 @@ Commands:
                                         --passphrase-env VAR supply the
                                         passphrase without prompting
 
-  decrypt FILE.gpg                  Decrypts FILE.gpg and print to stdout
+  decrypt FILE.asc                  Decrypts FILE.asc and print to stdout
+                                      - .gpg notes are read as well
                                       - --passphrase-fd N, --passphrase-file PATH,
                                         --passphrase-env VAR supply the
                                         passphrase without prompting
@@ -1446,9 +1493,9 @@ Commands:
                                       - --symmetric, --passphrase-fd N,
                                         --passphrase-file PATH
 
-  decrypt-files [FILES...]          Decrypt .gpg files in-place inside notes dir
-                                      - Accepts 'all' or explicit .gpg files
-                                      - Supports glob patterns (e.g. dir/*.gpg)
+  decrypt-files [FILES...]          Decrypt notes in-place inside notes dir
+                                      - Accepts 'all' or explicit note files
+                                      - Supports glob patterns (e.g. dir/*.asc)
                                       - --passphrase-fd N, --passphrase-file PATH
 
   files                             Browse all files in fzf (decrypts preview)
@@ -1467,17 +1514,21 @@ Commands:
 Examples:
   memo                                Open default file
   memo todo.md                        Open or create "todo.md" inside notes dir
-  memo encrypt out.gpg notes.txt    Encrypt notes.txt into out.gpg
-  memo decrypt out.gpg              Decrypt out.gpg to stdout
+  memo encrypt out.asc notes.txt    Encrypt notes.txt into out.asc
+  memo decrypt out.asc              Decrypt out.asc to stdout
   memo encrypt-files all            Encrypt all files in notes dir
-  memo decrypt-files *.gpg          Decrypt matching .gpg files
-  memo encrypt --symmetric out.gpg <in.txt            Encrypt stdin, passphrase asked by pinentry
-  memo encrypt --symmetric --passphrase-file pass.txt out.gpg <in.txt
+  memo decrypt-files *.asc          Decrypt matching .asc files
+  memo encrypt --symmetric out.asc <in.txt            Encrypt stdin, passphrase asked by pinentry
+  memo encrypt --symmetric --passphrase-file pass.txt out.asc <in.txt
                                       Encrypt stdin with a passphrase from a file
-  MEMO_PASSPHRASE=... memo encrypt --symmetric --passphrase-env MEMO_PASSPHRASE out.gpg <in.txt
+  MEMO_PASSPHRASE=... memo encrypt --symmetric --passphrase-env MEMO_PASSPHRASE out.asc <in.txt
                                       Encrypt stdin with a passphrase from the environment
 
 Notes:
+  Notes are written with the .asc extension and encrypted notes with the .gpg
+  extension are read as well, so notes stay where they are.
+  Set EXTENSION in the config to write a different extension, e.g gpg.
+  New notes use the extension you specify (or none if omitted).
   A note encrypted with a passphrase is re-encrypted the same way when opened
   with 'memo FILE', so it never turns into a recipient-key note.
 
@@ -1495,11 +1546,11 @@ _set_default_values() {
   : "${MEMO_PASSPHRASE_FD:=}"
   : "${MEMO_PASSPHRASE_ENV:=}"
   : "${MEMO_PASSPHRASE_FILE:=}"
+  : "${EXTENSION:=asc}"
   : "${_MEMO_PASSPHRASE:=}"
   : "${NOTES_DIR:=$HOME/notes}"
   : "${EDITOR_CMD:=${EDITOR:-nano}}"
-  : "${DEFAULT_EXTENSION:="md"}"
-  : "${CAPTURE_FILE:=inbox.$DEFAULT_EXTENSION}"
+  : "${CAPTURE_FILE:=inbox.md}"
   : "${DEFAULT_IGNORE:=".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"}"
   : "${DEFAULT_GIT_COMMIT:=$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')}"
 }

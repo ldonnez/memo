@@ -26,26 +26,26 @@ teardown() {
 
   run memo_encrypt_files "all"
   assert_success
-  assert_output "Encrypted: test.md -> test.md.gpg
-Encrypted: test2.md -> test2.md.gpg
-Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
+  assert_output "Encrypted: test.md -> test.md.asc
+Encrypted: test2.md -> test2.md.asc
+Encrypted: test_dir/test2.md -> test_dir/test2.md.asc"
 
   run _file_exists "$file1"
   assert_failure
 
-  run _file_exists "$file1.gpg"
+  run _file_exists "$file1.asc"
   assert_success
 
   run _file_exists "$file2"
   assert_failure
 
-  run _file_exists "$file2.gpg"
+  run _file_exists "$file2.asc"
   assert_success
 
   run _file_exists "$file3"
   assert_failure
 
-  run _file_exists "$file3.gpg"
+  run _file_exists "$file3.asc"
   assert_success
 }
 
@@ -68,40 +68,40 @@ Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
 
   run memo_encrypt_files "all"
   assert_success
-  assert_output "Encrypted: test.md -> test.md.gpg
-Encrypted: test2.md -> test2.md.gpg
-Encrypted: test3.word -> test3.word.gpg
-Encrypted: test_dir/test4.md -> test_dir/test4.md.gpg
-Encrypted: test_dir/test5.word -> test_dir/test5.word.gpg"
+  assert_output "Encrypted: test.md -> test.md.asc
+Encrypted: test2.md -> test2.md.asc
+Encrypted: test3.word -> test3.word.asc
+Encrypted: test_dir/test4.md -> test_dir/test4.md.asc
+Encrypted: test_dir/test5.word -> test_dir/test5.word.asc"
 
   run _file_exists "$file1"
   assert_failure
 
-  run _file_exists "$file1.gpg"
+  run _file_exists "$file1.asc"
   assert_success
 
   run _file_exists "$file2"
   assert_failure
 
-  run _file_exists "$file2.gpg"
+  run _file_exists "$file2.asc"
   assert_success
 
   run _file_exists "$file3"
   assert_failure
 
-  run _file_exists "$file3.gpg"
+  run _file_exists "$file3.asc"
   assert_success
 
   run _file_exists "$file4"
   assert_failure
 
-  run _file_exists "$file4.gpg"
+  run _file_exists "$file4.asc"
   assert_success
 
   run _file_exists "$file5"
   assert_failure
 
-  run _file_exists "$file5.gpg"
+  run _file_exists "$file5.asc"
   assert_success
 }
 
@@ -118,8 +118,8 @@ Encrypted: test_dir/test5.word -> test_dir/test5.word.gpg"
 
   run memo_encrypt_files "test2.md" "test_dir/test2.md"
   assert_success
-  assert_output "Encrypted: test2.md -> test2.md.gpg
-Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
+  assert_output "Encrypted: test2.md -> test2.md.asc
+Encrypted: test_dir/test2.md -> test_dir/test2.md.asc"
 
   run _file_exists "$file1"
   assert_success
@@ -145,8 +145,8 @@ Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
 
   run memo_encrypt_files "test_dir/*"
   assert_success
-  assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg
-Encrypted: test_dir/test3.md -> test_dir/test3.md.gpg"
+  assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.asc
+Encrypted: test_dir/test3.md -> test_dir/test3.md.asc"
 
   run _file_exists "$file1"
   assert_success
@@ -158,13 +158,17 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.gpg"
   assert_failure
 }
 
-@test "Does not encrypt .gpg files" {
+@test "Does not encrypt notes that are encrypted already" {
   local file1="$NOTES_DIR/test.md"
   printf "Hello World" >"$file1"
 
   local file2="$NOTES_DIR/test2.md"
 
-  _gpg_encrypt "$file2.gpg" <<<"Hello World"
+  _gpg_encrypt "$file2.asc" <<<"Hello World"
+
+  local legacy="$NOTES_DIR/test4.md"
+
+  _gpg_encrypt "$legacy.gpg" <<<"Hello World 4"
 
   mkdir -p "$NOTES_DIR/test_dir"
   local file3="$NOTES_DIR/test_dir/test2.md"
@@ -173,15 +177,18 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.gpg"
 
   run memo_encrypt_files "all"
   assert_success
-  assert_output "Encrypted: test.md -> test.md.gpg"
+  assert_output "Encrypted: test.md -> test.md.asc"
 
   run _file_exists "$file1"
   assert_failure
 
-  run _file_exists "$file2.gpg"
+  run _file_exists "$file2.asc"
   assert_success
 
   run _file_exists "$file3.gpg"
+  assert_success
+
+  run _file_exists "$legacy.gpg"
   assert_success
 }
 
@@ -202,9 +209,9 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.gpg"
   cd "$NOTES_DIR"
   run memo_encrypt_files "test_dir/test2.md" "test_dir/test3.word" "test2.word"
   assert_success
-  assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg
-Encrypted: test_dir/test3.word -> test_dir/test3.word.gpg
-Encrypted: test2.word -> test2.word.gpg"
+  assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.asc
+Encrypted: test_dir/test3.word -> test_dir/test3.word.asc
+Encrypted: test2.word -> test2.word.asc"
 
   run _file_exists "$file1"
   assert_success
@@ -212,7 +219,7 @@ Encrypted: test2.word -> test2.word.gpg"
   run _file_exists "$file2"
   assert_failure
 
-  run _file_exists "$file2.gpg"
+  run _file_exists "$file2.asc"
   assert_success
 
   run _file_exists "$file3"
@@ -221,7 +228,7 @@ Encrypted: test2.word -> test2.word.gpg"
   run _file_exists "$file4"
   assert_failure
 
-  run _file_exists "$file4.gpg"
+  run _file_exists "$file4.asc"
   assert_success
 }
 
@@ -239,7 +246,7 @@ Encrypted: test2.word -> test2.word.gpg"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
-Encrypted: test2.md -> test2.md.gpg"
+Encrypted: test2.md -> test2.md.asc"
 
   run _file_exists "$txtfile"
   assert_success
@@ -259,7 +266,7 @@ Encrypted: test2.md -> test2.md.gpg"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
-Encrypted: test2.md -> test2.md.gpg"
+Encrypted: test2.md -> test2.md.asc"
 
   run _file_exists "$txtfile"
   assert_success
@@ -280,7 +287,7 @@ Encrypted: test2.md -> test2.md.gpg"
   assert_success
   assert_output "Ignored (.ignore): .git/COMMIT
 Ignored (.ignore): .ignore
-Encrypted: test.md -> test.md.gpg"
+Encrypted: test.md -> test.md.asc"
 
   run _file_exists "$gitfile"
   assert_success
@@ -296,7 +303,7 @@ Encrypted: test.md -> test.md.gpg"
   run memo_encrypt_files "all" --exclude "*.txt"
   assert_success
   assert_output "Excluded (--exclude): test2.txt
-Encrypted: test2.md -> test2.md.gpg"
+Encrypted: test2.md -> test2.md.asc"
 
   run _file_exists "$txtfile"
   assert_success
@@ -315,9 +322,9 @@ Encrypted: test2.md -> test2.md.gpg"
 
   run memo_encrypt_files "all" --dry-run
   assert_success
-  assert_output "Would encrypt to: test.md.gpg
-Would encrypt to: test2.md.gpg
-Would encrypt to: test_dir/test2.md.gpg"
+  assert_output "Would encrypt to: test.md.asc
+Would encrypt to: test2.md.asc
+Would encrypt to: test_dir/test2.md.asc"
 }
 
 @test "Works with single file" {
@@ -326,7 +333,7 @@ Would encrypt to: test_dir/test2.md.gpg"
 
   run memo_encrypt_files "test.md"
   assert_success
-  assert_output "Encrypted: test.md -> test.md.gpg"
+  assert_output "Encrypted: test.md -> test.md.asc"
 
   run _file_exists "$file.md"
   assert_failure
@@ -340,7 +347,7 @@ Would encrypt to: test_dir/test2.md.gpg"
   cd "$NOTES_DIR/test_dir"
   run memo_encrypt_files "test2.md"
   assert_success
-  assert_output "Encrypted: test2.md -> test2.md.gpg"
+  assert_output "Encrypted: test2.md -> test2.md.asc"
 
   run _file_exists "$file.md"
   assert_failure
@@ -353,7 +360,7 @@ Would encrypt to: test_dir/test2.md.gpg"
 
   run memo_encrypt_files "test_dir/test2.md"
   assert_success
-  assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.gpg"
+  assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.asc"
 
   run _file_exists "$file.md"
   assert_failure
@@ -374,12 +381,12 @@ Would encrypt to: test_dir/test2.md.gpg"
 
   run memo_encrypt_files "$file"
   assert_success
-  assert_output "Encrypted: test.word -> test.word.gpg"
+  assert_output "Encrypted: test.word -> test.word.asc"
 
   run _file_exists "$file"
   assert_failure
 
-  run _file_exists "$file.gpg"
+  run _file_exists "$file.asc"
   assert_success
 }
 
@@ -394,15 +401,15 @@ Would encrypt to: test_dir/test2.md.gpg"
 
     run memo_encrypt_files --symmetric --passphrase-file "$MEMO_PASSPHRASE_FILE" "$file"
     assert_success
-    assert_output --partial "Encrypted: sym_batch.md -> sym_batch.md.gpg"
+    assert_output --partial "Encrypted: sym_batch.md -> sym_batch.md.asc"
 
-    run _file_exists "$file.gpg"
+    run _file_exists "$file.asc"
     assert_success
 
-    run _file_is_symmetric "$file.gpg"
+    run _file_is_symmetric "$file.asc"
     assert_success
 
-    run memo_decrypt --passphrase-file "$MEMO_PASSPHRASE_FILE" "$file.gpg"
+    run memo_decrypt --passphrase-file "$MEMO_PASSPHRASE_FILE" "$file.asc"
     assert_output "Batch content"
   )
 }

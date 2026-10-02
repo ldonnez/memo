@@ -56,6 +56,7 @@ _memo() {
     done < <({
       compgen -W "--passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
       cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.gpg' -- "$cur"
+      cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.asc' -- "$cur"
     })
     ;;
   decrypt-files)
@@ -64,6 +65,7 @@ _memo() {
     done < <({
       compgen -W "all --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
       cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.gpg' -- "$cur"
+      cd "$notes_dir" 2>/dev/null && compgen -f -X '!*.asc' -- "$cur"
     })
     ;;
   encrypt-files)
@@ -71,8 +73,18 @@ _memo() {
       candidates+=("$c")
     done < <({
       compgen -W "all --dry-run --exclude --symmetric --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
-      cd "$notes_dir" 2>/dev/null && compgen -f -X '*.gpg' -- "$cur"
+      cd "$notes_dir" 2>/dev/null && compgen -f -- "$cur"
     })
+
+    # Notes are encrypted already, so only plaintext files can be encrypted.
+    # Filtered here instead of with -X, since compgen honors just the last one.
+    local -a plaintext=()
+    if ((${#candidates[@]} > 0)); then
+      while IFS= read -r c; do
+        [[ "$c" == *.asc || "$c" == *.gpg ]] || plaintext+=("$c")
+      done < <(printf '%s\n' "${candidates[@]}")
+    fi
+    candidates=("${plaintext[@]}")
     ;;
   sync | init)
     if ((COMP_CWORD == 2)); then

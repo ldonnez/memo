@@ -39,10 +39,10 @@ setup() {
   refute_output --partial "encrypt"
 }
 
-@test "bash: decrypt-files suggests all plus only .gpg files" {
+@test "bash: decrypt-files suggests all plus only note files" {
   touch "$NOTES_DIR/alpha.txt"
   touch "$NOTES_DIR/secret.gpg"
-  touch "$NOTES_DIR/deep.gpg"
+  touch "$NOTES_DIR/deep.asc"
 
   run bash -c '
     source "completions/memo.bash"
@@ -54,7 +54,7 @@ setup() {
   assert_success
   assert_output --partial "all"
   assert_output --partial "secret.gpg"
-  assert_output --partial "deep.gpg"
+  assert_output --partial "deep.asc"
   refute_output --partial "alpha.txt"
 }
 
@@ -75,9 +75,10 @@ setup() {
   refute_output --partial "alpha.txt"
 }
 
-@test "bash: encrypt-files suggests all, options, and non-.gpg files" {
+@test "bash: encrypt-files suggests all, options, and no note files" {
   touch "$NOTES_DIR/alpha.txt"
   touch "$NOTES_DIR/secret.gpg"
+  touch "$NOTES_DIR/deep.asc"
 
   run bash -c '
     source "completions/memo.bash"
@@ -92,6 +93,7 @@ setup() {
   assert_output --partial "--exclude"
   assert_output --partial "alpha.txt"
   refute_output --partial "secret.gpg"
+  refute_output --partial "deep.asc"
 }
 
 @test "bash: encrypt-files filters options and files by prefix" {
@@ -174,23 +176,26 @@ setup() {
 @test "zsh: commands are offered with _describe" {
   run cat "completions/_memo"
   assert_output --partial "_describe 'command' commands"
-  assert_output --partial "decrypt-files:Decrypt .gpg files in-place"
+  assert_output --partial "decrypt-files:Decrypt .asc and .gpg notes in-place"
 }
 
-@test "zsh: decrypt-files completes .gpg files under NOTES_DIR" {
+@test "zsh: decrypt-files completes note files under NOTES_DIR" {
   run cat "completions/_memo"
   assert_output --partial "_files -W"
+  assert_output --partial "-g '*.asc'"
   assert_output --partial "-g '*.gpg'"
 }
 
-@test "zsh: encrypt-files excludes .gpg files" {
+@test "zsh: encrypt-files excludes note files" {
   run cat "completions/_memo"
+  assert_output --partial "-g '^*.asc'"
   assert_output --partial "-g '^*.gpg'"
 }
 
 @test "zsh: decrypt-files completes all" {
   run cat "completions/_memo"
   assert_output --partial "_values 'argument' all"
+  assert_output --partial "-g '*.asc'"
   assert_output --partial "-g '*.gpg'"
 }
 

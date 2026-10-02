@@ -19,10 +19,10 @@ teardown() {
   assert_output "$NOTES_DIR/$CAPTURE_FILE"
 }
 
-@test "returns <current_date>.md path" {
+@test "returns <current_date> path" {
   run _get_filepath "today"
   assert_success
-  assert_output "$NOTES_DIR/$(date +%F).md"
+  assert_output "$NOTES_DIR/$(date +%F)"
 }
 
 @test "returns $NOTES_DIR/test.md path" {

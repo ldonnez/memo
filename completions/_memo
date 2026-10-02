@@ -30,7 +30,7 @@ _memo_args() {
 
   case "$cmd" in
   decrypt)
-    [[ -d "$notes_dir" ]] && _files -W "$notes_dir" -g '*.gpg'
+    [[ -d "$notes_dir" ]] && _files -W "$notes_dir" -g '*.asc' -g '*.gpg'
     _values 'option' \
       '--passphrase-fd[Read the passphrase from the given file descriptor]:fd:' \
       '--passphrase-file[Read the passphrase from the given file]:file:_files' \
@@ -39,7 +39,7 @@ _memo_args() {
   decrypt-files)
     if [[ -d "$notes_dir" ]]; then
       _values 'argument' all
-      _files -W "$notes_dir" -g '*.gpg'
+      _files -W "$notes_dir" -g '*.asc' -g '*.gpg'
     fi
     _values 'option' \
       '--passphrase-fd[Read the passphrase from the given file descriptor]:fd:' \
@@ -49,7 +49,7 @@ _memo_args() {
   encrypt-files)
     if [[ -d "$notes_dir" ]]; then
       _values 'argument' all
-      _files -W "$notes_dir" -g '^*.gpg'
+      _files -W "$notes_dir" -g '^*.asc' -g '^*.gpg'
       _values 'option' \
         '--dry-run[Simulate encryption without making changes]' \
         '--symmetric[Encrypt with a passphrase instead of a recipient key]' \
@@ -90,9 +90,9 @@ _memo() {
   commands=(
     'help:Show help message'
     'encrypt:Encrypt text from stdin to a file'
-    'decrypt:Decrypt a .gpg file to stdout'
+    'decrypt:Decrypt an .asc or .gpg note to stdout'
     'encrypt-files:Encrypt files in-place'
-    'decrypt-files:Decrypt .gpg files in-place'
+    'decrypt-files:Decrypt .asc and .gpg notes in-place'
     'files:Browse files with fzf'
     'integrity-check:Verify files are properly encrypted'
     'sync:Sync notes with git'
