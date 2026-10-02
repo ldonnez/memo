@@ -15,17 +15,17 @@ setup() {
 
 @test "returns YYYY-MM-DD of today's date when today is given" {
   run _determine_filename "today"
-  assert_output "$(date +%F).md"
+  assert_output "$(date +%F)"
 }
 
-@test "returns YYYY-MM-DD.md of yesterdays date when yesterday is given" {
+@test "returns YYYY-MM-DD of yesterdays date when yesterday is given" {
   run _determine_filename "yesterday"
-  assert_output "$(date -d "yesterday" +%F 2>/dev/null || date -v-1d +%F).md"
+  assert_output "$(date -d "yesterday" +%F 2>/dev/null || date -v-1d +%F)"
 }
 
-@test "returns YYYY-MM-DD.md of tomorrows date when tomorrow is given" {
+@test "returns YYYY-MM-DD of tomorrows date when tomorrow is given" {
   run _determine_filename "tomorrow"
-  assert_output "$(date -d "tomorrow" +%F 2>/dev/null || date -v+1d +%F).md"
+  assert_output "$(date -d "tomorrow" +%F 2>/dev/null || date -v+1d +%F)"
 }
 
 @test "returns test.md when test.md is given" {
@@ -33,14 +33,14 @@ setup() {
   assert_output "test.md"
 }
 
-@test "returns YYYY-MM-DD.md when 2025-01-01 is given" {
+@test "returns YYYY-MM-DD when 2025-01-01 is given" {
   run _determine_filename "2025-01-01"
-  assert_output "2025-01-01.md"
+  assert_output "2025-01-01"
 }
 
-@test "returns test.md when test is given" {
+@test "returns test when test is given" {
   run _determine_filename "test"
-  assert_output "test.md"
+  assert_output "test"
 }
 
 @test "returns test.word when test.word is given" {

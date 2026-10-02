@@ -14,7 +14,7 @@ setup() {
     local GPG_RECIPIENTS
     local NOTES_DIR
     local EDITOR_CMD
-    local DEFAULT_EXTENSION
+    local EXTENSION
     local CAPTURE_FILE
     local DEFAULT_IGNORE
     local DEFAULT_GIT_COMMIT
@@ -24,7 +24,7 @@ setup() {
     assert_equal "$NOTES_DIR" "$HOME/notes"
     # Use readlink -f to follow symlinks here since macOS symlinks temp from /var/... to /private/var/
     assert_equal "$EDITOR_CMD" "nano"
-    assert_equal "$DEFAULT_EXTENSION" "md"
+    assert_equal "$EXTENSION" "asc"
     assert_equal "$CAPTURE_FILE" "inbox.md"
     assert_equal "$DEFAULT_IGNORE" ".ignore,.git/*,.githooks/*,.DS_store,.gitignore,.gitattributes"
 

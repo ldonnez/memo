@@ -39,10 +39,12 @@ teardown() {
   - update local git config to ensure git diffs are readable
   - add a protective .gitignore (accident prevention)
 Proceed? [y/N]: 
+Added '*.asc diff=gpg' to $NOTES_DIR/.gitattributes
 Added '*.gpg diff=gpg' to $NOTES_DIR/.gitattributes
 Configured diff.gpg.textconv
 Added '*' to $NOTES_DIR/.gitignore
 Added '!*/' to $NOTES_DIR/.gitignore
+Added '!**/*.asc' to $NOTES_DIR/.gitignore
 Added '!**/*.gpg' to $NOTES_DIR/.gitignore
 Added '!.gitignore' to $NOTES_DIR/.gitignore
 Added '!.gitattributes' to $NOTES_DIR/.gitignore
@@ -54,6 +56,9 @@ Added '!.githooks/' to $NOTES_DIR/.gitignore"
   run _file_exists "$NOTES_DIR/.gitignore"
   assert_success
 
+  run grep -qxF "*.asc diff=gpg" "$NOTES_DIR/.gitattributes"
+  assert_success
+
   run grep -qxF "*.gpg diff=gpg" "$NOTES_DIR/.gitattributes"
   assert_success
 
@@ -61,6 +66,9 @@ Added '!.githooks/' to $NOTES_DIR/.gitignore"
   assert_success
 
   run grep -qxF "!*/" "$NOTES_DIR/.gitignore"
+  assert_success
+
+  run grep -qxF "!**/*.asc" "$NOTES_DIR/.gitignore"
   assert_success
 
   run grep -qxF "!**/*.gpg" "$NOTES_DIR/.gitignore"

@@ -8,8 +8,8 @@ setup_suite() {
   export NOTES_DIR="$TEST_HOME/notes"
   export EDITOR_CMD="true" # avoid launching an actual editor
   export GPG_RECIPIENTS="mock@example.com"
-  export DEFAULT_EXTENSION="md"
-  export CAPTURE_FILE="inbox.$DEFAULT_EXTENSION"
+  export EXTENSION="asc"
+  export CAPTURE_FILE="inbox"
   export DEFAULT_IGNORE=".ignore,.git/*,.DS_store"
   export DEFAULT_GIT_COMMIT
   DEFAULT_GIT_COMMIT="$(hostname): sync $(date '+%Y-%m-%d %H:%M:%S')"
