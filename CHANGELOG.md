@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.11.0](https://github.com/ldonnez/memo/compare/v0.10.3...v0.11.0) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove default extension and write default with.asc extension
+
+### Features
+
+* support notes encrypted with a passphrase ([39cc936](https://github.com/ldonnez/memo/commit/39cc936fdb1fbf8b385fe31c673b3c1a3b907a24))
+
+
+### Code Refactoring
+
+* remove default extension and write default with.asc extension ([75a6979](https://github.com/ldonnez/memo/commit/75a69793451218730673a67c51e597b7b0ae1696))
+
 ## [0.10.3](https://github.com/ldonnez/memo/compare/v0.10.2...v0.10.3) (2026-09-18)
 
 
