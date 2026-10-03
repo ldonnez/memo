@@ -41,6 +41,103 @@ teardown() {
   assert_output "$NOTES_DIR/test.md"
 }
 
+@test "_strip_note_extension strips one trailing extension only" {
+  run _strip_note_extension "$NOTES_DIR/test.md.gpg.asc"
+  assert_output "$NOTES_DIR/test.md.gpg"
+
+  run _strip_note_extension "$NOTES_DIR/report.gpg.md"
+  assert_output "$NOTES_DIR/report.gpg.md"
+}
+
+@test "the configured EXTENSION is a supported note extension" {
+  local config_file="$BATS_TEST_TMPDIR/config"
+  printf 'EXTENSION="pgp"\n' >"$config_file"
+  _load_config "$config_file"
+
+  run _file_is_gpg "$NOTES_DIR/test.md.pgp"
+  assert_success
+
+  run _file_is_gpg "$NOTES_DIR/test.md.txt"
+  assert_failure
+
+  run _strip_note_extension "$NOTES_DIR/test.md.pgp"
+  assert_output "$NOTES_DIR/test.md"
+
+  # Written with it, then read back as a note again
+  run memo "custom.md"
+  assert_success
+  run _file_exists "$NOTES_DIR/custom.md.pgp"
+  assert_success
+
+  run memo "custom.md"
+  assert_success
+
+  run memo_decrypt_files "all"
+  assert_success
+
+  run cat "$NOTES_DIR/custom.md"
+  assert_output --partial "# custom"
+}
+
+@test "memo files lists the configured extension" {
+  local rg_args="$BATS_TEST_TMPDIR/rg-args"
+
+  # shellcheck disable=SC2317,SC2329
+  rg() {
+    printf "%s\n" "$*" >"$rg_args"
+  }
+
+  # shellcheck disable=SC2317,SC2329
+  fzf() {
+    printf "%s\n" "$NOTES_DIR/one.md.asc"
+  }
+
+  # shellcheck disable=SC2317,SC2329
+  memo() {
+    return 0
+  }
+
+  local config_file="$BATS_TEST_TMPDIR/config"
+  printf 'EXTENSION="pgp"\n' >"$config_file"
+  _load_config "$config_file"
+
+  run memo_files
+  assert_success
+
+  run cat "$rg_args"
+  assert_output --partial "--glob *.asc"
+  assert_output --partial "--glob *.gpg"
+  assert_output --partial "--glob *.pgp"
+}
+
+@test "a supported EXTENSION is not added to the list twice" {
+  local config_file="$BATS_TEST_TMPDIR/config"
+  printf 'EXTENSION="gpg"\n' >"$config_file"
+  _load_config "$config_file"
+
+  assert_equal "${#SUPPORTED_EXTENSIONS[@]}" "2"
+
+  _load_config "$config_file"
+  assert_equal "${#SUPPORTED_EXTENSIONS[@]}" "2"
+}
+
+@test "an invalid EXTENSION is rejected" {
+  local config_file="$BATS_TEST_TMPDIR/config"
+
+  printf 'EXTENSION=".asc"\n' >"$config_file"
+  run _load_config "$config_file"
+  assert_failure
+  assert_output --partial "EXTENSION must be a bare extension"
+
+  printf 'EXTENSION=""\n' >"$config_file"
+  run _load_config "$config_file"
+  assert_failure
+
+  printf 'EXTENSION="notes/asc"\n' >"$config_file"
+  run _load_config "$config_file"
+  assert_failure
+}
+
 @test "_make_tempfile drops either note extension" {
   run _make_tempfile "$NOTES_DIR/test.md.asc"
   assert_output --regexp "/memo\.[^/]+/test\.md"

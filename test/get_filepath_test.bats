@@ -60,3 +60,11 @@ teardown() {
   assert_output "$NOTES_DIR/test/test.word"
   [ -d "$NOTES_DIR/test" ]
 }
+
+@test "uses CAPTURE_FILE basename to find existing .gpg file" {
+  CAPTURE_FILE="inbox.md.gpg"
+  touch "$NOTES_DIR/inbox.md.gpg"
+  run _get_filepath ""
+  assert_success
+  assert_output "$NOTES_DIR/inbox.md.gpg"
+}

@@ -134,6 +134,66 @@ setup() {
   assert_output "$NOTES_DIR"
 }
 
+@test "bash: decrypt-files completes notes with the configured extension" {
+  printf 'NOTES_DIR="%s"\nEXTENSION="pgp"\n' "$NOTES_DIR" >"$XDG_CONFIG_HOME/memo/config"
+  touch "$NOTES_DIR/secret.pgp"
+
+  run bash -c '
+    source "completions/memo.bash"
+    COMP_WORDS=(memo decrypt-files "")
+    COMP_CWORD=2
+    _memo
+    printf "%s\n" "${COMPREPLY[@]}"
+  '
+  assert_success
+  assert_output --partial "secret.pgp"
+}
+
+@test "bash: encrypt-files does not suggest notes with the configured extension" {
+  printf 'NOTES_DIR="%s"\nEXTENSION="pgp"\n' "$NOTES_DIR" >"$XDG_CONFIG_HOME/memo/config"
+  touch "$NOTES_DIR/alpha.txt"
+  touch "$NOTES_DIR/secret.pgp"
+
+  run bash -c '
+    source "completions/memo.bash"
+    COMP_WORDS=(memo encrypt-files "")
+    COMP_CWORD=2
+    _memo
+    printf "%s\n" "${COMPREPLY[@]}"
+  '
+  assert_success
+  assert_output --partial "alpha.txt"
+  refute_output --partial "secret.pgp"
+}
+
+@test "bash: _memo_get_extensions lists the built-ins plus the configured one" {
+  run bash -c '
+    source "completions/memo.bash"
+    _memo_get_extensions
+  '
+  assert_success
+  assert_output "asc gpg"
+
+  printf 'NOTES_DIR="%s"\nEXTENSION="pgp"\n' "$NOTES_DIR" >"$XDG_CONFIG_HOME/memo/config"
+
+  run bash -c '
+    source "completions/memo.bash"
+    _memo_get_extensions
+  '
+  assert_success
+  assert_output "asc gpg pgp"
+
+  # Already a built-in, so it is not listed twice
+  printf 'NOTES_DIR="%s"\nEXTENSION="gpg"\n' "$NOTES_DIR" >"$XDG_CONFIG_HOME/memo/config"
+
+  run bash -c '
+    source "completions/memo.bash"
+    _memo_get_extensions
+  '
+  assert_success
+  assert_output "asc gpg"
+}
+
 @test "bash: sync/init offer git only once, not after it is present" {
   run bash -c '
     source "completions/memo.bash"
@@ -190,6 +250,43 @@ setup() {
   run cat "completions/_memo"
   assert_output --partial "-g '^*.asc'"
   assert_output --partial "-g '^*.gpg'"
+}
+
+@test "zsh: completes the extension set with EXTENSION as well" {
+  command -v zsh >/dev/null || skip "zsh not installed"
+  run zsh -c '
+    export XDG_CONFIG_HOME="$1"
+    printf "NOTES_DIR=\"$2\"\nEXTENSION=\"pgp\"\n" >"$XDG_CONFIG_HOME/memo/config"
+
+    # Stub the completion widgets, so the arguments they get can be read back
+    _files() { print -r -- "files: $*" }
+    _values() { : }
+    _describe() { : }
+
+    source "completions/_memo" 2>/dev/null
+    _memo_args decrypt
+    _memo_args encrypt-files
+  ' _ "$XDG_CONFIG_HOME" "$NOTES_DIR"
+  assert_success
+  assert_output --partial "files: -W $NOTES_DIR -g *.asc -g *.gpg -g *.pgp"
+  assert_output --partial "files: -W $NOTES_DIR -g ^*.asc -g ^*.gpg -g ^*.pgp"
+}
+
+@test "zsh: adds no extra globs without a configured extension" {
+  command -v zsh >/dev/null || skip "zsh not installed"
+  run zsh -c '
+    export XDG_CONFIG_HOME="$1"
+
+    _files() { print -r -- "files: $*" }
+    _values() { : }
+    _describe() { : }
+
+    source "completions/_memo" 2>/dev/null
+    _memo_args decrypt
+  ' _ "$BATS_TEST_TMPDIR/no-config"
+  assert_success
+  assert_output --partial "files: -W $HOME/notes -g *.asc -g *.gpg"
+  refute_output --partial "pgp"
 }
 
 @test "zsh: decrypt-files completes all" {

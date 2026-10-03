@@ -18,10 +18,11 @@ _file_exists() {
   [[ -f "$filepath" ]]
 }
 
-# Supported note extensions memo reads. New notes are written with $EXTENSION.
+# Supported note extensions memo reads. New notes are written with $EXTENSION,
+# which is added to this list once the config is loaded (_resolve_note_extensions).
 SUPPORTED_EXTENSIONS=("asc" "gpg")
 
-# Whether filepath is an encrypted note, so either extension is accepted
+# Whether filepath is an encrypted note, so any supported extension is accepted
 _file_is_gpg() {
   local filepath="$1"
   local ext
@@ -34,12 +35,16 @@ _file_is_gpg() {
 }
 
 # Strips the note extension of given path (e.g example.md.gpg -> example.md)
+# Only the trailing one is stripped, the rest of the name is kept as given.
 _strip_note_extension() {
   local filepath="$1"
   local ext
 
   for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
-    filepath="${filepath%."$ext"}"
+    if [[ "$filepath" == *".$ext" ]]; then
+      filepath="${filepath%."$ext"}"
+      break
+    fi
   done
 
   printf "%s" "$filepath"
@@ -179,7 +184,7 @@ _determine_filename() {
 
   if [[ -z "$input" ]]; then
     # Strip the note extension if present
-    _strip_note_extension "$CAPTURE_FILE"
+    printf "%s" "$CAPTURE_FILE"
     return 0
   fi
 
@@ -688,7 +693,7 @@ _git_sync() {
 
 # Initializes git configuration for encrypted notes in a git repository
 #
-# Updates/creates .gitattributes to include: *.asc and *.gpg diff=${diff_name}. This will make it possible that a custom diff command will be used for note files.
+# Updates/creates .gitattributes to include: *.<ext> diff=${diff_name} for every supported note extension. This will make it possible that a custom diff command will be used for note files.
 # It updates local git config to include a custom command (memo decrypt) to be used when generating git diffs.
 # Adds a wildcard to .gitignore to prevent accidental staging of files that are not notes. (.gitignore, .gitattributes and .githooks/ are exempt)
 _git_init() {
@@ -720,8 +725,15 @@ _git_init() {
   #
   touch "$attr_file"
 
-  # shellcheck disable=SC2066
-  for rule in "*.asc diff=${diff_name}" "*.gpg diff=${diff_name}"; do
+  local ext
+  local -a diff_rules=()
+  local -a allow_rules=()
+  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
+    diff_rules+=("*.${ext} diff=${diff_name}")
+    allow_rules+=("!**/*.${ext}")
+  done
+
+  for rule in "${diff_rules[@]}"; do
     if ! grep -qxF "$rule" "$attr_file"; then
       printf '%s\n' "$rule" >>"$attr_file"
       printf '%s\n' "Added '$rule' to $attr_file"
@@ -756,8 +768,7 @@ _git_init() {
     printf '%s\n' "Added '!*/' to $ignore_file"
   fi
 
-  # shellcheck disable=SC2066
-  for allow in "!**/*.asc" "!**/*.gpg"; do
+  for allow in "${allow_rules[@]}"; do
     if ! grep -qxF "$allow" "$ignore_file"; then
       printf '%s\n' "$allow" >>"$ignore_file"
       printf '%s\n' "Added '$allow' to $ignore_file"
@@ -780,7 +791,7 @@ _git_init() {
 # Interactively select a file inside notes dir using fzf.
 #
 # Ensures that the required commands (`gpg`, `rg`, `fzf`) are present before running.
-# Uses `ripgrep` to list all note files (`.asc` and `.gpg`) under NOTES_DIR.
+# Uses `ripgrep` to list all note files (any supported extension) under NOTES_DIR.
 #
 # Usage:
 #   memo_files
@@ -811,8 +822,14 @@ memo_files() {
   local preview_cmd
   printf -v preview_cmd '%q ' "${preview[@]}"
 
+  local -a note_globs=()
+  local ext
+  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
+    note_globs+=(--glob "*.$ext")
+  done
+
   local result
-  result=$(rg --files --glob "*.asc" --glob "*.gpg" "$NOTES_DIR" | fzf --preview "$preview_prefix$preview_cmd{} 2>/dev/null | head -100")
+  result=$(rg --files "${note_globs[@]}" "$NOTES_DIR" | fzf --preview "$preview_prefix$preview_cmd{} 2>/dev/null | head -100")
 
   [[ -z "$result" ]] && return
 
@@ -1528,6 +1545,7 @@ Notes:
   Notes are written with the .asc extension and encrypted notes with the .gpg
   extension are read as well, so notes stay where they are.
   Set EXTENSION in the config to write a different extension, e.g gpg.
+  A custom EXTENSION is read as well, so those notes keep opening.
   New notes use the extension you specify (or none if omitted).
   A note encrypted with a passphrase is re-encrypted the same way when opened
   with 'memo FILE', so it never turns into a recipient-key note.
@@ -1571,6 +1589,27 @@ _load_config() {
     # shellcheck source=/dev/null
     source "$config_file"
   fi
+
+  # After the config is read, so $EXTENSION can come from it
+  _resolve_note_extensions
+}
+
+# Validates $EXTENSION and adds it to $SUPPORTED_EXTENSIONS when it is a new one.
+# Notes memo writes are then readable again: without this, a note written with a
+# custom extension would be unknown to every place that matches on the
+# extensions (listing, decrypt-files, encrypt-files, _file_is_gpg, ...).
+_resolve_note_extensions() {
+  if [[ ! "$EXTENSION" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    printf "Error: EXTENSION must be a bare extension without a leading dot: '%s'\n" "$EXTENSION" >&2
+    return 1
+  fi
+
+  local ext
+  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
+    [[ "$ext" == "$EXTENSION" ]] && return 0
+  done
+
+  SUPPORTED_EXTENSIONS+=("$EXTENSION")
 }
 
 _parse_args() {
@@ -1660,7 +1699,7 @@ main() {
   fi
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
-  _load_config "$CONFIG_FILE"
+  _load_config "$CONFIG_FILE" || exit 1
   _create_dirs
 
   _parse_args "$@"

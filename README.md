@@ -126,9 +126,10 @@ NOTES_DIR=$HOME/notes
 # The default text editor for opening notes. If this variable is empty, memo will use the $EDITOR environment variable.
 EDITOR_CMD=$EDITOR
 
-# The extension new notes are encrypted with. Notes with the .gpg extension are
-# read as well, so existing notes keep opening and stay where they are. Set this
-# to gpg to keep writing .gpg files.
+# The extension new notes are encrypted with. Notes with the .asc and .gpg
+# extensions are read as well, so existing notes keep opening and stay where
+# they are. Set this to gpg to keep writing .gpg files, or to any other bare
+# extension (no leading dot): memo then reads that one too.
 EXTENSION="asc"
 
 # The default file to open when running memo without any arguments.
