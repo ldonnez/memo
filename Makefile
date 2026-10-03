@@ -16,10 +16,20 @@ dev:
 	ln -sf $(CURDIR)/memo.sh $(MEMO_INSTALL_DIR)/memo
 
 	@printf "Symlinking completions...\n"
-	mkdir -p $(ZSH_COMPLETION_DIR)
-	ln -sf $(CURDIR)/completions/_memo $(ZSH_COMPLETION_DIR)/_memo
-	mkdir -p $(BASH_COMPLETION_DIR)
-	ln -sf $(CURDIR)/completions/memo.bash $(BASH_COMPLETION_DIR)/memo
+	@if [ -w $(ZSH_COMPLETION_DIR) ] || [ -w $(dir $(ZSH_COMPLETION_DIR)) ]; then \
+		mkdir -p $(ZSH_COMPLETION_DIR); \
+		ln -sf $(CURDIR)/completions/_memo $(ZSH_COMPLETION_DIR)/_memo; \
+		printf "Zsh completion installed to $(ZSH_COMPLETION_DIR)/_memo\n"; \
+	else \
+		printf "Warning: $(ZSH_COMPLETION_DIR) is not writable, skipping zsh completion\n"; \
+	fi
+	@if [ -w $(BASH_COMPLETION_DIR) ] || [ -w $(dir $(BASH_COMPLETION_DIR)) ]; then \
+		mkdir -p $(BASH_COMPLETION_DIR); \
+		ln -sf $(CURDIR)/completions/memo.bash $(BASH_COMPLETION_DIR)/memo; \
+		printf "Bash completion installed to $(BASH_COMPLETION_DIR)/memo\n"; \
+	else \
+		printf "Warning: $(BASH_COMPLETION_DIR) is not writable, skipping bash completion\n"; \
+	fi
 
 	@printf "Installation complete!\n"
 	@printf "Ensure $(MEMO_INSTALL_DIR) is in your shell's PATH.\n"
@@ -30,10 +40,20 @@ install:
 	install -m 0700 memo.sh $(MEMO_INSTALL_DIR)/memo
 
 	@printf "Installing completions...\n"
-	mkdir -p $(ZSH_COMPLETION_DIR)
-	install -m 0644 completions/_memo $(ZSH_COMPLETION_DIR)/_memo
-	mkdir -p $(BASH_COMPLETION_DIR)
-	install -m 0644 completions/memo.bash $(BASH_COMPLETION_DIR)/memo
+	@if [ -w $(ZSH_COMPLETION_DIR) ] || [ -w $(dir $(ZSH_COMPLETION_DIR)) ]; then \
+		mkdir -p $(ZSH_COMPLETION_DIR); \
+		install -m 0644 completions/_memo $(ZSH_COMPLETION_DIR)/_memo; \
+		printf "Zsh completion installed to $(ZSH_COMPLETION_DIR)/_memo\n"; \
+	else \
+		printf "Warning: $(ZSH_COMPLETION_DIR) is not writable, skipping zsh completion\n"; \
+	fi
+	@if [ -w $(BASH_COMPLETION_DIR) ] || [ -w $(dir $(BASH_COMPLETION_DIR)) ]; then \
+		mkdir -p $(BASH_COMPLETION_DIR); \
+		install -m 0644 completions/memo.bash $(BASH_COMPLETION_DIR)/memo; \
+		printf "Bash completion installed to $(BASH_COMPLETION_DIR)/memo\n"; \
+	else \
+		printf "Warning: $(BASH_COMPLETION_DIR) is not writable, skipping bash completion\n"; \
+	fi
 
 	@printf "Installation complete!\n"
 	@printf "Ensure $(MEMO_INSTALL_DIR) is in your shell's PATH.\n"
