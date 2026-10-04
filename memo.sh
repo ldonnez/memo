@@ -1595,8 +1595,8 @@ _load_config() {
 # custom extension would be unknown to every place that matches on the
 # extensions (listing, decrypt-files, encrypt-files, _file_is_gpg, ...).
 _resolve_note_extensions() {
-  if [[ ! "$EXTENSION" =~ ^[A-Za-z0-9_-]+$ ]]; then
-    printf "Error: EXTENSION must be a bare extension without a leading dot: '%s'\n" "$EXTENSION" >&2
+  if [[ ! "$EXTENSION" =~ ^[A-Za-z0-9_][A-Za-z0-9_-]*$ ]]; then
+    printf "Error: EXTENSION must be a bare extension, starting with a letter, digit or underscore: '%s'\n" "$EXTENSION" >&2
     return 1
   fi
 
@@ -1694,7 +1694,19 @@ main() {
   fi
 
   CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/memo/config"
-  _load_config "$CONFIG_FILE" || exit 1
+
+  # An unusable $EXTENSION is fatal, since every command works on note
+  # extensions. The commands that only print text stay available though, so
+  # there is a way to read how to fix the config.
+  if ! _load_config "$CONFIG_FILE"; then
+    case "${1-}" in
+    help | version) ;;
+    *)
+      exit 1
+      ;;
+    esac
+  fi
+
   _create_dirs
 
   _parse_args "$@"
