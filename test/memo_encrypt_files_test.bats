@@ -413,3 +413,46 @@ Would encrypt to: test_dir/test2.md.asc"
     assert_output "Batch content"
   )
 }
+
+@test "warns about a plaintext file that is skipped for its note extension" {
+  # Every name based check takes it for a note, so it would stay plaintext and
+  # `memo sync` would commit it.
+  local file="$NOTES_DIR/data.gpg"
+  printf "TOP SECRET plaintext" >"$file"
+
+  run memo_encrypt_files all
+  assert_success
+  assert_output --partial "Warning: data.gpg ends in a note extension but is not encrypted"
+  assert_output --partial "Nothing to encrypt."
+
+  run cat "$file"
+  assert_output "TOP SECRET plaintext"
+}
+
+@test "does not warn about an encrypted note" {
+  _gpg_encrypt "$NOTES_DIR/note.md.asc" <<<"Hello"
+  _gpg_encrypt "$NOTES_DIR/legacy.md.gpg" <<<"Hello"
+  printf "Hello" >"$NOTES_DIR/plain.md"
+
+  run memo_encrypt_files all
+  assert_success
+  refute_output --partial "Warning:"
+  assert_output "Encrypted: plain.md -> plain.md.asc"
+}
+
+@test "warns about a skipped plaintext note name given explicitly" {
+  local file="$NOTES_DIR/data.asc"
+  printf "TOP SECRET plaintext" >"$file"
+
+  run memo_encrypt_files "$file"
+  assert_success
+  assert_output --partial "Warning: data.asc ends in a note extension but is not encrypted"
+}
+
+@test "warns about a skipped plaintext note name matched by a glob" {
+  local file="$NOTES_DIR/data.gpg"
+  printf "TOP SECRET plaintext" >"$file"
+
+  run memo_encrypt_files "*.gpg"
+  assert_output --partial "Warning: data.gpg ends in a note extension but is not encrypted"
+}
