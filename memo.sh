@@ -1096,10 +1096,15 @@ memo_encrypt() {
     case "$1" in
     --symmetric) symmetric="true" ;;
     --passphrase-fd | --passphrase-file | --passphrase-env)
-      _set_passphrase_option "$1" "$2"
+      _set_passphrase_option "$1" "${2-}" || return 1
       shift
       ;;
     *)
+      # One output file only: a second one would silently win over the first
+      if [[ -n "$output_file" ]]; then
+        printf "Usage: memo encrypt [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <output_file>\n"
+        return 1
+      fi
       output_file="$1"
       ;;
     esac
@@ -1107,7 +1112,7 @@ memo_encrypt() {
   done
 
   if [[ -z "$output_file" ]]; then
-    printf "Usage: memo encrypt [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>\n"
+    printf "Usage: memo encrypt [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <output_file>\n"
     return 1
   fi
 
@@ -1124,10 +1129,15 @@ memo_decrypt() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
     --passphrase-fd | --passphrase-file | --passphrase-env)
-      _set_passphrase_option "$1" "$2"
+      _set_passphrase_option "$1" "${2-}" || return 1
       shift
       ;;
     *)
+      # One note only: a second one would silently win over the first
+      if [[ -n "$input_file" ]]; then
+        printf "Usage: memo decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>\n"
+        return 1
+      fi
       input_file="$1"
       ;;
     esac
@@ -1135,7 +1145,7 @@ memo_decrypt() {
   done
 
   if [[ -z "$input_file" ]]; then
-    printf "Usage: memo decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>.asc\n"
+    printf "Usage: memo decrypt [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <input_file>\n"
     return 1
   fi
 
@@ -1667,14 +1677,13 @@ _parse_args() {
     esac
   done
 
-  if [[ -z "$arg" || "$arg" == "today" || "$arg" == "yesterday" || "$arg" == "tomorrow" || "$arg" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ || -n "$arg" ]]; then
-    memo "$arg"
-    return
+  if (($# > 0)); then
+    printf "Usage: memo [FILE]\n" >&2
+    exit 1
   fi
 
-  # unknown option
-  printf "Usage: memo [today|esterday|YYYY-MM-DD|files|encrypt|decrypt|encrypt-files|decrypt-files|integrity-check|sync|init|upgrade|uninstall]\n"
-  exit 1
+  memo "$arg"
+  return
 }
 
 # Entrypoint

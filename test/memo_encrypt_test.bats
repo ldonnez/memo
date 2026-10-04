@@ -82,20 +82,22 @@ teardown() {
   )
 }
 
-@test "errors when a passphrase option is given without a value" {
-  run memo_encrypt --passphrase-file
+@test "prints usage when memo_encrypt is given more than one output file" {
+  run memo_encrypt "$NOTES_DIR/first.asc" "$NOTES_DIR/second.md" <<<"Hello"
   assert_failure
-  assert_output --partial "--passphrase-file needs a value"
+  assert_output --partial "Usage: memo encrypt"
 
-  run memo_decrypt --passphrase-env
+  # The first one is not written either
+  run _file_exists "$NOTES_DIR/first.asc"
   assert_failure
-  assert_output --partial "--passphrase-env needs a value"
+  run _file_exists "$NOTES_DIR/second.md.asc"
+  assert_failure
+}
 
-  run memo_decrypt_files --passphrase-fd
-  assert_failure
-  assert_output --partial "--passphrase-fd needs a value"
+@test "prints usage when memo_decrypt is given more than one file" {
+  _gpg_encrypt "$NOTES_DIR/one.md.asc" <<<"Hello one"
 
-  run memo_encrypt_files --passphrase-file
+  run memo_decrypt "$NOTES_DIR/one.md.asc" "$NOTES_DIR/two.md.asc"
   assert_failure
-  assert_output --partial "--passphrase-file needs a value"
+  assert_output --partial "Usage: memo decrypt"
 }
