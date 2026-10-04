@@ -1465,8 +1465,17 @@ memo_uninstall() {
   local script_path
   script_path=$(_resolve_script_path)
 
-  rm -rf "$script_path/memo"
+  rm -f "$script_path/memo"
   printf "Deleted %s\n" "$script_path/memo"
+
+  local zsh_dir="/usr/local/share/zsh/site-functions"
+  local bash_dir="/usr/local/share/bash-completion/completions"
+  local zsh_fallback="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+  local bash_fallback="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+
+  rm -f "$zsh_dir/_memo" "$zsh_fallback/_memo"
+  rm -f "$bash_dir/memo" "$bash_fallback/memo"
+  printf "Deleted completion files\n"
 
   printf "Uninstall completed.\n"
 }
