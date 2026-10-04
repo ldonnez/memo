@@ -136,6 +136,20 @@ teardown() {
   printf 'EXTENSION="notes/asc"\n' >"$config_file"
   run _load_config "$config_file"
   assert_failure
+
+  # A leading dash would turn the note name into an option for the find and rg
+  # calls that match on the extensions.
+  printf 'EXTENSION="-asc"\n' >"$config_file"
+  run _load_config "$config_file"
+  assert_failure
+
+  printf 'EXTENSION="_asc"\n' >"$config_file"
+  run _load_config "$config_file"
+  assert_success
+  # Not via run: the extension is added to the global array, which a subshell
+  # would swallow.
+  _load_config "$config_file"
+  assert_equal "${SUPPORTED_EXTENSIONS[*]}" "asc gpg _asc"
 }
 
 @test "_make_tempfile drops either note extension" {

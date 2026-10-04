@@ -314,3 +314,39 @@ setup() {
   run cat "completions/_memo"
   assert_output --partial "help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade uninstall"
 }
+
+@test "every built-in note extension is completed by both completions" {
+  # The built-in list is written out in three places (memo.sh and both
+  # completions). Nothing else keeps them in sync, so a new extension added to
+  # SUPPORTED_EXTENSIONS has to show up in the completions too.
+  run bash -c '
+    source "memo.sh"
+    printf "%s\n" "${SUPPORTED_EXTENSIONS[@]}"
+  '
+  assert_success
+
+  local -a builtins=()
+  local ext
+  while IFS= read -r ext; do
+    builtins+=("$ext")
+  done < <(printf "%s\n" "$output")
+
+  # The config of this suite sets EXTENSION=asc, so the array still holds just
+  # the built-ins here.
+  run bash -c '
+    source "completions/memo.bash"
+    _memo_get_extensions
+  '
+  assert_success
+  assert_output "${builtins[*]}"
+
+  run cat "completions/_memo"
+  assert_success
+  local zsh_completion="$output"
+  for ext in "${builtins[@]}"; do
+    assert_regex "$zsh_completion" "-g '\\*\\.$ext'"
+    assert_regex "$zsh_completion" "-g '\\^\\*\\.$ext'"
+    # zsh skips the extra glob for a built-in, so it has to know all of them
+    assert_regex "$zsh_completion" "!= \"$ext\""
+  done
+}
