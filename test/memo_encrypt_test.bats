@@ -81,3 +81,21 @@ teardown() {
     assert_output --partial "Secret content"
   )
 }
+
+@test "errors when a passphrase option is given without a value" {
+  run memo_encrypt --passphrase-file
+  assert_failure
+  assert_output --partial "--passphrase-file needs a value"
+
+  run memo_decrypt --passphrase-env
+  assert_failure
+  assert_output --partial "--passphrase-env needs a value"
+
+  run memo_decrypt_files --passphrase-fd
+  assert_failure
+  assert_output --partial "--passphrase-fd needs a value"
+
+  run memo_encrypt_files --passphrase-file
+  assert_failure
+  assert_output --partial "--passphrase-file needs a value"
+}

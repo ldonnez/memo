@@ -395,10 +395,18 @@ _has_passphrase_source() {
 # Consumes a --passphrase-fd, --passphrase-file or --passphrase-env option by
 # putting its value into the matching MEMO_PASSPHRASE_* variable
 _set_passphrase_option() {
-  case "$1" in
-  --passphrase-file) MEMO_PASSPHRASE_FILE="$2" ;;
-  --passphrase-fd) MEMO_PASSPHRASE_FD="$2" ;;
-  --passphrase-env) MEMO_PASSPHRASE_ENV="$2" ;;
+  local option="$1"
+  local value="${2-}"
+
+  if [[ -z "$value" ]]; then
+    printf "Error: %s needs a value\n" "$option" >&2
+    return 1
+  fi
+
+  case "$option" in
+  --passphrase-file) MEMO_PASSPHRASE_FILE="$value" ;;
+  --passphrase-fd) MEMO_PASSPHRASE_FD="$value" ;;
+  --passphrase-env) MEMO_PASSPHRASE_ENV="$value" ;;
   esac
 }
 
@@ -793,7 +801,7 @@ memo_decrypt_files() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
     --passphrase-fd | --passphrase-file | --passphrase-env)
-      _set_passphrase_option "$1" "$2"
+      _set_passphrase_option "$1" "${2-}" || return 1
       shift
       ;;
     *)
@@ -912,11 +920,11 @@ memo_encrypt_files() {
     --dry-run) dry=1 ;;
     --symmetric) symmetric="true" ;;
     --passphrase-fd | --passphrase-file | --passphrase-env)
-      _set_passphrase_option "$1" "$2"
+      _set_passphrase_option "$1" "${2-}" || return 1
       shift
       ;;
     --exclude)
-      exclude_patterns+=("$2")
+      exclude_patterns+=("${2-}")
       shift
       ;;
     *)
