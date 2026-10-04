@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.1](https://github.com/ldonnez/memo/compare/v0.11.0...v0.11.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* compare the notes dir per path component ([1b6fb15](https://github.com/ldonnez/memo/commit/1b6fb157cdc3b98df47ce07086e6d6b6d4959adc))
+* ensure to remove completion files when uninstalling ([0895272](https://github.com/ldonnez/memo/commit/08952723a664062e8d6b49c081241f7a4f0d81a8))
+* fallback  when regular completion dir is not writable ([da69ab4](https://github.com/ldonnez/memo/commit/da69ab44c52c61074d16c950c95f6fa2189d7f3b))
+* keep help and version working with an unusable EXTENSION ([ac735ed](https://github.com/ldonnez/memo/commit/ac735edf3a4eba6280782b9ac1c3df37071f58b2))
+* reject a second positional argument ([33dc15a](https://github.com/ldonnez/memo/commit/33dc15ab56c810113740063f3f813204b46747e8))
+* require a value for a passphrase option ([79733f5](https://github.com/ldonnez/memo/commit/79733f50fd977d7a7a0b3b0b231abb35c3f9730d))
+* use SUPPORTED_EXTENSIONS and EXTENSIONS variables in completions ([7a2d5ae](https://github.com/ldonnez/memo/commit/7a2d5ae647a5251b7740208240c104b208137996))
+* warn about files skipped for their note extension ([bff3c63](https://github.com/ldonnez/memo/commit/bff3c632b74fd2232064a731404e1a6be669cccf))
+
 ## [0.11.0](https://github.com/ldonnez/memo/compare/v0.10.3...v0.11.0) (2026-10-03)
 
 
