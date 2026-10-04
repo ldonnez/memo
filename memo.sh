@@ -50,19 +50,6 @@ _strip_note_extension() {
   printf "%s" "$filepath"
 }
 
-_get_extension() {
-  local filename="$1"
-  local basename
-  basename="$(basename "$filename")"
-
-  if [[ "$basename" == *.* ]]; then
-    local extension="${basename#*.}"
-    printf "%s" "$extension"
-  else
-    printf ""
-  fi
-}
-
 # /path/to/example.md -> example.md
 _strip_path() {
   local filepath="$1"
@@ -109,22 +96,6 @@ _get_absolute_path() {
   abs_path=$(readlink -f "$target")
 
   printf "%s" "$abs_path"
-}
-
-# Check if filename matches YYYY-MM-DD format.
-# Strips path and extensions before determining. (e.g example.md.gpg -> example)
-_filename_is_date() {
-  local filepath="$1"
-
-  # Example: 2025-08-05.md.gpg -> 2025-08-05
-  local filename
-  filename=$(_strip_extensions "$(_strip_path "$filepath")")
-
-  if [[ "$filename" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    return 0
-  else
-    return 1
-  fi
 }
 
 # Ensures filepath has a note extension: one that is already there is kept, so
@@ -178,12 +149,12 @@ _gpg_recipients_exists() {
   fi
 }
 
-# Maps today, yesterday, tomorrow to YYYY-MM-DD date.
+# Maps today, yesterday, tomorrow to YYYY-MM-DD date. Everything else is
+# returned as given.
 _determine_filename() {
   local input="$1"
 
   if [[ -z "$input" ]]; then
-    # Strip the note extension if present
     printf "%s" "$CAPTURE_FILE"
     return 0
   fi
@@ -203,21 +174,10 @@ _determine_filename() {
     return 0
   fi
 
-  if [[ "$input" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    printf "%s" "$input"
-    return 0
-  fi
-
-  local extension
-  extension=$(_get_extension "$input")
-
-  if [[ "$extension" == "" ]]; then
-    printf "%s" "$input"
-    return 0
-  fi
-
+  # Every other input is used as given. The note extension is not decided here:
+  # _as_gpg appends the configured one, so it also stays out of the way of a name
+  # that already carries a supported extension.
   printf "%s" "$input"
-  return 0
 }
 
 # Returns filepath based on input file name.
@@ -336,8 +296,8 @@ _gpg_encrypt() {
     _gpg_run "${opts[@]}" -o "$(_as_gpg "$output_path")"
   else
     if ! _file_exists "$input"; then
-      printf "File not found: %s" "$input"
-      exit 1
+      printf "File not found: %s\n" "$input" >&2
+      return 1
     fi
     _gpg_run "${opts[@]}" -o "$(_as_gpg "$output_path")" "$input"
   fi
@@ -464,8 +424,8 @@ _gpg_decrypt() {
   local input_path="$1" output_path="${2-""}"
 
   if ! _file_exists "$input_path"; then
-    printf "File not found: %s" "$input_path"
-    exit 1
+    printf "File not found: %s\n" "$input_path" >&2
+    return 1
   fi
 
   local -a opts=(--quiet --yes)
@@ -555,31 +515,6 @@ _get_target_filepath() {
     _get_filepath "$input"
     return
   fi
-}
-
-# Finds note file path relative of $NOTES_DIR.
-# When working dir is inside $NOTES_DIR it will return the relative path
-_find_note_file() {
-  local target="$1"
-  local file=""
-
-  if _file_exists "$target"; then
-    file="$target"
-  else
-    file=$(find "$NOTES_DIR" -type f -path "*/$target" | head -n 1)
-  fi
-
-  if ! _file_exists "$file"; then
-    printf "Not found: %s\n" "$target"
-    return 1
-  fi
-
-  if ! _is_in_notes_dir "$file"; then
-    printf "File not in %s\n" "$NOTES_DIR"
-    return 1
-  fi
-
-  printf "%s" "$file"
 }
 
 # Creates a file header used when new file is created
