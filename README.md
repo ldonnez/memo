@@ -108,7 +108,7 @@ Then start a new shell (or re-run `compinit`) to load the completion.
 
 Memo is designed to work with sensible defaults, but you can customize its behavior by creating a config file.
 
-Memo adheres to the XDG Base Directory Specification. Your configuration file should be located at: `$XDG_CONFIG_HOME/memo/config` (usually `$HOME/memo/config`).
+Memo adheres to the XDG Base Directory Specification. Your configuration file should be located at: `$XDG_CONFIG_HOME/memo/config` (usually `$HOME/.config/memo/config`).
 You can override any of the default settings by adding them to this file.
 
 ### Example config
@@ -129,7 +129,8 @@ EDITOR_CMD=$EDITOR
 # The extension new notes are encrypted with. Notes with the .asc and .gpg
 # extensions are read as well, so existing notes keep opening and stay where
 # they are. Set this to gpg to keep writing .gpg files, or to any other bare
-# extension (no leading dot): memo then reads that one too.
+# extension (no leading dot, starting with a letter, digit or underscore):
+# memo then reads that one too.
 EXTENSION="asc"
 
 # The default file to open when running memo without any arguments.
@@ -160,7 +161,7 @@ MEMO_PASSPHRASE_ENV=
 ## Usage
 
 ```bash
-memo [FILE] [LINE]
+memo [FILE]
 memo [COMMAND] [ARGS...]
 ```
 
@@ -216,8 +217,8 @@ MEMO_PASSPHRASE=hunter2 memo decrypt --passphrase-env MEMO_PASSPHRASE out.md.asc
 
 | Command                    | Description                                                                                                                                                                                                               |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `encrypt INPUTFILE`        | Encrypts text from stdin to given `INPUTFILE`. Accepts `--symmetric`, `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.                                                                                               |
-| `decrypt FILE.asc`         | Decrypt `FILE.asc` and print to stdout. Accepts `--passphrase-fd N` and `--passphrase-file PATH`.                                                                                                                         |
+| `encrypt OUTPUTFILE`       | Encrypts text from stdin to given `OUTPUTFILE`, adding the configured note extension when it has none yet. Accepts `--symmetric`, `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.             |
+| `decrypt FILE`             | Decrypt `FILE` and print to stdout. Accepts `--passphrase-fd N` and `--passphrase-file PATH`.                                                                                                                            |
 | `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`), plus `--dry-run`, `--exclude`, `--symmetric`, `--passphrase-fd N` and `--passphrase-file PATH`. |
 | `decrypt-files [FILES...]` | Decrypt notes in-place inside the notes directory. Accepts `all`, explicit `.asc`/`.gpg` file names or glob patterns (e.g. `dir/*.asc`), plus `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.         |
 | `files`                    | Browse all files in `fzf` (decrypts preview automatically).                                                                                                                                                               |

@@ -1477,7 +1477,7 @@ memo_version() {
 
 show_help() {
   cat <<EOF
-Usage: memo [FILE] [LINE]
+Usage: memo [FILE]
        memo [COMMAND] [ARGS...]
 
 Description:
@@ -1486,14 +1486,18 @@ Description:
     - "memo FILE"      Opens or creates a file named FILE
 
 Commands:
-  encrypt INPUTFILE                 Encrypts the text from stdin to given inputfile
+  encrypt OUTPUTFILE                Encrypts the text from stdin to given outputfile
+                                      - the note extension is added when OUTPUTFILE
+                                        does not have one yet
                                       - --symmetric encrypts with a passphrase
                                         instead of a recipient key
                                       - --passphrase-fd N, --passphrase-file PATH,
                                         --passphrase-env VAR supply the
                                         passphrase without prompting
 
-  decrypt FILE.asc                  Decrypts FILE.asc and print to stdout
+  decrypt FILE                        Decrypts the note FILE and print to stdout
+                                      - FILE is read as given, no note extension
+                                        is added or stripped
                                       - .gpg notes are read as well
                                       - --passphrase-fd N, --passphrase-file PATH,
                                         --passphrase-env VAR supply the
@@ -1527,7 +1531,8 @@ Commands:
 Examples:
   memo                                Open default file
   memo todo.md                        Open or create "todo.md" inside notes dir
-  memo encrypt out.asc notes.txt    Encrypt notes.txt into out.asc
+  memo encrypt out.asc              Encrypt stdin into out.asc
+  memo encrypt out                  Encrypt stdin into out.<EXTENSION>
   memo decrypt out.asc              Decrypt out.asc to stdout
   memo encrypt-files all            Encrypt all files in notes dir
   memo decrypt-files *.asc          Decrypt matching .asc files
