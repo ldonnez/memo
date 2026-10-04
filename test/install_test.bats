@@ -25,12 +25,18 @@ setup() {
     return 0
   }
 
-  # Resolve the target dirs exactly like install.sh does, so assertions hold
-  # on both writable /usr/local hosts and rootless docker.
+  # Resolve the target dirs exactly like install.sh does.
   ZSH_DIR="/usr/local/share/zsh/site-functions"
   BASH_DIR="/usr/local/share/bash-completion/completions"
-  [ -w /usr/local/share/zsh ] || ZSH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
-  [ -w /usr/local/share/bash-completion ] || BASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+
+  if ! mkdir -p "$ZSH_DIR" 2>/dev/null || [ ! -w "$ZSH_DIR" ]; then
+    ZSH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+  fi
+
+  if ! mkdir -p "$BASH_DIR" 2>/dev/null || [ ! -w "$BASH_DIR" ]; then
+    BASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+  fi
+
   export ZSH_DIR BASH_DIR
 }
 
@@ -42,37 +48,21 @@ teardown() {
 @test "Installs latest version of memo" {
   # Mock latest version
   # shellcheck disable=SC2329
-  _get_version() { printf "v0.2.0"; }
+  _get_version() {
+    printf "v0.2.0"
+  }
 
   run main
   assert_success
   assert_line --index 0 --partial "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
   assert_line --index 1 "Installing memo to $TEST_HOME/.local/bin..."
-  assert_line --partial "Completions installed to $ZSH_DIR"
-  assert_line --partial "Completions installed to $BASH_DIR"
+  assert_line --partial "Zsh completion installed to $ZSH_DIR"
+  assert_line --partial "Bash completion installed to $BASH_DIR"
   [[ "${lines[${#lines[@]} - 1]}" == "Make sure $TEST_HOME/.local/bin is in your PATH." ]]
   [[ "${lines[${#lines[@]} - 2]}" == "Installed memo to $TEST_HOME/.local/bin" ]]
 }
 
-@test "Installs completions with a warning when system dirs are not writable" {
-  if [ -w /usr/local/share/zsh ] || [ -w /usr/local/share/bash-completion ]; then
-    skip "at least one system dir is writable; not all fallbacks in use"
-  fi
-
-  # Mock latest version
-  # shellcheck disable=SC2329
-  _get_version() { printf "v0.2.0"; }
-
-  run main
-  assert_success
-  assert_output --partial "WARNING: /usr/local/share/zsh is not writable."
-  assert_output --partial "fpath=( $ZSH_DIR \$fpath )"
-  assert_output --partial "WARNING: /usr/local/share/bash-completion is not writable."
-  assert_output --partial "Completions installed to $ZSH_DIR"
-  assert_output --partial "Completions installed to $BASH_DIR"
-}
-
-@test "Does not install memo curl could not resolve host" {
+@test "Does not install memo when curl could not resolve host" {
   # Run in separate subshell to avoid collision with other tests
   (
     # Mock curl

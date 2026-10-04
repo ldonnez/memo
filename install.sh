@@ -49,37 +49,43 @@ main() {
 
   local url="https://github.com/$REPO/releases/download/$version/memo.tar.gz"
   printf "Downloading %s\n" "$url"
-  curl -sSL "$url" -o $tmp_tar
+  curl -sSL "$url" -o "$tmp_tar"
 
-  mkdir -p "$tmp_dir" && tar -xzf $tmp_tar -C $tmp_dir
+  mkdir -p "$tmp_dir"
+  tar -xzf "$tmp_tar" -C "$tmp_dir"
 
   printf "Installing memo to %s...\n" "$MEMO_INSTALL_DIR"
   mkdir -p "$MEMO_INSTALL_DIR"
-  install -m 0755 /tmp/memo/memo.sh "$MEMO_INSTALL_DIR"/memo
+  install -m 0755 "$tmp_dir/memo.sh" "$MEMO_INSTALL_DIR/memo"
 
   # Completions go to the system dirs when writable, else per-user dirs.
   local zsh_dir="/usr/local/share/zsh/site-functions"
   local bash_dir="/usr/local/share/bash-completion/completions"
-  if [ ! -w /usr/local/share/zsh ]; then
+
+  if ! mkdir -p "$zsh_dir" 2>/dev/null || [ ! -w "$zsh_dir" ]; then
     zsh_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
-    printf "WARNING: /usr/local/share/zsh is not writable.\n"
-    printf "Zsh completion installed to %s\n" "$zsh_dir"
-    printf "Add this to your ~/.zshrc before compinit to enable it:\n"
-    printf "  fpath=( %s \$fpath )\n" "$zsh_dir"
   fi
-  if [ ! -w /usr/local/share/bash-completion ]; then
+
+  if ! mkdir -p "$bash_dir" 2>/dev/null || [ ! -w "$bash_dir" ]; then
     bash_dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
-    printf "WARNING: /usr/local/share/bash-completion is not writable.\n"
-    printf "Bash completion installed to %s\n" "$bash_dir"
-    printf "The per-user dir is picked up automatically when bash-completion is installed.\n"
   fi
 
   mkdir -p "$zsh_dir" "$bash_dir"
-  install -m 0644 /tmp/memo/completions/_memo "$zsh_dir"/_memo
-  install -m 0644 /tmp/memo/completions/memo.bash "$bash_dir"/memo
 
-  printf "Completions installed to %s\n" "$zsh_dir"
-  printf "Completions installed to %s\n" "$bash_dir"
+  install -m 0644 "$tmp_dir/completions/_memo" "$zsh_dir/_memo"
+  install -m 0644 "$tmp_dir/completions/memo.bash" "$bash_dir/memo"
+
+  printf "Zsh completion installed to %s\n" "$zsh_dir"
+  printf "Bash completion installed to %s\n" "$bash_dir"
+
+  if [ "$zsh_dir" != "/usr/local/share/zsh/site-functions" ]; then
+    printf "Add this to your ~/.zshrc before compinit to enable it:\n"
+    printf "  fpath=( %s \$fpath )\n" "$zsh_dir"
+  fi
+
+  if [ "$bash_dir" != "/usr/local/share/bash-completion/completions" ]; then
+    printf "The per-user dir is picked up automatically when bash-completion is installed.\n"
+  fi
 
   printf "Installed memo to %s\n" "$MEMO_INSTALL_DIR"
   printf "Make sure %s is in your PATH.\n" "$MEMO_INSTALL_DIR"

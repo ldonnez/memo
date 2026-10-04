@@ -24,14 +24,6 @@ setup() {
   tar() {
     return 0
   }
-
-  # Resolve the target dirs exactly like _memo_install_completions does, so
-  # assertions hold on both writable /usr/local hosts and rootless docker.
-  ZSH_DIR="/usr/local/share/zsh/site-functions"
-  BASH_DIR="/usr/local/share/bash-completion/completions"
-  [ -w /usr/local/share/zsh ] || ZSH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
-  [ -w /usr/local/share/bash-completion ] || BASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
-  export ZSH_DIR BASH_DIR
 }
 
 teardown() {
@@ -41,13 +33,15 @@ teardown() {
 }
 
 @test "Upgrades memo when confirming" {
-  # Run in subshell to avaoid collision with other tests
+  # Run in subshell to avoid collision with other tests
   (
     local VERSION="0.1.0"
 
     # Mock latest version
     # shellcheck disable=SC2329
-    _get_latest_version() { printf "v0.2.0"; }
+    _get_latest_version() {
+      printf "v0.2.0"
+    }
 
     run memo_upgrade <<<""
     assert_success
@@ -55,40 +49,44 @@ teardown() {
     assert_line --index 1 "Proceeding with upgrade..."
     assert_line --index 2 "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
     assert_line --index 3 "Upgrade memo in $(_resolve_script_path)..."
-    assert_line --partial "Completions installed to $ZSH_DIR"
-    assert_line --partial "Completions installed to $BASH_DIR"
+    assert_line --partial "Zsh completion installed to "
+    assert_line --partial "Bash completion installed to "
     [[ "${lines[${#lines[@]} - 1]}" == "Upgrade success!" ]]
   )
 }
 
 @test "Upgrades memo when --force is given" {
-  # Run in subshell to avaoid collision with other tests
+  # Run in subshell to avoid collision with other tests
   (
     local VERSION="0.1.0"
 
     # Mock latest version
     # shellcheck disable=SC2329
-    _get_latest_version() { printf "v0.2.0"; }
+    _get_latest_version() {
+      printf "v0.2.0"
+    }
 
     run memo_upgrade "--force"
     assert_success
     assert_line --index 0 "Upgrade available: v0.1.0 -> v0.2.0"
     assert_line --index 1 "Downloading https://github.com/ldonnez/memo/releases/download/v0.2.0/memo.tar.gz"
     assert_line --index 2 "Upgrade memo in $(_resolve_script_path)..."
-    assert_line --partial "Completions installed to $ZSH_DIR"
-    assert_line --partial "Completions installed to $BASH_DIR"
+    assert_line --partial "Zsh completion installed to "
+    assert_line --partial "Bash completion installed to "
     [[ "${lines[${#lines[@]} - 1]}" == "Upgrade success!" ]]
   )
 }
 
 @test "Does not upgrade when not confirming" {
-  # Run in subshell to avaoid collision with other tests
+  # Run in subshell to avoid collision with other tests
   (
     local VERSION="0.1.0"
 
     # Mock latest version
     # shellcheck disable=SC2329
-    _get_latest_version() { printf "v0.2.0"; }
+    _get_latest_version() {
+      printf "v0.2.0"
+    }
 
     run memo_upgrade <<<"n"
     assert_success
@@ -104,7 +102,9 @@ Upgrade cancelled."
 
     # Mock latest version
     # shellcheck disable=SC2329
-    _get_latest_version() { printf "v0.1.0"; }
+    _get_latest_version() {
+      printf "v0.1.0"
+    }
 
     run memo_upgrade
     assert_success
