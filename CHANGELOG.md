@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/ldonnez/memo/compare/v0.11.1...v0.11.2) (2026-10-04)
+
+
+### Bug Fixes
+
+* ensure consistently installing completions to one location ([eb479ad](https://github.com/ldonnez/memo/commit/eb479adeef70d5dd573576e4f0dcfb2b381c390e))
+
 ## [0.11.1](https://github.com/ldonnez/memo/compare/v0.11.0...v0.11.1) (2026-10-04)
 
 
