@@ -28,3 +28,22 @@ teardown() {
   run _is_in_notes_dir "$input_path"
   assert_failure
 }
+
+@test "returns 1 for a sibling dir that starts with the notes dir name" {
+  local sibling="${NOTES_DIR}-backup"
+  mkdir -p "$sibling"
+  printf "Hello World" >"$sibling/test.md"
+
+  run _is_in_notes_dir "$sibling/test.md"
+  assert_failure
+
+  rm -rf "$sibling"
+}
+
+@test "returns 0 for a subdir of the notes dir" {
+  mkdir -p "$NOTES_DIR/sub"
+  printf "Hello World" >"$NOTES_DIR/sub/test.md"
+
+  run _is_in_notes_dir "$NOTES_DIR/sub/test.md"
+  assert_success
+}

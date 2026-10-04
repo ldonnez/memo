@@ -68,3 +68,16 @@ teardown() {
   assert_success
   assert_output "$NOTES_DIR/inbox.md.gpg"
 }
+
+@test "does not resolve a name against a sibling dir of the notes dir" {
+  local sibling="${NOTES_DIR}-backup"
+  mkdir -p "$sibling"
+
+  cd "$sibling"
+  run _get_filepath "pwd.md"
+  assert_success
+  assert_output "$NOTES_DIR/pwd.md"
+
+  cd /
+  rm -rf "$sibling"
+}

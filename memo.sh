@@ -188,7 +188,10 @@ _get_filepath() {
   if filename=$(_determine_filename "$input"); then
     local filepath
 
-    if [[ -n "$input" && "$PWD" == "$NOTES_DIR"* ]]; then
+    # An input given while inside the notes dir is taken as relative to it, so
+    # `cd` into a subdir and refer to its notes by name. _is_in_notes_dir
+    # compares per path component, so a sibling dir is not mistaken for one.
+    if [[ -n "$input" ]] && _is_in_notes_dir "$PWD"; then
       filepath="$PWD/$input"
     elif _file_exists "$filename" && _file_is_gpg "$filename"; then
       filepath="$filename"
@@ -477,7 +480,9 @@ _is_in_notes_dir() {
   # Remove trailing slash from NOTES_DIR if it exists, for consistent comparison
   notes_dir=${notes_dir%/}
 
-  if [[ "$fullpath" == "$notes_dir"* ]]; then
+  # Compared per path component, so a sibling that merely starts with the same
+  # characters ($NOTES_DIR-backup) is not taken for a subdir.
+  if [[ "$fullpath" == "$notes_dir" || "$fullpath" == "$notes_dir/"* ]]; then
     return 0
   else
     return 1
