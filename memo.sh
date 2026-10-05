@@ -734,6 +734,18 @@ _git_init() {
   done
 }
 
+# Reports a file that is left unencrypted only because its name ends in a note
+# extension. Every name based check (find filter, _file_is_gpg, _as_gpg) takes
+# such a file for a note, so it would be skipped in silence and end up committed
+# as plaintext by `memo sync`.
+_warn_unencrypted_file() {
+  local filepath="$1"
+
+  if _file_is_gpg "$filepath" && ! _file_is_gpg_message "$filepath"; then
+    printf "Warning: %s ends in a note extension but is not encrypted, so it was skipped. Drop the extension to have it encrypted.\n" "${filepath#"$NOTES_DIR"/}"
+  fi
+}
+
 ###############################################################################
 # Core API
 ###############################################################################
@@ -881,18 +893,6 @@ memo_decrypt_files() {
   done
 }
 
-# Reports a file that is left unencrypted only because its name ends in a note
-# extension. Every name based check (find filter, _file_is_gpg, _as_gpg) takes
-# such a file for a note, so it would be skipped in silence and end up committed
-# as plaintext by `memo sync`.
-_warn_unencrypted_note_name() {
-  local filepath="$1"
-
-  if _file_is_gpg "$filepath" && ! _file_is_gpg_message "$filepath"; then
-    printf "Warning: %s ends in a note extension but is not encrypted, so it was skipped. Drop the extension to have it encrypted.\n" "${filepath#"$NOTES_DIR"/}"
-  fi
-}
-
 # Encrypts a set of files using GPG, respecting user-defined rules like `.ignore` and `--exclude` patterns.
 #
 # Each file is encrypted in-place with the note extension using a temp file while preserving the original file name.
@@ -978,7 +978,7 @@ memo_encrypt_files() {
       # What the filter above dropped counts as a note by name. Report the ones
       # that hold no encrypted data, so plaintext cannot sit there unnoticed.
       while IFS= read -r f; do
-        _warn_unencrypted_note_name "$f"
+        _warn_unencrypted_file "$f"
 
         # Ensure consistent sorting on Linux/Macos with LC_ALL=C sort
       done < <(find "$NOTES_DIR" -type f \( "${note_args[@]}" \) | LC_ALL=C sort)
@@ -995,7 +995,7 @@ memo_encrypt_files() {
       if ! _file_is_gpg "$target"; then
         files+=("$target")
       else
-        _warn_unencrypted_note_name "$target"
+        _warn_unencrypted_file "$target"
       fi
 
       continue
@@ -1008,7 +1008,7 @@ memo_encrypt_files() {
         files+=("$f")
         matched=1
       else
-        _warn_unencrypted_note_name "$f"
+        _warn_unencrypted_file "$f"
       fi
     done
     [[ $matched -eq 0 ]] && {
