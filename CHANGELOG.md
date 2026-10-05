@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.3](https://github.com/ldonnez/memo/compare/v0.11.2...v0.11.3) (2026-10-05)
+
+
+### Code Refactoring
+
+* simplify encrypting files ([569fd92](https://github.com/ldonnez/memo/commit/569fd927238a11f529e5b0365e471aee7eced33e))
+
 ## [0.11.2](https://github.com/ldonnez/memo/compare/v0.11.1...v0.11.2) (2026-10-04)
 
 
