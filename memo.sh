@@ -573,6 +573,24 @@ _get_ignored_files() {
   fi
 }
 
+# Whether the given path, relative to $NOTES_DIR, matches any of the given glob
+# patterns, as they are written in .ignore or passed to --exclude.
+#
+# Usage:
+#   _matches_pattern "notes/file.md" "${ignore_patterns[@]}"
+_matches_pattern() {
+  local rel="$1"
+  shift
+
+  local pattern
+  for pattern in "$@"; do
+    # shellcheck disable=SC2053
+    [[ "$rel" == $pattern ]] && return 0
+  done
+
+  return 1
+}
+
 # Returns latest release version of memo by using the Github API.
 # Prints an explicit error and exits 1 when the version cannot be determined.
 _get_latest_version() {
@@ -986,138 +1004,99 @@ memo_encrypt_files() {
   fi
 
   shopt -s nullglob
-  local files=()
+  local -a candidates=()
+  local -a files=()
   local target
-  local -a plaintext_args=()
-  local -a note_args=()
-  local ext
+  local f
+  local rel
+  local matched=0
 
-  # Exclude notes that are encrypted already, whatever extension they use
-  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
-    plaintext_args+=(! -name "*.$ext")
-    [[ ${#note_args[@]} -gt 0 ]] && note_args+=(-o)
-    note_args+=(-name "*.$ext")
-  done
-
-  # Collect candidate files
+  # Collect the files every target points at, "all" being every file below
+  # $NOTES_DIR
   for target in "${args[@]}"; do
     if [[ "$target" == "all" ]]; then
       while IFS= read -r f; do
-
-        if _file_exists "$f" && ! _file_is_gpg "$f"; then
-          files+=("$f")
-        fi
-
+        candidates+=("$f")
         # Ensure consistent sorting on Linux/Macos with LC_ALL=C sort
-      done < <(find "$NOTES_DIR" -type f "${plaintext_args[@]}" | LC_ALL=C sort)
-
-      # What the filter above dropped counts as a note by name. Report the ones
-      # that hold no encrypted data, so plaintext cannot sit there unnoticed.
-      while IFS= read -r f; do
-        _warn_unencrypted_file "$f"
-
-        # Ensure consistent sorting on Linux/Macos with LC_ALL=C sort
-      done < <(find "$NOTES_DIR" -type f \( "${note_args[@]}" \) | LC_ALL=C sort)
-      continue
-    fi
-
-    if _file_exists "$target"; then
+      done < <(find "$NOTES_DIR" -type f | LC_ALL=C sort)
+    elif _file_exists "$target"; then
       if ! _is_in_notes_dir "$target"; then
         printf "File not in %s\n" "$NOTES_DIR"
         shopt -u nullglob
         return 1
       fi
 
-      if ! _file_is_gpg "$target"; then
-        files+=("$target")
-      else
-        _warn_unencrypted_file "$target"
-      fi
+      candidates+=("$target")
+    else
+      matched=0
+      for f in "$NOTES_DIR"/$target; do
+        _file_exists "$f" || continue
+        candidates+=("$f")
+        matched=1
+      done
 
+      if [[ $matched -eq 0 ]]; then
+        printf "File not in %s or pattern did not match: %s\n" "$NOTES_DIR" "$target"
+        shopt -u nullglob
+        return 1
+      fi
+    fi
+  done
+  shopt -u nullglob
+
+  if [[ ${#candidates[@]} -eq 0 ]]; then
+    printf "Nothing to encrypt.\n"
+    return 0
+  fi
+
+  # Drop everything that must stay as it is: notes that are encrypted already,
+  # files matching a .ignore or --exclude pattern, and names that only look like
+  # notes while holding plaintext, so it cannot be committed unnoticed
+  for f in "${candidates[@]}"; do
+    if _file_is_gpg "$f"; then
+      _warn_unencrypted_file "$f"
       continue
     fi
 
-    local matched=0
-    local f
-    for f in "$NOTES_DIR"/$target; do
-      if _file_exists "$f" && ! _file_is_gpg "$f"; then
-        files+=("$f")
-        matched=1
-      else
-        _warn_unencrypted_file "$f"
-      fi
-    done
-    [[ $matched -eq 0 ]] && {
-      printf "File not in %s or pattern did not match: %s\n" "$NOTES_DIR" "$target"
-      shopt -u nullglob
-      return 1
-    }
+    rel="${f#"$NOTES_DIR"/}"
+
+    if ((${#ignore_patterns[@]} > 0)) && _matches_pattern "$rel" "${ignore_patterns[@]}"; then
+      printf "Ignored (.ignore): %s\n" "$rel"
+      continue
+    fi
+
+    if ((${#exclude_patterns[@]} > 0)) && _matches_pattern "$rel" "${exclude_patterns[@]}"; then
+      printf "Excluded (--exclude): %s\n" "$rel"
+      continue
+    fi
+
+    files+=("$f")
   done
-  shopt -u nullglob
 
   if [[ ${#files[@]} -eq 0 ]]; then
     printf "Nothing to encrypt.\n"
     return 0
   fi
 
-  # Apply ignore/exclude filters
-  local -a files_to_encrypt=()
-
-  for file in "${files[@]}"; do
-    local rel="${file#"$NOTES_DIR"/}"
-    local skip=0
-
-    if ((${#ignore_patterns[@]} > 0)); then
-      for ig in "${ignore_patterns[@]}"; do
-        # shellcheck disable=SC2053
-        [[ "$rel" == $ig ]] && {
-          printf "Ignored (.ignore): %s\n" "$rel"
-          skip=1
-          break
-        }
-      done
-    fi
-    [[ $skip -eq 1 ]] && continue
-
-    if ((${#exclude_patterns[@]} > 0)); then
-      for ex in "${exclude_patterns[@]}"; do
-        # shellcheck disable=SC2053
-        [[ "$rel" == $ex ]] && {
-          printf "Excluded (--exclude): %s\n" "$rel"
-          skip=1
-          break
-        }
-      done
-    fi
-    [[ $skip -eq 1 ]] && continue
-
-    files_to_encrypt+=("$file")
-  done
-
-  if [[ ${#files_to_encrypt[@]} -eq 0 ]]; then
-    printf "Nothing to encrypt.\n"
-    return 0
-  fi
-
   # Encrypt
-  if [[ $dry -eq 1 ]]; then
-    for f in "${files_to_encrypt[@]}"; do
-      local rel="${f#"$NOTES_DIR"/}"
-      printf "Would encrypt to: %s\n" "$(_as_gpg "$rel")"
-    done
-  else
-    local f
-    for f in "${files_to_encrypt[@]}"; do
-      local outfile
-      outfile="$(_as_gpg "$f")"
-      if ! _gpg_encrypt "$outfile" "$f" "$symmetric"; then
-        printf "Failed to encrypt: %s\n" "$f"
-        return 1
-      fi
-      rm -f "$f"
-      printf "Encrypted: %s -> %s\n" "${f#"$NOTES_DIR"/}" "${outfile#"$NOTES_DIR"/}"
-    done
-  fi
+  for f in "${files[@]}"; do
+    local outfile
+    rel="${f#"$NOTES_DIR"/}"
+    outfile="$(_as_gpg "$f")"
+
+    if [[ $dry -eq 1 ]]; then
+      printf "Would encrypt to: %s\n" "${outfile#"$NOTES_DIR"/}"
+      continue
+    fi
+
+    if ! _gpg_encrypt "$outfile" "$f" "$symmetric"; then
+      printf "Failed to encrypt: %s\n" "$f"
+      return 1
+    fi
+
+    rm -f "$f"
+    printf "Encrypted: %s -> %s\n" "$rel" "${outfile#"$NOTES_DIR"/}"
+  done
 }
 
 # Encrypts the text to given input file from stdin.
