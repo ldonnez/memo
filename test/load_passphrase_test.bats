@@ -175,3 +175,25 @@ teardown() {
   run bash -c 'printf "%s" "${_MEMO_PASSPHRASE-}"'
   assert_output ""
 }
+
+@test "unsets the environment variable after reading the passphrase" {
+  export MEMO_TEST_PASSPHRASE="from the environment"
+  MEMO_PASSPHRASE_ENV=MEMO_TEST_PASSPHRASE
+
+  _load_passphrase
+
+  assert_equal "from the environment" "$_MEMO_PASSPHRASE"
+  [ -z "${MEMO_TEST_PASSPHRASE+x}" ]
+}
+
+@test "reuses the cached environment passphrase after unsetting the variable" {
+  export MEMO_TEST_PASSPHRASE="from the environment"
+  MEMO_PASSPHRASE_ENV=MEMO_TEST_PASSPHRASE
+
+  _load_passphrase
+  assert_equal "from the environment" "$_MEMO_PASSPHRASE"
+
+  _load_passphrase
+  assert_equal "from the environment" "$_MEMO_PASSPHRASE"
+  [ -z "${MEMO_TEST_PASSPHRASE+x}" ]
+}

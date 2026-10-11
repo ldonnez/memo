@@ -374,13 +374,19 @@ _load_passphrase() {
       _MEMO_PASSPHRASE="$_MEMO_PASSPHRASE_FROM_FD"
     fi
   elif [[ -n "${MEMO_PASSPHRASE_ENV:-}" ]]; then
-    if [[ -z "${!MEMO_PASSPHRASE_ENV:-}" ]]; then
-      printf "Passphrase environment variable not set: %s\n" "$MEMO_PASSPHRASE_ENV"
-      return 1
-    fi
-    _MEMO_PASSPHRASE="${!MEMO_PASSPHRASE_ENV}"
-  fi
+    if [[ -n "${_MEMO_PASSPHRASE_FROM_ENV+x}" ]]; then
+      _MEMO_PASSPHRASE="$_MEMO_PASSPHRASE_FROM_ENV"
+    else
+      if [[ -z "${!MEMO_PASSPHRASE_ENV:-}" ]]; then
+        printf "Passphrase environment variable not set: %s\n" "$MEMO_PASSPHRASE_ENV"
+        return 1
+      fi
 
+      _MEMO_PASSPHRASE_FROM_ENV="${!MEMO_PASSPHRASE_ENV}"
+      unset "$MEMO_PASSPHRASE_ENV"
+      _MEMO_PASSPHRASE="$_MEMO_PASSPHRASE_FROM_ENV"
+    fi
+  fi
   if [[ -z "$_MEMO_PASSPHRASE" ]] && _has_passphrase_source; then
     printf "Passphrase is empty\n"
     return 1
