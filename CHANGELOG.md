@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.4](https://github.com/ldonnez/memo/compare/v0.11.3...v0.11.4) (2026-10-11)
+
+
+### Bug Fixes
+
+* reuse cached environment passphrase after unset ([3d8ec1a](https://github.com/ldonnez/memo/commit/3d8ec1a656d7ef84d67383610737b4cca9c9e411))
+
 ## [0.11.3](https://github.com/ldonnez/memo/compare/v0.11.2...v0.11.3) (2026-10-05)
 
 
