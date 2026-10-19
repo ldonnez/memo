@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.5](https://github.com/ldonnez/memo/compare/v0.11.4...v0.11.5) (2026-10-19)
+
+
+### Bug Fixes
+
+* honor explicit passphrase source options ([a4a498b](https://github.com/ldonnez/memo/commit/a4a498b647c6367b6bb75e9911d4f60f935c0ae4))
+
 ## [0.11.4](https://github.com/ldonnez/memo/compare/v0.11.3...v0.11.4) (2026-10-11)
 
 
