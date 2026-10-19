@@ -131,6 +131,23 @@ teardown() {
   assert_equal "from the file" "$_MEMO_PASSPHRASE"
 }
 
+@test "passphrase fd option overrides configured sources" {
+  printf "from the file" >"$TEST_HOME/pass.txt"
+  printf "from the descriptor" >"$TEST_HOME/fd.txt"
+  exec 7<"$TEST_HOME/fd.txt"
+  export MEMO_TEST_PASSPHRASE="from the environment"
+
+  MEMO_PASSPHRASE_FILE="$TEST_HOME/pass.txt"
+  MEMO_PASSPHRASE_ENV=MEMO_TEST_PASSPHRASE
+
+  _set_passphrase_option --passphrase-fd 7
+  _load_passphrase
+
+  assert_equal "from the descriptor" "$_MEMO_PASSPHRASE"
+  [ -z "${MEMO_PASSPHRASE_FILE+x}" ]
+  [ -z "${MEMO_PASSPHRASE_ENV+x}" ]
+}
+
 @test "prefers the descriptor over the environment" {
   printf "from the descriptor" >"$TEST_HOME/pass.txt"
   exec 7<"$TEST_HOME/pass.txt"

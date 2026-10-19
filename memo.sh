@@ -409,11 +409,26 @@ _set_passphrase_option() {
     return 1
   fi
 
+  # An explicit option takes precedence over passphrase sources loaded from
+  # config or the environment. Keep only the selected source so _load_passphrase
+  # cannot silently choose a different one by its normal source priority.
   case "$option" in
-  --passphrase-file) MEMO_PASSPHRASE_FILE="$value" ;;
-  --passphrase-fd) MEMO_PASSPHRASE_FD="$value" ;;
-  --passphrase-env) MEMO_PASSPHRASE_ENV="$value" ;;
+  --passphrase-file)
+    MEMO_PASSPHRASE_FILE="$value"
+    unset MEMO_PASSPHRASE_FD MEMO_PASSPHRASE_ENV
+    ;;
+  --passphrase-fd)
+    MEMO_PASSPHRASE_FD="$value"
+    unset MEMO_PASSPHRASE_FILE MEMO_PASSPHRASE_ENV
+    ;;
+  --passphrase-env)
+    MEMO_PASSPHRASE_ENV="$value"
+    unset MEMO_PASSPHRASE_FILE MEMO_PASSPHRASE_FD
+    ;;
   esac
+
+  # A previously resolved source must not survive switching sources.
+  unset _MEMO_PASSPHRASE_FROM_FD _MEMO_PASSPHRASE_FROM_ENV
 }
 
 # Runs gpg with the given options.
