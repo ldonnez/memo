@@ -45,8 +45,6 @@ It lets you create, edit, search, and manage your notes as easily as plain text.
 ## Requirements
 
 - GPG with a key: you must have at least one active GPG key pair. Check with: `gpg --list-secret-keys --keyid-format LONG`. (if you don't have a key yet run `gpg --full-generate-key`)
-- fzf (optional - only necessary for `memo files`)
-- ripgrep (optional - only necessary for `memo files`)
 - Neovim (optional) $EDITOR is used as default editor for opening files.
 
 ## Installation
@@ -221,7 +219,6 @@ MEMO_PASSPHRASE=hunter2 memo decrypt --passphrase-env MEMO_PASSPHRASE out.md.asc
 | `decrypt FILE`             | Decrypt `FILE` and print to stdout. Accepts `--passphrase-fd N` and `--passphrase-file PATH`.                                                                                                                            |
 | `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`), plus `--dry-run`, `--exclude`, `--symmetric`, `--passphrase-fd N` and `--passphrase-file PATH`. |
 | `decrypt-files [FILES...]` | Decrypt notes in-place inside the notes directory. Accepts `all`, explicit `.asc`/`.gpg` file names or glob patterns (e.g. `dir/*.asc`), plus `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.         |
-| `files`                    | Browse all files in `fzf` (decrypts preview automatically).                                                                                                                                                               |
 | `integrity-check`          | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                                                                                                              |
 | `sync [git]`               | Stages changes, creates a local git commit using $DEFAULT_GIT_COMMIT, and pushes them to the remote repository.                                                                                                           |
 | `init [git]`               | Initializes git configuration for encrypted notes in a git repository. Run this when storing your files in a git repository to ensure clean (decrypted) git diffs, and to prevent accidentally committing files that are not notes. |
