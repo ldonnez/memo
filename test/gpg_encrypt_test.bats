@@ -76,7 +76,7 @@ teardown() {
 
 @test "does not execute shell syntax in recipient IDs" {
   local marker="$TEST_HOME/recipient-injection"
-  local GPG_RECIPIENTS='$(touch "$TEST_HOME/recipient-injection")'
+  local GPG_RECIPIENTS="\$(touch \"\$TEST_HOME/recipient-injection\")"
 
   run _gpg_encrypt "$NOTES_DIR/test_injection.md.gpg" <<<"Sensitive"
 
