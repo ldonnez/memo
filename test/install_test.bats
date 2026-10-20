@@ -92,3 +92,34 @@ teardown() {
     assert_output "Error: could not parse the latest version from GitHub's response."
   )
 }
+
+@test "downloads and extracts in a private temporary directory" {
+  local curl_target="$TEST_HOME/curl-target"
+  local tar_args="$TEST_HOME/tar-args"
+
+  # Record the paths used by the installer without needing a real download.
+  # shellcheck disable=SC2329
+  curl() {
+    printf '%s' "${4-}" >"$curl_target"
+  }
+  # shellcheck disable=SC2329
+  tar() {
+    printf '%s\n' "$@" >"$tar_args"
+  }
+  # shellcheck disable=SC2329
+  _get_version() {
+    printf "v0.2.0"
+  }
+
+  run main
+  assert_success
+
+  local downloaded_to
+  downloaded_to=$(cat "$curl_target")
+  [[ "$downloaded_to" == "${TMPDIR:-/tmp}"/memo-install.*/memo.tar.gz ]]
+  [[ "$downloaded_to" != "/tmp/memo.tar.gz" ]]
+  run grep -E -- "memo-install\.[^/]+" "$tar_args"
+  assert_success
+
+  command rm -rf "${downloaded_to%/*}"
+}

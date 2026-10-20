@@ -217,3 +217,16 @@ Added line"
     assert_success
   )
 }
+
+@test "does not execute shell syntax from a note filename during cleanup" {
+  local marker="$NOTES_DIR/injected"
+  local filename="note'; touch injected; #"
+
+  (
+    cd "$NOTES_DIR"
+    run memo "$filename"
+    assert_success
+  )
+
+  [ ! -e "$marker" ]
+}

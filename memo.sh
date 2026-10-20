@@ -18,6 +18,18 @@ _file_exists() {
   [[ -f "$filepath" ]]
 }
 
+# Cleanup a plaintext temporary file and its private directory.
+_cleanup_memo_tmpfile() {
+  local tmpfile="$1"
+  shred -u "$tmpfile" 2>/dev/null || true
+  rm -rf "${tmpfile%/*}"
+}
+
+# Cleanup a private directory used to download an upgrade.
+_cleanup_memo_upgrade_tmpdir() {
+  rm -rf "$1"
+}
+
 # Supported note extensions memo reads. New notes are written with $EXTENSION,
 # which is added to this list once the config is loaded (_resolve_note_extensions).
 SUPPORTED_EXTENSIONS=("asc" "gpg")
@@ -1269,7 +1281,7 @@ memo_integrity_check() {
 #
 # Usage:
 #   memo <file>
-memo() {
+memo() (
   local input="${1-""}"
   local filepath
   filepath=$(_get_target_filepath "$input") || return 1
@@ -1280,9 +1292,8 @@ memo() {
   local tmpfile
   tmpfile=$(_make_tempfile "$filepath") || return 1
 
-  # Ensure cleanup on normal exit or error.
-  # shellcheck disable=SC2064
-  trap "shred -u '$tmpfile' 2>/dev/null; rm -rf '${tmpfile%/*}'" EXIT
+  # Quote the path for the trap command so filename metacharacters stay data.
+  trap '_cleanup_memo_tmpfile "$tmpfile"' EXIT
 
   local orig_hash="-"
   local symmetric="false"
@@ -1318,7 +1329,7 @@ memo() {
 
   # Encrypt only if changed, back to the note that was opened
   _gpg_encrypt "$gpg_file" "$tmpfile" "$symmetric"
-}
+)
 
 # Upgrades memo in-place when a new version is found.
 #
@@ -1326,7 +1337,7 @@ memo() {
 #
 # Usage:
 #   memo upgrade
-memo_upgrade() {
+memo_upgrade() (
   local latest_version
   local arg="${1-}"
   local force=0
@@ -1352,29 +1363,27 @@ memo_upgrade() {
     fi
 
     local url="https://github.com/$REPO/releases/download/$latest_version/memo.tar.gz"
-    local tmp_dir="/tmp/memo"
-    local tmp_tar="/tmp/memo.tar.gz"
+    local tmp_dir
+    tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/memo-upgrade.XXXXXX") || return 1
+    # Clean up the temporary download directory when this subshell exits.
+    trap '_cleanup_memo_upgrade_tmpdir "$tmp_dir"' EXIT
+    local tmp_tar="$tmp_dir/memo.tar.gz"
 
     local script_path
     script_path=$(_resolve_script_path)
 
-    # Ensure cleanup on normal exit or error.
-    # shellcheck disable=SC2064
-    trap "rm -rf '$tmp_dir' '$tmp_tar'" EXIT
-
     printf "Downloading %s\n" "$url"
-    curl -sSL "$url" -o /tmp/memo.tar.gz
-
-    mkdir -p $tmp_dir && tar -xzf $tmp_tar -C $tmp_dir
+    curl -sSL "$url" -o "$tmp_tar"
+    tar -xzf "$tmp_tar" -C "$tmp_dir"
 
     printf "Upgrade memo in %s...\n" "$script_path"
-    install -m 0755 /tmp/memo/memo.sh "$script_path"/memo
-    _memo_install_completions /tmp/memo
+    install -m 0755 "$tmp_dir/memo.sh" "$script_path"/memo
+    _memo_install_completions "$tmp_dir"
 
     printf "Upgrade success!\n"
     return 0
   fi
-}
+)
 
 # Syncs notes when $NOTES_DIR is a git repository
 #
