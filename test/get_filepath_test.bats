@@ -81,3 +81,30 @@ teardown() {
   cd /
   rm -rf "$sibling"
 }
+
+@test "rejects parent traversal without creating directories outside notes dir" {
+  local outside="$TEST_HOME/outside"
+
+  run _get_filepath "../outside/note.md"
+
+  assert_failure
+  [ ! -e "$outside" ]
+}
+
+@test "allows a symlinked parent that points outside notes dir" {
+  local outside="$TEST_HOME/outside"
+  mkdir -p "$outside"
+  ln -s "$outside" "$NOTES_DIR/external"
+
+  run _get_filepath "external/note.md"
+
+  assert_success
+  assert_output "$NOTES_DIR/external/note.md"
+}
+
+@test "rejects absolute paths outside notes dir" {
+  run _get_filepath "$TEST_HOME/outside.md"
+
+  assert_failure
+  [ ! -e "$TEST_HOME/outside.md" ]
+}
