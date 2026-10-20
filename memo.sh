@@ -33,7 +33,6 @@ _cleanup_memo_upgrade_tmpdir() {
 # Supported note extensions memo reads. New notes are written with $EXTENSION,
 # which is added to this list once the config is loaded (_resolve_note_extensions).
 SUPPORTED_EXTENSIONS=("asc" "gpg")
-_MEMO_GPG_RECIPIENTS=()
 
 # Whether filepath is an encrypted note, so any supported extension is accepted
 _file_is_gpg() {
@@ -961,11 +960,23 @@ memo_encrypt_files() {
   done
 
   if [[ "$symmetric" != "true" ]]; then
-    _build_gpg_recipients "$GPG_RECIPIENTS"
+    local -a recipients=() items=()
+    local IFS=',' id
 
-    if [[ ${#_MEMO_GPG_RECIPIENTS[@]} -eq 0 ]]; then
-      return 1
+    if [[ -z "$GPG_RECIPIENTS" ]]; then
+      recipients=(--default-recipient-self)
+    else
+      read -r -a items <<<"$GPG_RECIPIENTS"
+
+      for id in "${items[@]}"; do
+        id=$(_trim "$id")
+        [[ -z "$id" ]] && continue
+        _gpg_recipients_exists "$id" || continue
+        recipients+=(-r "$id")
+      done
     fi
+
+    [[ ${#recipients[@]} -gt 0 ]] || return 1
   fi
 
   if [[ ${#args[@]} -eq 0 ]]; then
