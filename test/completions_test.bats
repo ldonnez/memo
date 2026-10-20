@@ -312,7 +312,7 @@ setup() {
 
 @test "zsh: help completion lists uninstall" {
   run cat "completions/_memo"
-  assert_output --partial "help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade uninstall"
+  assert_output --partial "help encrypt decrypt encrypt-files decrypt-files integrity-check sync init upgrade uninstall"
 }
 
 @test "every built-in note extension is completed by both completions" {

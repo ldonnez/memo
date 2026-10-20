@@ -106,7 +106,7 @@ _memo_args() {
       '--force[Force upgrade]'
     ;;
   help)
-    _values 'argument' help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade uninstall version today yesterday tomorrow
+    _values 'argument' help encrypt decrypt encrypt-files decrypt-files integrity-check sync init upgrade uninstall version today yesterday tomorrow
     ;;
   encrypt)
     _files
@@ -131,7 +131,6 @@ _memo() {
     'decrypt:Decrypt an .asc or .gpg note to stdout'
     'encrypt-files:Encrypt files in-place'
     'decrypt-files:Decrypt .asc and .gpg notes in-place'
-    'files:Browse files with fzf'
     'integrity-check:Verify files are properly encrypted'
     'sync:Sync notes with git'
     'init:Configure git for encrypted notes'

@@ -17,12 +17,12 @@ teardown() {
   local gpg_recipients="$GPG_RECIPIENTS"
   local -a recipients=()
 
-  _build_gpg_recipients "$gpg_recipients" recipients
+  _build_gpg_recipients "$gpg_recipients"
   # capture return code
   local rc=$?
 
   assert_equal $rc 0
-  assert_equal "${recipients[*]}" "-r mock@example.com"
+  assert_equal "${_MEMO_GPG_RECIPIENTS[*]}" "-r mock@example.com"
 }
 
 @test "builds multiple gpg recipients" {
@@ -39,31 +39,46 @@ EOF
   local gpg_recipients="mock@example.com,test2@example.com"
   local -a recipients=()
 
-  _build_gpg_recipients "$gpg_recipients" recipients
+  _build_gpg_recipients "$gpg_recipients"
   # capture return code
   local rc=$?
 
   assert_equal $rc 0
-  assert_equal "${recipients[*]}" "-r mock@example.com -r test2@example.com"
+  assert_equal "${_MEMO_GPG_RECIPIENTS[*]}" "-r mock@example.com -r test2@example.com"
 }
 
 @test "sets --default-recipient-self when no gpg keys given" {
   local gpg_recipients=""
   local -a recipients=()
 
-  _build_gpg_recipients "$gpg_recipients" recipients
+  _build_gpg_recipients "$gpg_recipients"
   # capture return code
   local rc=$?
 
   assert_equal $rc 0
-  assert_equal "${recipients[*]}" "--default-recipient-self"
+  assert_equal "${_MEMO_GPG_RECIPIENTS[*]}" "--default-recipient-self"
 }
 
 @test "continues with found gpg keys when one of the gpg keys is not found" {
   local gpg_recipients="i-do-not-exist@example.com,mock@example.com,"
   local -a recipients=()
 
-  _build_gpg_recipients "$gpg_recipients" recipients
+  _build_gpg_recipients "$gpg_recipients"
 
-  assert_equal "${recipients[*]}" "-r mock@example.com"
+  assert_equal "${_MEMO_GPG_RECIPIENTS[*]}" "-r mock@example.com"
+}
+
+@test "treats recipient IDs as data rather than shell code" {
+  local marker="$TEST_HOME/recipient-injection"
+  local recipient_id="\$(touch \"\$TEST_HOME/recipient-injection\")"
+
+  _gpg_recipients_exists() {
+    return 0
+  }
+
+  _build_gpg_recipients "$recipient_id"
+
+  [ ! -e "$marker" ]
+  assert_equal "${_MEMO_GPG_RECIPIENTS[0]}" "-r"
+  assert_equal "${_MEMO_GPG_RECIPIENTS[1]}" "$recipient_id"
 }
