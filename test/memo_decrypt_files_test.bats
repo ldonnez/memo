@@ -161,3 +161,55 @@ Decrypted: $file3"
   # Cleanup
   rm -f "$file" "$file.gpg"
 }
+
+@test "removes partial plaintext and its private temp directory after failed decryption" {
+  local encrypted="$NOTES_DIR/partial.md.gpg"
+  local marker="$TEST_HOME/decrypt-temp-path"
+
+  printf 'encrypted placeholder\n' >"$encrypted"
+
+  _gpg_decrypt() {
+    printf 'partial plaintext\n' >"$2"
+    printf '%s' "$2" >"$marker"
+    return 1
+  }
+
+  run memo_decrypt_files "$encrypted"
+  assert_success
+  assert_output "Failed to decrypt: $encrypted"
+
+  local tmp
+  tmp="$(cat "$marker")"
+  [ ! -e "$tmp" ]
+  [ ! -d "${tmp%/*}" ]
+  [ -f "$encrypted" ]
+  [ ! -e "$NOTES_DIR/partial.md" ]
+}
+
+@test "does not decrypt a glob that escapes the notes directory" {
+  local outside="$HOME/outside.md.gpg"
+  printf 'encrypted placeholder\n' >"$outside"
+
+  run memo_decrypt_files "../outside.md.gpg"
+  assert_failure
+  assert_output "File not in $NOTES_DIR"
+
+  [ -f "$outside" ]
+  [ ! -e "$HOME/outside.md" ]
+  rm -f "$outside"
+}
+
+@test "does not decrypt a symlinked note that points outside the notes directory" {
+  local outside="$HOME/outside.md.gpg"
+  local link="$NOTES_DIR/outside.md.gpg"
+  printf 'encrypted placeholder\n' >"$outside"
+  ln -s "$outside" "$link"
+
+  run memo_decrypt_files "outside.md.gpg"
+  assert_failure
+  assert_output "File not in $NOTES_DIR"
+
+  [ -f "$outside" ]
+  [ ! -e "$HOME/outside.md" ]
+  rm -f "$link" "$outside"
+}

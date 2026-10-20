@@ -233,76 +233,33 @@ _resolve_script_path() {
   cd -P "$(dirname "$source")" && pwd
 }
 
-# Builds the gpg recipients (-r param in gpg) based on given gpg_recipients
-# When given gpg_recipients is empty, --default-recipient-self is given, which means the first key found in the keyring is used as a recipient.
-# returns array of "-r <gpg_recipient> -r <gpg_recipient2>"
-#
-# Usage:
-#
-# ```
-# local -a recipients=()
-#
-# if ! _build_gpg_recipients "$GPG_RECIPIENTS" recipients; then
-#   return 1
-# fi
-#
-# gpg --quiet --yes --armor --encrypt "${recipients[@]}"...
-# ```
-_build_gpg_recipients() {
-  local gpg_recipients="$1"
-  local output_array="$2"
-
-  if [[ -z "$gpg_recipients" ]]; then
-    eval "$output_array+=(\"--default-recipient-self\")"
-    return 0
-  fi
-
-  local IFS=',' items
-  read -r -a items <<<"$gpg_recipients"
-
-  if [[ ${#items[@]} -eq 0 ]]; then
-    eval "$output_array+=(\"--default-recipient-self\")"
-    return 0
-  fi
-
-  local id
-  for id in "${items[@]}"; do
-    id=$(_trim "$id")
-    [[ -z "$id" ]] && continue
-
-    if ! _gpg_recipients_exists "$id"; then
-      continue
-    fi
-
-    eval "$output_array+=(\"-r\" \"$id\")"
-  done
-}
-
-# Encrypts the content of given input file (path) to given output file (path)
-# This will NOT encrypt the file itself only the content. (gpg --armor)
-# When no second argument is given we interpet content from stdin
-# When the third argument is 'true' the content is encrypted with a passphrase
-# instead of a recipient key (gpg --symmetric)
 _gpg_encrypt() {
   local output_path="$1"
   local input="${2-}"
   local symmetric="${3:-false}"
 
-  local -a opts=()
+  local -a opts=() recipients=() items=()
+  local IFS=',' id
 
   if [[ "$symmetric" == "true" ]]; then
     # pinentry has to be able to ask for the passphrase, so --batch and --no-tty
     # are left out here. _gpg_run adds the options for a configured passphrase.
     opts=(--yes --armor -z 0 --compress-algo none --symmetric --cipher-algo AES256)
   else
-    local -a recipients=()
+    if [[ -z "$GPG_RECIPIENTS" ]]; then
+      recipients=(--default-recipient-self)
+    else
+      read -r -a items <<<"$GPG_RECIPIENTS"
 
-    _build_gpg_recipients "$GPG_RECIPIENTS" recipients
-
-    if [[ ${#recipients[@]} -eq 0 ]]; then
-      return 1
+      for id in "${items[@]}"; do
+        id=$(_trim "$id")
+        [[ -z "$id" ]] && continue
+        _gpg_recipients_exists "$id" || continue
+        recipients+=(-r "$id")
+      done
     fi
 
+    [[ ${#recipients[@]} -gt 0 ]] || return 1
     opts=(--batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}")
   fi
 
@@ -885,6 +842,32 @@ memo_files() {
   memo "$result"
 }
 
+# Decrypts one encrypted note into a private temporary directory, then
+# atomically replaces the plaintext destination only after GPG succeeds.
+_memo_decrypt_file() (
+  local input="$1"
+  local output
+  output="$(_strip_note_extension "$input")"
+
+  local tmp
+  tmp=$(_make_tempfile "$input") || return 1
+  trap '_cleanup_memo_tmpfile "$tmp"' EXIT
+
+  if ! _gpg_decrypt "$input" "$tmp" 2>/dev/null; then
+    return 1
+  fi
+
+  if ! mv "$tmp" "$output"; then
+    return 1
+  fi
+
+  if ! rm -f "$input"; then
+    return 1
+  fi
+
+  printf "Decrypted: %s\n" "$output"
+)
+
 # Decrypts a set of files that were encrypted with GPG.
 #
 # This function operates in-place: each encrypted note is decrypted and replaces the original encrypted file.
@@ -950,6 +933,11 @@ memo_decrypt_files() {
     local f
     for f in "$NOTES_DIR"/$target; do
       if _file_exists "$f" && _file_is_gpg "$f"; then
+        if ! _is_in_notes_dir "$f"; then
+          printf "File not in %s\n" "$NOTES_DIR"
+          return 1
+        fi
+
         files+=("$f")
         matched=1
       fi
@@ -965,16 +953,9 @@ memo_decrypt_files() {
     return 0
   fi
 
-  local f tmp out
+  local f
   for f in "${files[@]}"; do
-    tmp=$(mktemp)
-    out="$(_strip_note_extension "$f")"
-
-    if _gpg_decrypt "$f" "$tmp" 2>/dev/null; then
-      mv "$tmp" "$out"
-      rm -f "$f"
-      printf "Decrypted: %s\n" "$out"
-    else
+    if ! _memo_decrypt_file "$f"; then
       printf "Failed to decrypt: %s\n" "$f"
     fi
   done
@@ -1022,13 +1003,23 @@ memo_encrypt_files() {
   done
 
   if [[ "$symmetric" != "true" ]]; then
-    local -a recipients=()
+    local -a recipients=() items=()
+    local IFS=',' id
 
-    _build_gpg_recipients "$GPG_RECIPIENTS" recipients
+    if [[ -z "$GPG_RECIPIENTS" ]]; then
+      recipients=(--default-recipient-self)
+    else
+      read -r -a items <<<"$GPG_RECIPIENTS"
 
-    if [[ ${#recipients[@]} -eq 0 ]]; then
-      return 1
+      for id in "${items[@]}"; do
+        id=$(_trim "$id")
+        [[ -z "$id" ]] && continue
+        _gpg_recipients_exists "$id" || continue
+        recipients+=(-r "$id")
+      done
     fi
+
+    [[ ${#recipients[@]} -gt 0 ]] || return 1
   fi
 
   if [[ ${#args[@]} -eq 0 ]]; then
