@@ -4,6 +4,9 @@ set -euo pipefail
 REPO="ldonnez/memo"
 VERSION="${VERSION:-latest}"
 MEMO_INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
+_cleanup_install_tmpdir() {
+  rm -rf "$1"
+}
 
 # Prints latest release version of memo. Prints an explicit error and exits
 # non-zero when the version cannot be determined.
@@ -33,25 +36,27 @@ _get_version() {
   fi
 }
 
-main() {
+main() (
   local version
 
   if ! version=$(_get_version); then
     return 1
   fi
 
-  local tmp_dir="/tmp/memo"
-  local tmp_tar="/tmp/memo.tar.gz"
-
-  # Ensure cleanup on normal exit or error.
-  # shellcheck disable=SC2064
-  trap "rm -rf '$tmp_dir' '$tmp_tar'" EXIT
+  # Use a private temporary directory to avoid shared /tmp names and symlink
+  # races when installing or upgrading.
+  local tmp_dir
+  tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/memo-install.XXXXXX") || {
+    printf "Error: could not create a temporary directory.\n" >&2
+    return 1
+  }
+  trap '_cleanup_install_tmpdir "$tmp_dir"' EXIT
+  local tmp_tar="$tmp_dir/memo.tar.gz"
 
   local url="https://github.com/$REPO/releases/download/$version/memo.tar.gz"
   printf "Downloading %s\n" "$url"
   curl -sSL "$url" -o "$tmp_tar"
 
-  mkdir -p "$tmp_dir"
   tar -xzf "$tmp_tar" -C "$tmp_dir"
 
   printf "Installing memo to %s...\n" "$MEMO_INSTALL_DIR"
@@ -91,7 +96,7 @@ main() {
   printf "Make sure %s is in your PATH.\n" "$MEMO_INSTALL_DIR"
 
   return 0
-}
+)
 
 if [[ "${BASH_SOURCE[0]:-}" == "${0:-}" ]] || [[ "${BASH_SOURCE[0]:-}" == "" ]]; then
   main "$@"

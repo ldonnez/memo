@@ -144,3 +144,37 @@ Upgrade cancelled."
     assert_output "Error: could not parse the latest version from GitHub's response."
   )
 }
+
+@test "downloads and extracts upgrades in a private temporary directory" {
+  local curl_target="$TEST_HOME/upgrade-curl-target"
+  local tar_args="$TEST_HOME/upgrade-tar-args"
+
+  (
+    local VERSION="0.1.0"
+
+    # shellcheck disable=SC2329
+    _get_latest_version() {
+      printf "v0.2.0"
+    }
+    # shellcheck disable=SC2329
+    curl() {
+      printf '%s' "${4-}" >"$curl_target"
+    }
+    # shellcheck disable=SC2329
+    tar() {
+      printf '%s\n' "$@" >"$tar_args"
+    }
+
+    run memo_upgrade --force
+    assert_success
+  )
+
+  local downloaded_to
+  downloaded_to=$(cat "$curl_target")
+  [[ "$downloaded_to" == "${TMPDIR:-/tmp}"/memo-upgrade.*/memo.tar.gz ]]
+  [[ "$downloaded_to" != "/tmp/memo.tar.gz" ]]
+  run grep -E -- "memo-upgrade\.[^/]+" "$tar_args"
+  assert_success
+
+  command rm -rf "${downloaded_to%/*}"
+}
