@@ -497,6 +497,17 @@ _make_tempfile() {
   echo "$tmpdir/$base"
 }
 
+# Removes the plaintext editor file and its private temporary directory.
+# Paths are stored as data so note filenames cannot inject shell commands.
+_cleanup_memo_tempfile() {
+  if [[ -n "${_MEMO_TMPFILE:-}" ]]; then
+    shred -u "$_MEMO_TMPFILE" 2>/dev/null || true
+    rm -rf "$_MEMO_TMPDIR"
+    _MEMO_TMPFILE=""
+    _MEMO_TMPDIR=""
+  fi
+}
+
 # Checks if given path is inside $NOTES_DIR. Also works if the file is in subdir of $NOTES_DIR
 # Will get absolute path and follow symlinks of given file.
 _is_in_notes_dir() {
@@ -651,6 +662,14 @@ _check_upgrade() {
   else
     printf "Current version (%s) is newer than latest %s?\n" "$current_version" "$version"
     return 1
+  fi
+}
+
+# Cleans up the private directory used by the self-upgrade flow.
+_cleanup_memo_upgrade_tmpdir() {
+  if [[ -n "${_MEMO_UPGRADE_TMP_DIR:-}" ]]; then
+    rm -rf "$_MEMO_UPGRADE_TMP_DIR"
+    _MEMO_UPGRADE_TMP_DIR=""
   fi
 }
 
@@ -1280,9 +1299,10 @@ memo() {
   local tmpfile
   tmpfile=$(_make_tempfile "$filepath") || return 1
 
-  # Ensure cleanup on normal exit or error.
-  # shellcheck disable=SC2064
-  trap "shred -u '$tmpfile' 2>/dev/null; rm -rf '${tmpfile%/*}'" EXIT
+  # Keep paths as data instead of interpolating them into shell code.
+  _MEMO_TMPFILE="$tmpfile"
+  _MEMO_TMPDIR="${tmpfile%/*}"
+  trap '_cleanup_memo_tempfile' EXIT
 
   local orig_hash="-"
   local symmetric="false"
@@ -1352,24 +1372,25 @@ memo_upgrade() {
     fi
 
     local url="https://github.com/$REPO/releases/download/$latest_version/memo.tar.gz"
-    local tmp_dir="/tmp/memo"
-    local tmp_tar="/tmp/memo.tar.gz"
+    local tmp_dir
+    tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/memo.XXXXXX") || return 1
+    local tmp_tar="$tmp_dir/memo.tar.gz"
+    _MEMO_UPGRADE_TMP_DIR="$tmp_dir"
 
     local script_path
     script_path=$(_resolve_script_path)
 
-    # Ensure cleanup on normal exit or error.
-    # shellcheck disable=SC2064
-    trap "rm -rf '$tmp_dir' '$tmp_tar'" EXIT
+    # Use a private temporary directory rather than predictable shared /tmp paths.
+    trap '_cleanup_memo_upgrade_tmpdir' EXIT
 
     printf "Downloading %s\n" "$url"
-    curl -sSL "$url" -o /tmp/memo.tar.gz
+    curl -sSL "$url" -o "$tmp_tar"
 
-    mkdir -p $tmp_dir && tar -xzf $tmp_tar -C $tmp_dir
+    tar -xzf "$tmp_tar" -C "$tmp_dir"
 
     printf "Upgrade memo in %s...\n" "$script_path"
-    install -m 0755 /tmp/memo/memo.sh "$script_path"/memo
-    _memo_install_completions /tmp/memo
+    install -m 0755 "$tmp_dir/memo.sh" "$script_path"/memo
+    _memo_install_completions "$tmp_dir"
 
     printf "Upgrade success!\n"
     return 0
