@@ -194,30 +194,37 @@ _determine_filename() {
 
 # Returns filepath based on input file name.
 _get_filepath() {
-  local input="$1"
+  local input="$1" filename filepath dirpath
 
-  local filename
-  if filename=$(_determine_filename "$input"); then
-    local filepath
+  filename=$(_determine_filename "$input") || return 1
 
-    # An input given while inside the notes dir is taken as relative to it, so
-    # `cd` into a subdir and refer to its notes by name. _is_in_notes_dir
-    # compares per path component, so a sibling dir is not mistaken for one.
-    if [[ -n "$input" ]] && _is_in_notes_dir "$PWD"; then
-      filepath="$PWD/$input"
-    elif _file_exists "$filename" && _file_is_gpg "$filename"; then
-      filepath="$filename"
-    else
-      filepath="$NOTES_DIR/$filename"
-    fi
-
-    dirpath=$(dirname "$filepath")
-    mkdir -p "$dirpath"
-
-    printf "%s" "$filepath"
+  if [[ "$filename" == /* ]]; then
+    filepath="$filename"
+  elif [[ -n "$input" ]] && _is_in_notes_dir "$PWD"; then
+    filepath="$PWD/$filename"
+  elif _file_exists "$filename" && _file_is_gpg "$filename"; then
+    filepath="$filename"
   else
-    return 1
+    filepath="$NOTES_DIR/$filename"
   fi
+
+  # Validate lexical paths without resolving symlinks, so explicitly chosen
+  # symlinks remain allowed.
+  case "$filepath" in
+  *"/.." | *"/../"*)
+    printf "Error: Parent traversal is not allowed in note paths.\n" >&2
+    return 1
+    ;;
+  "$NOTES_DIR" | "$NOTES_DIR/"*) ;;
+  *)
+    printf "Error: File path must stay inside %s.\n" "$NOTES_DIR" >&2
+    return 1
+    ;;
+  esac
+
+  dirpath=$(dirname "$filepath")
+  mkdir -p "$dirpath" || return 1
+  printf "%s" "$filepath"
 }
 
 # Resolves the absolute path of where this script is run (it will follows symlinks)
@@ -232,7 +239,6 @@ _resolve_script_path() {
   done
   cd -P "$(dirname "$source")" && pwd
 }
-
 _gpg_encrypt() {
   local output_path="$1"
   local input="${2-}"
@@ -1235,8 +1241,12 @@ memo() (
   local tmpfile
   tmpfile=$(_make_tempfile "$filepath") || return 1
 
-  # Quote the path for the trap command so filename metacharacters stay data.
+  # EXIT performs cleanup on normal exits and after handled signals.
+  # SIGKILL and system crashes cannot be trapped; see the security documentation.
   trap '_cleanup_memo_tmpfile "$tmpfile"' EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
   local orig_hash="-"
   local symmetric="false"

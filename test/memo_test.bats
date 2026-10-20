@@ -230,3 +230,24 @@ Added line"
 
   [ ! -e "$marker" ]
 }
+
+@test "cleans up plaintext when the memo process receives TERM" {
+  local editor="$TEST_HOME/terminate-editor"
+  cat >"$editor" <<'EOF'
+#!/usr/bin/env bash
+printf 'plaintext marker\n' >>"$1"
+kill -TERM "$PPID"
+sleep 1
+EOF
+  chmod 700 "$editor"
+
+  local EDITOR_CMD="$editor"
+  run memo "terminated.md"
+
+  assert_failure
+  if [[ "$(uname)" == "Linux" ]]; then
+    [ -z "$(find /dev/shm -maxdepth 2 -type f -name 'terminated.md' -print -quit 2>/dev/null)" ]
+  else
+    [ -z "$(find /tmp -maxdepth 2 -type f -name 'terminated.md' -print -quit 2>/dev/null)" ]
+  fi
+}
