@@ -79,37 +79,6 @@ teardown() {
   assert_output --partial "# custom"
 }
 
-@test "memo files lists the configured extension" {
-  local rg_args="$BATS_TEST_TMPDIR/rg-args"
-
-  # shellcheck disable=SC2317,SC2329
-  rg() {
-    printf "%s\n" "$*" >"$rg_args"
-  }
-
-  # shellcheck disable=SC2317,SC2329
-  fzf() {
-    printf "%s\n" "$NOTES_DIR/one.md.asc"
-  }
-
-  # shellcheck disable=SC2317,SC2329
-  memo() {
-    return 0
-  }
-
-  local config_file="$BATS_TEST_TMPDIR/config"
-  printf 'EXTENSION="pgp"\n' >"$config_file"
-  _load_config "$config_file"
-
-  run memo_files
-  assert_success
-
-  run cat "$rg_args"
-  assert_output --partial "--glob *.asc"
-  assert_output --partial "--glob *.gpg"
-  assert_output --partial "--glob *.pgp"
-}
-
 @test "a supported EXTENSION is not added to the list twice" {
   local config_file="$BATS_TEST_TMPDIR/config"
   printf 'EXTENSION="gpg"\n' >"$config_file"
@@ -158,34 +127,6 @@ teardown() {
 
   run _make_tempfile "$NOTES_DIR/test.md.gpg"
   assert_output --regexp "/memo\.[^/]+/test\.md"
-}
-
-@test "memo files lists both note extensions" {
-  local rg_args="$BATS_TEST_TMPDIR/rg-args"
-
-  # Mock rg to record its arguments, since the globs are memo_files' only way
-  # to tell which notes exist
-  # shellcheck disable=SC2329
-  rg() {
-    printf "%s\n" "$*" >"$rg_args"
-  }
-
-  # shellcheck disable=SC2329
-  fzf() {
-    printf "%s\n" "$NOTES_DIR/one.md.asc"
-  }
-
-  # shellcheck disable=SC2329
-  memo() {
-    return 0
-  }
-
-  run memo_files
-  assert_success
-
-  run cat "$rg_args"
-  assert_output --partial "--glob *.asc"
-  assert_output --partial "--glob *.gpg"
 }
 
 @test "decrypt-files decrypts both note extensions" {

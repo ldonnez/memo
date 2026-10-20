@@ -46,7 +46,7 @@ _memo() {
   local cur
   cur="${COMP_WORDS[COMP_CWORD]}"
 
-  local commands="help encrypt decrypt encrypt-files decrypt-files files integrity-check sync init upgrade uninstall version today yesterday tomorrow"
+  local commands="help encrypt decrypt encrypt-files decrypt-files integrity-check sync init upgrade uninstall version today yesterday tomorrow"
 
   if ((COMP_CWORD == 1)); then
     local -a candidates=()

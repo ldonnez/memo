@@ -794,54 +794,6 @@ _memo_install_completions() {
 # Core API
 ###############################################################################
 
-# Interactively select a file inside notes dir using fzf.
-#
-# Ensures that the required commands (`gpg`, `rg`, `fzf`) are present before running.
-# Uses `ripgrep` to list all note files (any supported extension) under NOTES_DIR.
-#
-# Usage:
-#   memo_files
-memo_files() {
-  if ! _check_cmd gpg || ! _check_cmd rg || ! _check_cmd fzf; then
-    printf "Error: gpg, rg and fzf are required for memo_files" >&2
-    exit 1
-  fi
-
-  # A passphrase note only previews when the passphrase reaches gpg, which is
-  # what _load_passphrase covers.
-  _load_passphrase || return 1
-
-  local -a preview=(gpg --quiet)
-  local preview_prefix=""
-
-  if [[ -n "$_MEMO_PASSPHRASE" ]]; then
-    # fzf runs the preview in a shell of its own, where descriptor 3 cannot be
-    # set up from here. gpg reads the note from the file given as argument, so
-    # stdin is free for the passphrase. Exported so the preview shell reads it
-    # by name.
-    export MEMO_PREVIEW_PASSPHRASE="$_MEMO_PASSPHRASE"
-    preview_prefix="printf '%s' \"\$MEMO_PREVIEW_PASSPHRASE\" | "
-    preview+=(--pinentry-mode loopback --passphrase-fd 0)
-  fi
-  preview+=(--decrypt)
-
-  local preview_cmd
-  printf -v preview_cmd '%q ' "${preview[@]}"
-
-  local -a note_globs=()
-  local ext
-  for ext in "${SUPPORTED_EXTENSIONS[@]}"; do
-    note_globs+=(--glob "*.$ext")
-  done
-
-  local result
-  result=$(rg --files "${note_globs[@]}" "$NOTES_DIR" | fzf --preview "$preview_prefix$preview_cmd{} 2>/dev/null | head -100")
-
-  [[ -z "$result" ]] && return
-
-  memo "$result"
-}
-
 # Decrypts one encrypted note into a private temporary directory, then
 # atomically replaces the plaintext destination only after GPG succeeds.
 _memo_decrypt_file() (
@@ -1518,7 +1470,6 @@ Commands:
                                       - Supports glob patterns (e.g. dir/*.asc)
                                       - --passphrase-fd N, --passphrase-file PATH
 
-  files                             Browse all files in fzf (decrypts preview)
   integrity-check                   Checks the integrity of all the files inside notes dir. Does not check files ignored with .ignore.
   sync [git]                        Creates a local git commit: $DEFAULT_GIT_COMMIT with changes and pushes to remote.
                                       - Accepts 'git'
@@ -1648,10 +1599,6 @@ _parse_args() {
     integrity-check)
       shift
       memo_integrity_check
-      return
-      ;;
-    files)
-      memo_files
       return
       ;;
     sync)
