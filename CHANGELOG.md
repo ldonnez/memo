@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.0](https://github.com/ldonnez/memo/compare/v0.11.5...v0.12.0) (2026-10-20)
+
+
+### Bug Fixes
+
+* **security:** harden bulk decryption and recipients ([55b7cc1](https://github.com/ldonnez/memo/commit/55b7cc115551db35c53a98a7cd8b9784336694eb))
+* **security:** harden temporary-file cleanup ([430aa1b](https://github.com/ldonnez/memo/commit/430aa1be2eeac2ea5e0f2fc994d8d1cc1228b6f9))
+
+
+### Code Refactoring
+
+* remove fzf-based memo files command ([114f8ae](https://github.com/ldonnez/memo/commit/114f8ae0bc1fc5707d82094883882fcfabc69c3a))
+
 ## [0.11.5](https://github.com/ldonnez/memo/compare/v0.11.4...v0.11.5) (2026-10-19)
 
 
