@@ -33,6 +33,14 @@ _get_version() {
   fi
 }
 
+# Cleans up the private directory used by the installer.
+_cleanup_install_tmpdir() {
+  if [[ -n "${_MEMO_INSTALL_TMP_DIR:-}" ]]; then
+    rm -rf "$_MEMO_INSTALL_TMP_DIR"
+    _MEMO_INSTALL_TMP_DIR=""
+  fi
+}
+
 main() {
   local version
 
@@ -40,18 +48,18 @@ main() {
     return 1
   fi
 
-  local tmp_dir="/tmp/memo"
-  local tmp_tar="/tmp/memo.tar.gz"
+  local tmp_dir
+  tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/memo.XXXXXX") || return 1
+  local tmp_tar="$tmp_dir/memo.tar.gz"
+  _MEMO_INSTALL_TMP_DIR="$tmp_dir"
 
-  # Ensure cleanup on normal exit or error.
-  # shellcheck disable=SC2064
-  trap "rm -rf '$tmp_dir' '$tmp_tar'" EXIT
+  # Use a private temporary directory rather than predictable shared /tmp paths.
+  trap '_cleanup_install_tmpdir' EXIT
 
   local url="https://github.com/$REPO/releases/download/$version/memo.tar.gz"
   printf "Downloading %s\n" "$url"
   curl -sSL "$url" -o "$tmp_tar"
 
-  mkdir -p "$tmp_dir"
   tar -xzf "$tmp_tar" -C "$tmp_dir"
 
   printf "Installing memo to %s...\n" "$MEMO_INSTALL_DIR"
