@@ -234,40 +234,6 @@ _resolve_script_path() {
   cd -P "$(dirname "$source")" && pwd
 }
 
-# Builds the GPG argument array from comma-separated recipient IDs. The
-# module-level array avoids eval, which would interpret recipient data as shell
-# code. Callers must check the array is non-empty before encrypting.
-_build_gpg_recipients() {
-  local gpg_recipients="$1"
-  local IFS=',' items
-  local id
-
-  _MEMO_GPG_RECIPIENTS=()
-
-  if [[ -z "$gpg_recipients" ]]; then
-    _MEMO_GPG_RECIPIENTS+=(--default-recipient-self)
-    return 0
-  fi
-
-  read -r -a items <<<"$gpg_recipients"
-
-  if [[ ${#items[@]} -eq 0 ]]; then
-    _MEMO_GPG_RECIPIENTS+=(--default-recipient-self)
-    return 0
-  fi
-
-  for id in "${items[@]}"; do
-    id=$(_trim "$id")
-    [[ -z "$id" ]] && continue
-
-    if ! _gpg_recipients_exists "$id"; then
-      continue
-    fi
-
-    _MEMO_GPG_RECIPIENTS+=(-r "$id")
-  done
-}
-
 # Encrypts the content of given input file (path) to given output file (path)
 # This will NOT encrypt the file itself only the content. (gpg --armor)
 # When no second argument is given we interpet content from stdin
@@ -278,20 +244,29 @@ _gpg_encrypt() {
   local input="${2-}"
   local symmetric="${3:-false}"
 
-  local -a opts=()
+  local -a opts=() recipients=() items=()
+  local IFS=',' id
 
   if [[ "$symmetric" == "true" ]]; then
     # pinentry has to be able to ask for the passphrase, so --batch and --no-tty
     # are left out here. _gpg_run adds the options for a configured passphrase.
     opts=(--yes --armor -z 0 --compress-algo none --symmetric --cipher-algo AES256)
   else
-    _build_gpg_recipients "$GPG_RECIPIENTS"
+    if [[ -z "$GPG_RECIPIENTS" ]]; then
+      recipients=(--default-recipient-self)
+    else
+      read -r -a items <<<"$GPG_RECIPIENTS"
 
-    if [[ ${#_MEMO_GPG_RECIPIENTS[@]} -eq 0 ]]; then
-      return 1
+      for id in "${items[@]}"; do
+        id=$(_trim "$id")
+        [[ -z "$id" ]] && continue
+        _gpg_recipients_exists "$id" || continue
+        recipients+=(-r "$id")
+      done
     fi
 
-    opts=(--batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${_MEMO_GPG_RECIPIENTS[@]}")
+    [[ ${#recipients[@]} -gt 0 ]] || return 1
+    opts=(--batch --no-tty --yes --armor -z 0 --compress-algo none --encrypt "${recipients[@]}")
   fi
 
   # If input_path is empty, gpg reads from stdin.
