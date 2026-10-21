@@ -286,7 +286,8 @@ Decrypted: $file2"
 
   run memo_decrypt_files --delete-source "$file1" "$file2"
   assert_success
-  assert_output "Decrypted: $NOTES_DIR/existing.md
+  assert_output "Overwriting existing decryption output: $NOTES_DIR/existing.md
+Decrypted: $NOTES_DIR/existing.md
 Decrypted: $NOTES_DIR/other.md"
 
   [ "$(cat "$NOTES_DIR/existing.md")" = "Encrypted first" ]

@@ -915,6 +915,13 @@ memo_decrypt_files() {
     return 0
   fi
 
+  for f in "${files[@]}"; do
+    output="$(_strip_note_extension "$f")"
+    if [[ -e "$output" || -L "$output" ]]; then
+      printf "Overwriting existing decryption output: %s\\n" "$output"
+    fi
+  done
+
   if (("${#files[@]}" > 1)); then
     local -a outputs=()
     local output existing_output
