@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.1](https://github.com/ldonnez/memo/compare/v0.13.0...v0.13.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **decryption:** report existing plaintext outputs ([62453e5](https://github.com/ldonnez/memo/commit/62453e5e672243a31c56e35f79f6519c6e9209fe))
+* **encryption:** report existing outputs ([c8ebe60](https://github.com/ldonnez/memo/commit/c8ebe6035273a1156f01154b55c8f13d988bb19d))
+
 ## [0.13.0](https://github.com/ldonnez/memo/compare/v0.12.0...v0.13.0) (2026-10-21)
 
 
