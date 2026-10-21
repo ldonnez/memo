@@ -534,15 +534,17 @@ Encrypted: collision2.md -> collision2.md.asc"
 
 @test "symmetric encryption reports and overwrites an existing output" {
   local file="$NOTES_DIR/symmetric-collision.md"
+  local passphrase_file="$TEST_HOME/pass.txt"
+  printf "secret passphrase" >"$passphrase_file"
   printf "Symmetric plaintext" >"$file"
   printf "Old output" >"$file.asc"
 
-  run memo_encrypt_files --symmetric "symmetric-collision.md"
+  run memo_encrypt_files --symmetric --passphrase-file "$passphrase_file" "symmetric-collision.md"
   assert_success
   assert_output "Overwriting existing encryption output: $file.asc
 Encrypted: symmetric-collision.md -> symmetric-collision.md.asc"
 
-  run _gpg_decrypt "$file.asc"
+  run memo_decrypt --passphrase-file "$passphrase_file" "$file.asc"
   assert_output "Symmetric plaintext"
   [ -f "$file" ]
 }
