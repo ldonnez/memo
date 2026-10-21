@@ -1193,6 +1193,10 @@ memo_encrypt_files() {
   rel="${f#"$NOTES_DIR"/}"
   outfile="$(_as_gpg "$f")"
 
+  if [[ -e "$outfile" || -L "$outfile" ]]; then
+    printf "Overwriting existing encryption output: %s\\n" "$outfile"
+  fi
+
   if [[ $dry -eq 1 ]]; then
     printf "Would encrypt to: %s\\n" "${outfile#"$NOTES_DIR"/}"
     return 0
