@@ -1124,7 +1124,7 @@ memo_encrypt_files() {
 
   if [[ "$symmetric" != "true" ]]; then
     local -a outputs=() intermediate_outputs=()
-    local outfile intermediate i j
+    local outfile intermediate i
 
     # Report existing outputs before GPG overwrites them.
     for f in "${files[@]}"; do
@@ -1179,7 +1179,6 @@ memo_encrypt_files() {
         return 1
       fi
     done
-
 
     for i in "${!files[@]}"; do
       f="${files[$i]}"
