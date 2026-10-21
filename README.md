@@ -217,8 +217,8 @@ MEMO_PASSPHRASE=hunter2 memo decrypt --passphrase-env MEMO_PASSPHRASE out.md.asc
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `encrypt OUTPUTFILE`       | Encrypts text from stdin to given `OUTPUTFILE`, adding the configured note extension when it has none yet. Accepts `--symmetric`, `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.             |
 | `decrypt FILE`             | Decrypt `FILE` and print to stdout. Accepts `--passphrase-fd N` and `--passphrase-file PATH`.                                                                                                                            |
-| `encrypt-files [FILES...]` | Encrypt files in-place inside the notes directory. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`), plus `--dry-run`, `--exclude`, `--symmetric`, `--passphrase-fd N` and `--passphrase-file PATH`. |
-| `decrypt-files [FILES...]` | Decrypt notes in-place inside the notes directory. Accepts `all`, explicit `.asc`/`.gpg` file names or glob patterns (e.g. `dir/*.asc`), plus `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`.         |
+| `encrypt-files [FILES...]` | Encrypt files inside the notes directory, preserving plaintext sources by default. Add `--delete-source` to delete sources after successful encryption. Accepts `all`, explicit file names or glob patterns (e.g. `dir/*`), plus `--dry-run`, `--exclude`, `--symmetric`, `--passphrase-fd N` and `--passphrase-file PATH`. |
+| `decrypt-files [FILES...]` | Decrypt notes inside the notes directory, preserving encrypted sources by default. Add `--delete-source` to delete sources after successful decryption. Accepts `all`, explicit `.asc`/`.gpg` file names or glob patterns (e.g. `dir/*.asc`), plus `--passphrase-fd N`, `--passphrase-file PATH` and `--passphrase-env VAR`. |
 | `integrity-check`          | Verify the integrity of all files in the notes directory (skips files ignored by `.ignore`).                                                                                                                              |
 | `sync [git]`               | Stages changes, creates a local git commit using $DEFAULT_GIT_COMMIT, and pushes them to the remote repository.                                                                                                           |
 | `init [git]`               | Initializes git configuration for encrypted notes in a git repository. Run this when storing your files in a git repository to ensure clean (decrypted) git diffs, and to prevent accidentally committing files that are not notes. |
@@ -243,7 +243,9 @@ memo decrypt out.md.asc
 
 # Encrypt/decrypt multiple files
 memo encrypt-files all
+memo encrypt-files --delete-source all
 memo decrypt-files *.asc
+memo decrypt-files --delete-source *.asc
 
 # Encrypt with a passphrase instead of a recipient key
 memo encrypt --symmetric --passphrase-file ~/.secrets/memo.pass out.md.asc <<<"Hello World"
