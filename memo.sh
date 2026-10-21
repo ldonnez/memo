@@ -1119,15 +1119,13 @@ memo_encrypt_files() {
     local -a outputs=() intermediate_outputs=()
     local outfile intermediate i
 
-    # GPG's multifile mode writes each armored input to a sibling .asc file.
-    # Check every destination first so a collision cannot overwrite existing data.
+    # Report existing outputs before GPG overwrites them.
     for f in "${files[@]}"; do
       outfile="$(_as_gpg "$f")"
       intermediate="$f.asc"
 
-      if [[ -e "$intermediate" || -L "$intermediate" || ("$outfile" != "$intermediate" && (-e "$outfile" || -L "$outfile")) ]]; then
-        printf "Encryption output already exists: %s\n" "$outfile" >&2
-        return 1
+      if [[ -e "$outfile" || -L "$outfile" ]]; then
+        printf "Overwriting existing encryption output: %s\n" "$outfile"
       fi
 
       outputs+=("$outfile")
@@ -1136,7 +1134,7 @@ memo_encrypt_files() {
 
     if [[ $dry -eq 1 ]]; then
       for i in "${!files[@]}"; do
-        printf "Would encrypt to: %s\n" "${outputs[$i]#"$NOTES_DIR"/}"
+        printf "Would encrypt to: %s\\n" "${outputs[$i]#"$NOTES_DIR"/}"
       done
       return 0
     fi
@@ -1164,8 +1162,11 @@ memo_encrypt_files() {
     for i in "${!files[@]}"; do
       if [[ "${intermediate_outputs[$i]}" != "${outputs[$i]}" ]] &&
         ! mv "${intermediate_outputs[$i]}" "${outputs[$i]}"; then
-        for intermediate in "${intermediate_outputs[@]}" "${outputs[@]}"; do
-          rm -f "$intermediate"
+        for intermediate in "${intermediate_outputs[@]}"; do
+          [[ "$intermediate" == "${outputs[$i]}" ]] || rm -f "$intermediate"
+        done
+        for output in "${outputs[@]}"; do
+          rm -f "$output"
         done
         printf "Failed to finalize encrypted outputs. Plaintext files were kept.\n" >&2
         return 1
@@ -1190,6 +1191,10 @@ memo_encrypt_files() {
   local outfile
   rel="${f#"$NOTES_DIR"/}"
   outfile="$(_as_gpg "$f")"
+
+  if [[ -e "$outfile" || -L "$outfile" ]]; then
+    printf "Overwriting existing encryption output: %s\\n" "$outfile"
+  fi
 
   if [[ $dry -eq 1 ]]; then
     printf "Would encrypt to: %s\\n" "${outfile#"$NOTES_DIR"/}"

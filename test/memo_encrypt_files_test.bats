@@ -496,19 +496,28 @@ Encrypted: batch2.md -> batch2.md.asc"
   assert_success
 }
 
-@test "recipient batch encryption does not overwrite an existing output" {
-  local file="$NOTES_DIR/collision.md"
-  printf "Plaintext" >"$file"
-  printf "Existing output" >"$file.asc"
+@test "recipient batch encryption reports and overwrites multiple existing outputs" {
+  local file1="$NOTES_DIR/collision.md"
+  local file2="$NOTES_DIR/collision2.md"
+  printf "Plaintext one" >"$file1"
+  printf "Plaintext two" >"$file2"
+  printf "Old output one" >"$file1.asc"
+  printf "Old output two" >"$file2.asc"
 
-  run memo_encrypt_files --delete-source "collision.md"
-  assert_failure
-  assert_output "Encryption output already exists: $file.asc"
+  run memo_encrypt_files "collision.md" "collision2.md"
+  assert_success
+  assert_output "Overwriting existing encryption output: $file1.asc
+Overwriting existing encryption output: $file2.asc
+Encrypted: collision.md -> collision.md.asc
+Encrypted: collision2.md -> collision2.md.asc"
 
-  run cat "$file"
-  assert_output "Plaintext"
-  run cat "$file.asc"
-  assert_output "Existing output"
+  run _gpg_decrypt "$file1.asc"
+  assert_output "Plaintext one"
+  run _gpg_decrypt "$file2.asc"
+  assert_output "Plaintext two"
+
+  [ -f "$file1" ]
+  [ -f "$file2" ]
 }
 
 @test "keeps plaintext source by default" {
@@ -521,4 +530,21 @@ Encrypted: batch2.md -> batch2.md.asc"
 
   [ -f "$file" ]
   [ -f "$file.asc" ]
+}
+
+@test "symmetric encryption reports and overwrites an existing output" {
+  local file="$NOTES_DIR/symmetric-collision.md"
+  local passphrase_file="$TEST_HOME/pass.txt"
+  printf "secret passphrase" >"$passphrase_file"
+  printf "Symmetric plaintext" >"$file"
+  printf "Old output" >"$file.asc"
+
+  run memo_encrypt_files --symmetric --passphrase-file "$passphrase_file" "symmetric-collision.md"
+  assert_success
+  assert_output "Overwriting existing encryption output: $file.asc
+Encrypted: symmetric-collision.md -> symmetric-collision.md.asc"
+
+  run memo_decrypt --passphrase-file "$passphrase_file" "$file.asc"
+  assert_output "Symmetric plaintext"
+  [ -f "$file" ]
 }
