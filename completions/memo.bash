@@ -91,7 +91,7 @@ _memo() {
     while IFS= read -r c; do
       candidates+=("$c")
     done < <({
-      compgen -W "all --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
+      compgen -W "all --delete-source --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
       for ext in "${extensions[@]}"; do
         cd "$notes_dir" 2>/dev/null && compgen -f -X "!*.$ext" -- "$cur"
       done
@@ -101,7 +101,7 @@ _memo() {
     while IFS= read -r c; do
       candidates+=("$c")
     done < <({
-      compgen -W "all --dry-run --exclude --symmetric --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
+      compgen -W "all --delete-source --dry-run --exclude --symmetric --passphrase-fd --passphrase-file --passphrase-env" -- "$cur"
       cd "$notes_dir" 2>/dev/null && compgen -f -- "$cur"
     })
 

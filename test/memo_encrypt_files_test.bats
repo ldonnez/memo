@@ -24,7 +24,7 @@ teardown() {
   local file3="$NOTES_DIR/test_dir/test2.md"
   printf "Hello World 3" >"$file3"
 
-  run memo_encrypt_files "all"
+  run memo_encrypt_files --delete-source "all"
   assert_success
   assert_output "Encrypted: test.md -> test.md.asc
 Encrypted: test2.md -> test2.md.asc
@@ -66,7 +66,7 @@ Encrypted: test_dir/test2.md -> test_dir/test2.md.asc"
   local file5="$NOTES_DIR/test_dir/test5.word"
   printf "Hello World 5" >"$file5"
 
-  run memo_encrypt_files "all"
+  run memo_encrypt_files --delete-source "all"
   assert_success
   assert_output "Encrypted: test.md -> test.md.asc
 Encrypted: test2.md -> test2.md.asc
@@ -116,7 +116,7 @@ Encrypted: test_dir/test5.word -> test_dir/test5.word.asc"
   local file3="$NOTES_DIR/test_dir/test2.md"
   printf "Hello World 3" >"$file3"
 
-  run memo_encrypt_files "test2.md" "test_dir/test2.md"
+  run memo_encrypt_files --delete-source "test2.md" "test_dir/test2.md"
   assert_success
   assert_output "Encrypted: test2.md -> test2.md.asc
 Encrypted: test_dir/test2.md -> test_dir/test2.md.asc"
@@ -143,7 +143,7 @@ Encrypted: test_dir/test2.md -> test_dir/test2.md.asc"
   local file3="$NOTES_DIR/test_dir/test3.md"
   printf "Hello World 3" >"$file3"
 
-  run memo_encrypt_files "test_dir/*"
+  run memo_encrypt_files --delete-source "test_dir/*"
   assert_success
   assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.asc
 Encrypted: test_dir/test3.md -> test_dir/test3.md.asc"
@@ -175,7 +175,7 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.asc"
 
   _gpg_encrypt "$file3.gpg" <<<"Hello World 3"
 
-  run memo_encrypt_files "all"
+  run memo_encrypt_files --delete-source "all"
   assert_success
   assert_output "Encrypted: test.md -> test.md.asc"
 
@@ -207,7 +207,7 @@ Encrypted: test_dir/test3.md -> test_dir/test3.md.asc"
   printf "Hello World 4" >"$file4"
 
   cd "$NOTES_DIR"
-  run memo_encrypt_files "test_dir/test2.md" "test_dir/test3.word" "test2.word"
+  run memo_encrypt_files --delete-source "test_dir/test2.md" "test_dir/test3.word" "test2.word"
   assert_success
   assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.asc
 Encrypted: test_dir/test3.word -> test_dir/test3.word.asc
@@ -242,7 +242,7 @@ Encrypted: test2.word -> test2.word.asc"
   local txtfile="$NOTES_DIR/test2.txt"
   printf "Hello World 2" >"$txtfile"
 
-  run memo_encrypt_files "all"
+  run memo_encrypt_files --delete-source "all"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
@@ -262,7 +262,7 @@ Encrypted: test2.md -> test2.md.asc"
   local txtfile="$NOTES_DIR/test2.txt"
   printf "Hello World 2" >"$txtfile"
 
-  run memo_encrypt_files "all"
+  run memo_encrypt_files --delete-source "all"
   assert_success
   assert_output "Ignored (.ignore): .ignore
 Ignored (.ignore): test2.txt
@@ -283,7 +283,7 @@ Encrypted: test2.md -> test2.md.asc"
   local mdfile="$NOTES_DIR/test.md"
   printf "Hello World 2" >"$mdfile"
 
-  run memo_encrypt_files "all"
+  run memo_encrypt_files --delete-source "all"
   assert_success
   assert_output "Ignored (.ignore): .git/COMMIT
 Ignored (.ignore): .ignore
@@ -300,7 +300,7 @@ Encrypted: test.md -> test.md.asc"
   local txtfile="$NOTES_DIR/test2.txt"
   printf "Hello World 2" >"$txtfile"
 
-  run memo_encrypt_files "all" --exclude "*.txt"
+  run memo_encrypt_files --delete-source "all" --exclude "*.txt"
   assert_success
   assert_output "Excluded (--exclude): test2.txt
 Encrypted: test2.md -> test2.md.asc"
@@ -320,7 +320,7 @@ Encrypted: test2.md -> test2.md.asc"
   local file3="$NOTES_DIR/test_dir/test2.md"
   printf "Hello World 3" >"$file3"
 
-  run memo_encrypt_files "all" --dry-run
+  run memo_encrypt_files --delete-source "all" --dry-run
   assert_success
   assert_output "Would encrypt to: test.md.asc
 Would encrypt to: test2.md.asc
@@ -331,7 +331,7 @@ Would encrypt to: test_dir/test2.md.asc"
   local file="$NOTES_DIR/test.md"
   printf "Hello World" >"$file"
 
-  run memo_encrypt_files "test.md"
+  run memo_encrypt_files --delete-source "test.md"
   assert_success
   assert_output "Encrypted: test.md -> test.md.asc"
 
@@ -345,7 +345,7 @@ Would encrypt to: test_dir/test2.md.asc"
   printf "Hello World" >"$file"
 
   cd "$NOTES_DIR/test_dir"
-  run memo_encrypt_files "test2.md"
+  run memo_encrypt_files --delete-source "test2.md"
   assert_success
   assert_output "Encrypted: test2.md -> test2.md.asc"
 
@@ -358,7 +358,7 @@ Would encrypt to: test_dir/test2.md.asc"
   local file="$NOTES_DIR/test_dir/test2.md"
   printf "Hello World" >"$file"
 
-  run memo_encrypt_files "test_dir/test2.md"
+  run memo_encrypt_files --delete-source "test_dir/test2.md"
   assert_success
   assert_output "Encrypted: test_dir/test2.md -> test_dir/test2.md.asc"
 
@@ -370,7 +370,7 @@ Would encrypt to: test_dir/test2.md.asc"
   local file="$HOME/test2.md"
   printf "Hello World" >"$file"
 
-  run memo_encrypt_files "$file"
+  run memo_encrypt_files --delete-source "$file"
   assert_failure
   assert_output "File not in $NOTES_DIR"
 }
@@ -379,7 +379,7 @@ Would encrypt to: test_dir/test2.md.asc"
   local file="$NOTES_DIR/test.word"
   printf "Hello World" >"$file"
 
-  run memo_encrypt_files "$file"
+  run memo_encrypt_files --delete-source "$file"
   assert_success
   assert_output "Encrypted: test.word -> test.word.asc"
 
@@ -399,7 +399,7 @@ Would encrypt to: test_dir/test2.md.asc"
     local file="$NOTES_DIR/sym_batch.md"
     printf "Batch content" >"$file"
 
-    run memo_encrypt_files --symmetric --passphrase-file "$MEMO_PASSPHRASE_FILE" "$file"
+    run memo_encrypt_files --delete-source --symmetric --passphrase-file "$MEMO_PASSPHRASE_FILE" "$file"
     assert_success
     assert_output --partial "Encrypted: sym_batch.md -> sym_batch.md.asc"
 
@@ -420,7 +420,7 @@ Would encrypt to: test_dir/test2.md.asc"
   local file="$NOTES_DIR/data.gpg"
   printf "TOP SECRET plaintext" >"$file"
 
-  run memo_encrypt_files all
+  run memo_encrypt_files --delete-source all
   assert_success
   assert_output --partial "Warning: data.gpg ends in a note extension but is not encrypted"
   assert_output --partial "Nothing to encrypt."
@@ -434,7 +434,7 @@ Would encrypt to: test_dir/test2.md.asc"
   _gpg_encrypt "$NOTES_DIR/legacy.md.gpg" <<<"Hello"
   printf "Hello" >"$NOTES_DIR/plain.md"
 
-  run memo_encrypt_files all
+  run memo_encrypt_files --delete-source all
   assert_success
   refute_output --partial "Warning:"
   assert_output "Encrypted: plain.md -> plain.md.asc"
@@ -444,7 +444,7 @@ Would encrypt to: test_dir/test2.md.asc"
   local file="$NOTES_DIR/data.asc"
   printf "TOP SECRET plaintext" >"$file"
 
-  run memo_encrypt_files "$file"
+  run memo_encrypt_files --delete-source "$file"
   assert_success
   assert_output --partial "Warning: data.asc ends in a note extension but is not encrypted"
 }
@@ -453,6 +453,72 @@ Would encrypt to: test_dir/test2.md.asc"
   local file="$NOTES_DIR/data.gpg"
   printf "TOP SECRET plaintext" >"$file"
 
-  run memo_encrypt_files "*.gpg"
+  run memo_encrypt_files --delete-source "*.gpg"
   assert_output --partial "Warning: data.gpg ends in a note extension but is not encrypted"
+}
+
+@test "encrypts recipient-based files in one GPG invocation" {
+  local file1="$NOTES_DIR/batch1.md"
+  local file2="$NOTES_DIR/batch2.md"
+  printf "Batch one" >"$file1"
+  printf "Batch two" >"$file2"
+
+  run memo_encrypt_files --delete-source "batch1.md" "batch2.md"
+  assert_success
+  assert_output "Encrypted: batch1.md -> batch1.md.asc
+Encrypted: batch2.md -> batch2.md.asc"
+
+  run _gpg_decrypt "$file1.asc"
+  assert_output "Batch one"
+
+  run _gpg_decrypt "$file2.asc"
+  assert_output "Batch two"
+
+  run _file_exists "$file1"
+  assert_failure
+  run _file_exists "$file2"
+  assert_failure
+}
+
+@test "rejects multiple files with symmetric encryption and keeps plaintext" {
+  local file1="$NOTES_DIR/symmetric1.md"
+  local file2="$NOTES_DIR/symmetric2.md"
+  printf "First" >"$file1"
+  printf "Second" >"$file2"
+
+  run memo_encrypt_files --delete-source --symmetric "symmetric1.md" "symmetric2.md"
+  assert_failure
+  assert_output "Symmetric encryption supports only one file at a time."
+
+  run _file_exists "$file1"
+  assert_success
+  run _file_exists "$file2"
+  assert_success
+}
+
+@test "recipient batch encryption does not overwrite an existing output" {
+  local file="$NOTES_DIR/collision.md"
+  printf "Plaintext" >"$file"
+  printf "Existing output" >"$file.asc"
+
+  run memo_encrypt_files --delete-source "collision.md"
+  assert_failure
+  assert_output "Encryption output already exists: $file.asc"
+
+  run cat "$file"
+  assert_output "Plaintext"
+  run cat "$file.asc"
+  assert_output "Existing output"
+}
+
+@test "keeps plaintext source by default" {
+  local file="$NOTES_DIR/keep-source.md"
+  printf "Plaintext" >"$file"
+
+  run memo_encrypt_files "keep-source.md"
+  assert_success
+  assert_output "Encrypted: keep-source.md -> keep-source.md.asc"
+
+  [ -f "$file" ]
+  [ -f "$file.asc" ]
 }

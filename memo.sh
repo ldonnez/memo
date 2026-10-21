@@ -802,8 +802,10 @@ _memo_install_completions() {
 
 # Decrypts one encrypted note into a private temporary directory, then
 # atomically replaces the plaintext destination only after GPG succeeds.
+# Keeps the encrypted source unless delete_source is true.
 _memo_decrypt_file() (
   local input="$1"
+  local delete_source="${2:-false}"
   local output
   output="$(_strip_note_extension "$input")"
 
@@ -819,7 +821,7 @@ _memo_decrypt_file() (
     return 1
   fi
 
-  if ! rm -f "$input"; then
+  if [[ "$delete_source" == "true" ]] && ! rm -f "$input"; then
     return 1
   fi
 
@@ -835,11 +837,13 @@ _memo_decrypt_file() (
 # Usage:
 #   memo_decrypt_files <file1.asc | glob | all> [file2.asc ...]
 memo_decrypt_files() {
+  local delete_source="false"
   local -a targets=()
 
   # A symmetric note can only be decrypted when the passphrase reaches gpg.
   while [[ $# -gt 0 ]]; do
     case "$1" in
+    --delete-source) delete_source="true" ;;
     --passphrase-fd | --passphrase-file | --passphrase-env)
       _set_passphrase_option "$1" "${2-}" || return 1
       shift
@@ -852,7 +856,7 @@ memo_decrypt_files() {
   done
 
   if [[ ${#targets[@]} -eq 0 ]]; then
-    printf "Usage: memo decrypt-files [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <filename.asc | filename.gpg | glob | all> ...\n"
+    printf "Usage: memo decrypt-files [--delete-source] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR] <filename.asc | filename.gpg | glob | all> ...\n"
     return 1
   fi
 
@@ -911,9 +915,53 @@ memo_decrypt_files() {
     return 0
   fi
 
+  if (("${#files[@]}" > 1)); then
+    local -a outputs=()
+    local output existing_output
+    local i
+
+    # Reject ambiguous destinations, but allow GPG to overwrite existing plaintext.
+    for f in "${files[@]}"; do
+      output="$(_strip_note_extension "$f")"
+      for existing_output in "${outputs[@]-}"; do
+        if [[ "$existing_output" == "$output" ]]; then
+          printf "Multiple encrypted files target the same output: %s\\n" "$output" >&2
+          return 1
+        fi
+      done
+      outputs+=("$output")
+    done
+
+    # GPG writes beside each input. On failure, keep any outputs it produced:
+    # they may have replaced existing plaintext, so deleting them would lose data.
+    if ! _gpg_run --quiet --yes --multifile --decrypt "${files[@]}"; then
+      for f in "${files[@]}"; do
+        printf "Failed to decrypt: %s\\n" "$f"
+      done
+      return 0
+    fi
+
+    for i in "${!outputs[@]}"; do
+      if [[ ! -f "${outputs[$i]}" ]]; then
+        printf "Failed to decrypt: %s\\n" "${files[$i]}"
+        return 0
+      fi
+    done
+
+    for i in "${!files[@]}"; do
+      f="${files[$i]}"
+      if [[ "$delete_source" == "true" ]] && ! rm -f "$f"; then
+        printf "Failed to remove encrypted file: %s\\n" "$f" >&2
+        return 1
+      fi
+      printf "Decrypted: %s\\n" "${outputs[$i]}"
+    done
+    return 0
+  fi
+
   local f
   for f in "${files[@]}"; do
-    if ! _memo_decrypt_file "$f"; then
+    if ! _memo_decrypt_file "$f" "$delete_source"; then
       printf "Failed to decrypt: %s\n" "$f"
     fi
   done
@@ -921,7 +969,7 @@ memo_decrypt_files() {
 
 # Encrypts a set of files using GPG, respecting user-defined rules like `.ignore` and `--exclude` patterns.
 #
-# Each file is encrypted in-place with the note extension using a temp file while preserving the original file name.
+# Each file is encrypted to the note extension while preserving the original unless delete_source is true.
 # Errors are reported and skipped files are logged with its source.
 # When giving `--dry-run` flag, it simulates the operation without making changes.
 # The function supports glob patterns like <dir>/* and multiple files <file1> <file2>
@@ -930,6 +978,7 @@ memo_decrypt_files() {
 #   memo_encrypt_files <file1|glob|all> [file2 ...] [--exclude pattern] [--dry-run]
 memo_encrypt_files() {
   local dry=0
+  local delete_source="false"
   local symmetric="false"
   local -a exclude_patterns=()
   local -a ignore_patterns=()
@@ -943,6 +992,7 @@ memo_encrypt_files() {
   local args=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
+    --delete-source) delete_source="true" ;;
     --dry-run) dry=1 ;;
     --symmetric) symmetric="true" ;;
     --passphrase-fd | --passphrase-file | --passphrase-env)
@@ -981,7 +1031,7 @@ memo_encrypt_files() {
   fi
 
   if [[ ${#args[@]} -eq 0 ]]; then
-    printf "Usage: memo encrypt-files <filename | glob | all> [more files …] [--dry-run] [--exclude pattern] [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR]\n"
+    printf "Usage: memo encrypt-files [--delete-source] <filename | glob | all> [more files …] [--dry-run] [--exclude pattern] [--symmetric] [--passphrase-fd N | --passphrase-file PATH | --passphrase-env VAR]\n"
     return 1
   fi
 
@@ -1060,25 +1110,107 @@ memo_encrypt_files() {
     return 0
   fi
 
-  # Encrypt
-  for f in "${files[@]}"; do
-    local outfile
-    rel="${f#"$NOTES_DIR"/}"
-    outfile="$(_as_gpg "$f")"
+  if [[ "$symmetric" == "true" && ${#files[@]} -gt 1 ]]; then
+    printf "Symmetric encryption supports only one file at a time.\n" >&2
+    return 1
+  fi
+
+  if [[ "$symmetric" != "true" ]]; then
+    local -a outputs=() intermediate_outputs=()
+    local outfile intermediate i
+
+    # GPG's multifile mode writes each armored input to a sibling .asc file.
+    # Check every destination first so a collision cannot overwrite existing data.
+    for f in "${files[@]}"; do
+      outfile="$(_as_gpg "$f")"
+      intermediate="$f.asc"
+
+      if [[ -e "$intermediate" || -L "$intermediate" || ("$outfile" != "$intermediate" && (-e "$outfile" || -L "$outfile")) ]]; then
+        printf "Encryption output already exists: %s\n" "$outfile" >&2
+        return 1
+      fi
+
+      outputs+=("$outfile")
+      intermediate_outputs+=("$intermediate")
+    done
 
     if [[ $dry -eq 1 ]]; then
-      printf "Would encrypt to: %s\n" "${outfile#"$NOTES_DIR"/}"
-      continue
+      for i in "${!files[@]}"; do
+        printf "Would encrypt to: %s\n" "${outputs[$i]#"$NOTES_DIR"/}"
+      done
+      return 0
     fi
 
-    if ! _gpg_encrypt "$outfile" "$f" "$symmetric"; then
-      printf "Failed to encrypt: %s\n" "$f"
+    if ! _gpg_run --batch --no-tty --yes --armor -z 0 --compress-algo none --multifile --encrypt "${recipients[@]}" "${files[@]}"; then
+      for intermediate in "${intermediate_outputs[@]}"; do
+        rm -f "$intermediate"
+      done
+      printf "Failed to encrypt files.\n" >&2
       return 1
     fi
 
-    rm -f "$f"
-    printf "Encrypted: %s -> %s\n" "$rel" "${outfile#"$NOTES_DIR"/}"
-  done
+    # Do not remove any plaintext until every encrypted output exists and has
+    # been moved to its configured extension.
+    for intermediate in "${intermediate_outputs[@]}"; do
+      if ! _file_exists "$intermediate"; then
+        for output in "${intermediate_outputs[@]}"; do
+          rm -f "$output"
+        done
+        printf "Failed to encrypt files: GPG did not create every output.\n" >&2
+        return 1
+      fi
+    done
+
+    for i in "${!files[@]}"; do
+      if [[ "${intermediate_outputs[$i]}" != "${outputs[$i]}" ]] &&
+        ! mv "${intermediate_outputs[$i]}" "${outputs[$i]}"; then
+        for intermediate in "${intermediate_outputs[@]}" "${outputs[@]}"; do
+          rm -f "$intermediate"
+        done
+        printf "Failed to finalize encrypted outputs. Plaintext files were kept.\n" >&2
+        return 1
+      fi
+    done
+
+    for i in "${!files[@]}"; do
+      f="${files[$i]}"
+      rel="${f#"$NOTES_DIR"/}"
+      if [[ "$delete_source" == "true" ]] && ! rm -f "$f"; then
+        printf "Failed to remove plaintext file: %s\\n" "$f" >&2
+        return 1
+      fi
+      printf "Encrypted: %s -> %s\n" "$rel" "${outputs[$i]#"$NOTES_DIR"/}"
+    done
+    return 0
+  fi
+
+  # Symmetric encryption is restricted to one file so GPG can handle its
+  # passphrase prompt without multifile complexity.
+  f="${files[0]}"
+  local outfile
+  rel="${f#"$NOTES_DIR"/}"
+  outfile="$(_as_gpg "$f")"
+
+  if [[ $dry -eq 1 ]]; then
+    printf "Would encrypt to: %s\\n" "${outfile#"$NOTES_DIR"/}"
+    return 0
+  fi
+
+  if ! _gpg_encrypt "$outfile" "$f" "$symmetric"; then
+    printf "Failed to encrypt: %s\\n" "$f"
+    return 1
+  fi
+
+  if ! _file_exists "$outfile"; then
+    printf "Failed to encrypt: output was not created: %s\\n" "$outfile" >&2
+    return 1
+  fi
+
+  if [[ "$delete_source" == "true" ]] && ! rm -f "$f"; then
+    printf "Failed to remove plaintext file: %s\\n" "$f" >&2
+    return 1
+  fi
+  printf "Encrypted: %s -> %s\\n" "$rel" "${outfile#"$NOTES_DIR"/}"
 }
 
 # Encrypts the text to given input file from stdin.
@@ -1468,14 +1600,20 @@ Commands:
                                         --passphrase-env VAR supply the
                                         passphrase without prompting
 
-  encrypt-files [FILES...]          Encrypt files in-place inside notes dir
+  encrypt-files [FILES...]          Encrypt files inside notes dir
+                                      - Preserves plaintext sources by default
+                                      - --delete-source deletes sources after
+                                        successful encryption
                                       - Accepts 'all' or explicit files
                                       - Supports glob patterns (e.g. dir/*)
                                       - --dry-run, --exclude pattern
                                       - --symmetric, --passphrase-fd N,
                                         --passphrase-file PATH
 
-  decrypt-files [FILES...]          Decrypt notes in-place inside notes dir
+  decrypt-files [FILES...]          Decrypt notes inside notes dir
+                                      - Preserves encrypted sources by default
+                                      - --delete-source deletes sources after
+                                        successful decryption
                                       - Accepts 'all' or explicit note files
                                       - Supports glob patterns (e.g. dir/*.asc)
                                       - --passphrase-fd N, --passphrase-file PATH
