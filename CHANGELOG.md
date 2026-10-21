@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.13.0](https://github.com/ldonnez/memo/compare/v0.12.0...v0.13.0) (2026-10-21)
+
+
+### Features
+
+* **encryption:** batch file operations and support source deletion ([d7436c8](https://github.com/ldonnez/memo/commit/d7436c8fc54066a3883e340220b86f4c77c2ab4b))
+
+
+### Bug Fixes
+
+* **security:** constrain note paths and clean up on signals ([6cbc0eb](https://github.com/ldonnez/memo/commit/6cbc0eb7ca01c8f34b5751d38c3b79b6d55d9530))
+
 ## [0.12.0](https://github.com/ldonnez/memo/compare/v0.11.5...v0.12.0) (2026-10-20)
 
 
