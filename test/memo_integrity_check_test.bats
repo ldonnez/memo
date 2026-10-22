@@ -96,3 +96,18 @@ Ignored (.ignore): ignored.txt"
   assert_output --partial "Valid GPG-encrypted file."
   refute_output --partial "NOT a valid GPG-encrypted file."
 }
+
+@test "checks GPG packets only once per file" {
+  local file="$NOTES_DIR/test.md.gpg"
+  local calls="$TEST_HOME/gpg-calls"
+  printf "encrypted" >"$file"
+
+  _gpg_list_packets() {
+    printf "%s\\n" "$1" >>"$calls"
+    printf "pubkey enc packet\\n"
+  }
+
+  run _file_is_gpg_message "$file"
+  assert_success
+  [ "$(wc -l <"$calls")" -eq 1 ]
+}
