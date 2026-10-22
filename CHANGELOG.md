@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/ldonnez/memo/compare/v0.13.1...v0.13.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **integrity-check:** list packets once per file ([c189dd9](https://github.com/ldonnez/memo/commit/c189dd9590e01f69be1a96b7d75cd726ddfca09e))
+
 ## [0.13.1](https://github.com/ldonnez/memo/compare/v0.13.0...v0.13.1) (2026-10-21)
 
 
