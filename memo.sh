@@ -315,14 +315,12 @@ _file_is_symmetric() {
 # passphrase note
 _file_is_gpg_message() {
   local input_path="$1"
+  local packets
 
-  if _file_is_symmetric "$input_path"; then
-    return 0
-  fi
-
-  # stderr is dropped for the same reason as in _file_is_symmetric: gpg prints
-  # the key it read the note for, and looking at a note must stay quiet.
-  _gpg_list_packets "$input_path" >/dev/null 2>&1
+  # A symmetric note can make gpg exit non-zero because it cannot unlock the
+  # session key, but its packet dump still identifies the encrypted message.
+  packets="$(_gpg_list_packets "$input_path" 2>&1)" && return 0
+  [[ "$packets" == *"symkey enc packet"* ]]
 }
 
 # Resolves the passphrase into _MEMO_PASSPHRASE, reading MEMO_PASSPHRASE_FILE,
