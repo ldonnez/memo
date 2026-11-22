@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/ldonnez/memo/compare/v0.13.2...v0.14.0) (2026-11-22)
+
+
+### Code Refactoring
+
+* only install completions to ~/.local/share ([beaa140](https://github.com/ldonnez/memo/commit/beaa1400c1309b10c4bc6c1581791cd2aab134a1))
+
 ## [0.13.2](https://github.com/ldonnez/memo/compare/v0.13.1...v0.13.2) (2026-10-22)
 
 
