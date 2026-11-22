@@ -1,7 +1,8 @@
 #compdef memo
 # zsh completion for memo. Install as the file "_memo" on $fpath (e.g.
-# /usr/local/share/zsh/site-functions is already on it); then restart the
-# shell or run `compinit`. No bashcompinit/bash sourcing needed.
+# ~/.local/share/zsh/site-functions, added to fpath in ~/.zshrc before
+# compinit); then restart the shell or run `compinit`. No bashcompinit/bash
+# sourcing needed.
 
 # Resolves NOTES_DIR from the memo config file (see memo.sh), defaulting to
 # $HOME/notes.

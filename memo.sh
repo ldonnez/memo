@@ -758,20 +758,16 @@ _warn_unencrypted_file() {
   fi
 }
 
-# Installs the bundled tab-completions to the system dirs when writable, else
-# to per-user dirs that only zsh (via fpath) or XDG-aware bash-completion
-# Source dir is an extracted release tarball.
+# Installs the bundled tab-completions. Zsh completions are installed to the
+# per-user dir; bash completions go to the system dir when writable, else to
+# the per-user dir. Source dir is an extracted release tarball.
 #
 # Usage:
 #   _install_completions <source_dir>
 _memo_install_completions() {
   local src_dir="${1:?source dir required}"
-  local zsh_dir="/usr/local/share/zsh/site-functions"
+  local zsh_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
   local bash_dir="/usr/local/share/bash-completion/completions"
-
-  if ! mkdir -p "$zsh_dir" 2>/dev/null || [ ! -w "$zsh_dir" ]; then
-    zsh_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
-  fi
 
   if ! mkdir -p "$bash_dir" 2>/dev/null || [ ! -w "$bash_dir" ]; then
     bash_dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
@@ -784,10 +780,8 @@ _memo_install_completions() {
   printf "Zsh completion installed to %s\n" "$zsh_dir"
   printf "Bash completion installed to %s\n" "$bash_dir"
 
-  if [ "$zsh_dir" != "/usr/local/share/zsh/site-functions" ]; then
-    printf "Add this to your ~/.zshrc before compinit to enable it:\n"
-    printf "  fpath=( %s \$fpath )\n" "$zsh_dir"
-  fi
+  printf "Add this to your ~/.zshrc before compinit to enable it:\n"
+  printf "  fpath=( %s \$fpath )\n" "$zsh_dir"
 
   if [ "$bash_dir" != "/usr/local/share/bash-completion/completions" ]; then
     printf "The per-user dir is picked up automatically when bash-completion is installed.\n"
@@ -1562,12 +1556,11 @@ memo_uninstall() {
   rm -f "$script_path/memo"
   printf "Deleted %s\n" "$script_path/memo"
 
-  local zsh_dir="/usr/local/share/zsh/site-functions"
+  local zsh_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
   local bash_dir="/usr/local/share/bash-completion/completions"
-  local zsh_fallback="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
   local bash_fallback="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
 
-  rm -f "$zsh_dir/_memo" "$zsh_fallback/_memo"
+  rm -f "$zsh_dir/_memo"
   rm -f "$bash_dir/memo" "$bash_fallback/memo"
   printf "Deleted completion files\n"
 
