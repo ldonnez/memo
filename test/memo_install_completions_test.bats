@@ -24,12 +24,8 @@ setup() {
   export XDG_DATA_HOME="$BATS_TEST_TMPDIR/data"
 
   # Resolve the target dirs exactly like _memo_install_completions does.
-  ZSH_DIR="/usr/local/share/zsh/site-functions"
+  ZSH_DIR="${XDG_DATA_HOME}/zsh/site-functions"
   BASH_DIR="/usr/local/share/bash-completion/completions"
-
-  if ! mkdir -p "$ZSH_DIR" 2>/dev/null || [ ! -w "$ZSH_DIR" ]; then
-    ZSH_DIR="${XDG_DATA_HOME}/zsh/site-functions"
-  fi
 
   if ! mkdir -p "$BASH_DIR" 2>/dev/null || [ ! -w "$BASH_DIR" ]; then
     BASH_DIR="${XDG_DATA_HOME}/bash-completion/completions"
@@ -43,22 +39,10 @@ setup() {
   assert_success
   assert_line --partial "Zsh completion installed to $ZSH_DIR"
   assert_line --partial "Bash completion installed to $BASH_DIR"
-  [ -f "$ZSH_DIR/_memo" ]
-  [ -f "$BASH_DIR/memo" ]
-}
-
-@test "install_completions warns when the system zsh dir is not writable" {
-  if mkdir -p /usr/local/share/zsh/site-functions 2>/dev/null &&
-    [ -w /usr/local/share/zsh/site-functions ]; then
-    skip "system zsh completion dir is writable; fallback not in use"
-  fi
-
-  run _memo_install_completions "$SRC_DIR"
-  assert_success
   assert_output --partial "Add this to your ~/.zshrc before compinit to enable it:"
   assert_output --partial "fpath=( $ZSH_DIR \$fpath )"
-  assert_output --partial "Zsh completion installed to $ZSH_DIR"
   [ -f "$ZSH_DIR/_memo" ]
+  [ -f "$BASH_DIR/memo" ]
 }
 
 @test "install_completions copies the files with 0644 permissions" {

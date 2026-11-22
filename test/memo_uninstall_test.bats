@@ -19,20 +19,19 @@ setup() {
     # mock memo binary to delete
     touch "$temp_script_path/memo"
 
-    local sys_zsh="/usr/local/share/zsh/site-functions"
     local sys_bash="/usr/local/share/bash-completion/completions"
-    local fallback_zsh="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+    local zsh_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
     local fallback_bash="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
 
-    local test_sys_dirs=false
-    if [ -w "$(dirname "$sys_zsh")" ] && [ -w "$(dirname "$sys_bash")" ]; then
-      test_sys_dirs=true
-      mkdir -p "$sys_zsh" "$sys_bash"
-      touch "$sys_zsh/_memo" "$sys_bash/memo"
+    local test_sys_bash=false
+    if [ -w "$(dirname "$sys_bash")" ]; then
+      test_sys_bash=true
+      mkdir -p "$sys_bash"
+      touch "$sys_bash/memo"
     fi
 
-    mkdir -p "$fallback_zsh" "$fallback_bash"
-    touch "$fallback_zsh/_memo" "$fallback_bash/memo"
+    mkdir -p "$zsh_dir" "$fallback_bash"
+    touch "$zsh_dir/_memo" "$fallback_bash/memo"
 
     # Mock _resolve_script_path
     # shellcheck disable=SC2317,SC2329
@@ -45,11 +44,10 @@ setup() {
     assert_output --partial "Deleted completion files"
     assert_output --partial "Uninstall completed."
 
-    refute [ -e "$fallback_zsh/_memo" ]
+    refute [ -e "$zsh_dir/_memo" ]
     refute [ -e "$fallback_bash/memo" ]
 
-    if [ "$test_sys_dirs" = true ]; then
-      refute [ -e "$sys_zsh/_memo" ]
+    if [ "$test_sys_bash" = true ]; then
       refute [ -e "$sys_bash/memo" ]
     fi
   )
@@ -71,20 +69,19 @@ setup() {
     mkdir -p "$temp_script_path"
     touch "$temp_script_path/memo"
 
-    local fallback_zsh="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+    local zsh_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
     local fallback_bash="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
 
-    mkdir -p "$fallback_zsh" "$fallback_bash"
-    touch "$fallback_zsh/_memo" "$fallback_bash/memo"
+    mkdir -p "$zsh_dir" "$fallback_bash"
+    touch "$zsh_dir/_memo" "$fallback_bash/memo"
 
-    local sys_zsh="/usr/local/share/zsh/site-functions"
     local sys_bash="/usr/local/share/bash-completion/completions"
 
-    local test_sys_dirs=false
-    if [ -w "$(dirname "$sys_zsh")" ] && [ -w "$(dirname "$sys_bash")" ]; then
-      test_sys_dirs=true
-      mkdir -p "$sys_zsh" "$sys_bash"
-      touch "$sys_zsh/_memo" "$sys_bash/memo"
+    local test_sys_bash=false
+    if [ -w "$(dirname "$sys_bash")" ]; then
+      test_sys_bash=true
+      mkdir -p "$sys_bash"
+      touch "$sys_bash/memo"
     fi
 
     # shellcheck disable=SC2317,SC2329
@@ -94,11 +91,10 @@ setup() {
     assert_success
     assert_output --partial "Deleted completion files"
 
-    refute [ -e "$fallback_zsh/_memo" ]
+    refute [ -e "$zsh_dir/_memo" ]
     refute [ -e "$fallback_bash/memo" ]
 
-    if [ "$test_sys_dirs" = true ]; then
-      refute [ -e "$sys_zsh/_memo" ]
+    if [ "$test_sys_bash" = true ]; then
       refute [ -e "$sys_bash/memo" ]
     fi
   )

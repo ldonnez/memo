@@ -3,9 +3,8 @@ CONTAINER_NAME := $(IMAGE_NAME)
 VOLUME_MOUNT := -v $(shell pwd):/opt
 
 MEMO_INSTALL_DIR := $(HOME)/.local/bin
-ZSH_COMPLETION_DIR := /usr/local/share/zsh/site-functions
+ZSH_COMPLETION_DIR := $(HOME)/.local/share/zsh/site-functions
 BASH_COMPLETION_DIR := /usr/local/share/bash-completion/completions
-ZSH_COMPLETION_FALLBACK := $(HOME)/.local/share/zsh/site-functions
 BASH_COMPLETION_FALLBACK := $(HOME)/.local/share/bash-completion/completions
 
 # Ensures it does not interferes with local files/directories named test or build etc...
@@ -18,16 +17,11 @@ dev:
 	ln -sf $(CURDIR)/memo.sh $(MEMO_INSTALL_DIR)/memo
 
 	@printf "Symlinking completions...\n"
-	@if mkdir -p "$(ZSH_COMPLETION_DIR)" 2>/dev/null && [ -w "$(ZSH_COMPLETION_DIR)" ]; then \
-		ln -sf $(CURDIR)/completions/_memo $(ZSH_COMPLETION_DIR)/_memo; \
-		printf "Zsh completion installed to $(ZSH_COMPLETION_DIR)/_memo\n"; \
-	else \
-		mkdir -p "$(ZSH_COMPLETION_FALLBACK)"; \
-		ln -sf $(CURDIR)/completions/_memo $(ZSH_COMPLETION_FALLBACK)/_memo; \
-		printf "Zsh completion installed to $(ZSH_COMPLETION_FALLBACK)/_memo\n"; \
-		printf "Add this to your ~/.zshrc before compinit to enable it:\n"; \
-		printf "  fpath=( $(ZSH_COMPLETION_FALLBACK) \$$fpath )\n"; \
-	fi
+	@mkdir -p "$(ZSH_COMPLETION_DIR)"
+	@ln -sf $(CURDIR)/completions/_memo $(ZSH_COMPLETION_DIR)/_memo
+	@printf "Zsh completion installed to $(ZSH_COMPLETION_DIR)/_memo\n"
+	@printf "Add this to your ~/.zshrc before compinit to enable it:\n"
+	@printf "  fpath=( $(ZSH_COMPLETION_DIR) \$$fpath )\n"
 	@if mkdir -p "$(BASH_COMPLETION_DIR)" 2>/dev/null && [ -w "$(BASH_COMPLETION_DIR)" ]; then \
 		ln -sf $(CURDIR)/completions/memo.bash $(BASH_COMPLETION_DIR)/memo; \
 		printf "Bash completion installed to $(BASH_COMPLETION_DIR)/memo\n"; \
@@ -47,16 +41,11 @@ install:
 	install -m 0700 memo.sh $(MEMO_INSTALL_DIR)/memo
 
 	@printf "Installing completions...\n"
-	@if mkdir -p "$(ZSH_COMPLETION_DIR)" 2>/dev/null && [ -w "$(ZSH_COMPLETION_DIR)" ]; then \
-		install -m 0644 completions/_memo $(ZSH_COMPLETION_DIR)/_memo; \
-		printf "Zsh completion installed to $(ZSH_COMPLETION_DIR)/_memo\n"; \
-	else \
-		mkdir -p "$(ZSH_COMPLETION_FALLBACK)"; \
-		install -m 0644 completions/_memo $(ZSH_COMPLETION_FALLBACK)/_memo; \
-		printf "Zsh completion installed to $(ZSH_COMPLETION_FALLBACK)/_memo\n"; \
-		printf "Add this to your ~/.zshrc before compinit to enable it:\n"; \
-		printf "  fpath=( $(ZSH_COMPLETION_FALLBACK) \$$fpath )\n"; \
-	fi
+	@mkdir -p "$(ZSH_COMPLETION_DIR)"
+	@install -m 0644 completions/_memo $(ZSH_COMPLETION_DIR)/_memo
+	@printf "Zsh completion installed to $(ZSH_COMPLETION_DIR)/_memo\n"
+	@printf "Add this to your ~/.zshrc before compinit to enable it:\n"
+	@printf "  fpath=( $(ZSH_COMPLETION_DIR) \$$fpath )\n"
 	@if mkdir -p "$(BASH_COMPLETION_DIR)" 2>/dev/null && [ -w "$(BASH_COMPLETION_DIR)" ]; then \
 		install -m 0644 completions/memo.bash $(BASH_COMPLETION_DIR)/memo; \
 		printf "Bash completion installed to $(BASH_COMPLETION_DIR)/memo\n"; \
@@ -75,7 +64,6 @@ uninstall:
 	@printf "Deleting completion files\n"
 	@rm -f $(ZSH_COMPLETION_DIR)/_memo
 	@rm -f $(BASH_COMPLETION_DIR)/memo
-	@rm -f $(ZSH_COMPLETION_FALLBACK)/_memo
 	@rm -f $(BASH_COMPLETION_FALLBACK)/memo
 
 	@printf "Uninstall complete!\n"

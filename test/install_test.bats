@@ -26,12 +26,8 @@ setup() {
   }
 
   # Resolve the target dirs exactly like install.sh does.
-  ZSH_DIR="/usr/local/share/zsh/site-functions"
+  ZSH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
   BASH_DIR="/usr/local/share/bash-completion/completions"
-
-  if ! mkdir -p "$ZSH_DIR" 2>/dev/null || [ ! -w "$ZSH_DIR" ]; then
-    ZSH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
-  fi
 
   if ! mkdir -p "$BASH_DIR" 2>/dev/null || [ ! -w "$BASH_DIR" ]; then
     BASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
@@ -58,6 +54,8 @@ teardown() {
   assert_line --index 1 "Installing memo to $TEST_HOME/.local/bin..."
   assert_line --partial "Zsh completion installed to $ZSH_DIR"
   assert_line --partial "Bash completion installed to $BASH_DIR"
+  assert_line --partial "Add this to your ~/.zshrc before compinit to enable it:"
+  assert_line --partial "fpath=( $ZSH_DIR \$fpath )"
   [[ "${lines[${#lines[@]} - 1]}" == "Make sure $TEST_HOME/.local/bin is in your PATH." ]]
   [[ "${lines[${#lines[@]} - 2]}" == "Installed memo to $TEST_HOME/.local/bin" ]]
 }
