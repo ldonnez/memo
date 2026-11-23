@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/ldonnez/memo/compare/v0.14.0...v0.14.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* support GitHub token for release API requests ([e0de9bc](https://github.com/ldonnez/memo/commit/e0de9bc975f808805a1560117ace1bee340fbbf9))
+
 ## [0.14.0](https://github.com/ldonnez/memo/compare/v0.13.2...v0.14.0) (2026-11-22)
 
 
