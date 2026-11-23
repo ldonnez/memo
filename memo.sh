@@ -590,8 +590,11 @@ _matches_pattern() {
 _get_latest_version() {
   local response=""
   local tag_name=""
-
-  response=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>&1) || {
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    response=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/releases/latest" 2>&1)
+  else
+    response=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>&1)
+  fi || {
     printf "Error: could not fetch the latest version from GitHub (curl exit code %s).\n" "$?" >&2
     return 1
   }

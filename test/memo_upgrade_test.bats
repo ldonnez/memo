@@ -178,3 +178,41 @@ Upgrade cancelled."
 
   command rm -rf "${downloaded_to%/*}"
 }
+
+@test "Uses GITHUB_TOKEN when fetching the latest release" {
+  local curl_args="$TEST_HOME/latest-release-curl-args"
+
+  (
+    # shellcheck disable=SC2329
+    curl() {
+      printf '%s\n' "$@" >"$curl_args"
+      printf '%s\n' '{"tag_name":"v1.2.3"}'
+    }
+
+    GITHUB_TOKEN="test-token" _get_latest_version
+  )
+
+  run grep -Fx -- "-H" "$curl_args"
+  assert_success
+  run grep -Fx -- "Authorization: Bearer test-token" "$curl_args"
+  assert_success
+}
+
+@test "Does not send an Authorization header when GITHUB_TOKEN is unset" {
+  local curl_args="$TEST_HOME/latest-release-curl-args"
+
+  (
+    unset GITHUB_TOKEN
+
+    # shellcheck disable=SC2329
+    curl() {
+      printf '%s\n' "$@" >"$curl_args"
+      printf '%s\n' '{"tag_name":"v1.2.3"}'
+    }
+
+    _get_latest_version
+  )
+
+  run grep -Fx -- "Authorization: Bearer" "$curl_args"
+  assert_failure
+}
